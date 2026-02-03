@@ -1,1 +1,42 @@
+# macOS
 .DS_Store
+
+# Environment files
+.env
+*.env
+backend/.env
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs
+/dist/
+/build/
+/out/
+
+# Coverage
+coverage/
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# Expo / React Native
+.expo/
+.expo-shared/
+web-build/
+
+# Temp
+*.tmp
+*.temp
+
+# Project notes (local)
+/docs/personalNotes/

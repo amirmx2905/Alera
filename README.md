@@ -32,7 +32,7 @@ La arquitectura se compone de seis capas principales:
 ### Funcionalidades principales (MVP)
 
 1. Autenticación de usuarios (login y registro).
-2. Registro de hábitos diarios (limitado a 2 tipos de hábito).
+2. Registro de hábitos diarios (hábitos ilimitados).
 3. Visualización de métricas diarias básicas.
 4. Asistente conversacional con IA (contexto limitado).
 5. Gestión básica de objetivos diarios.
@@ -73,21 +73,32 @@ El backend en Node.js actúa como núcleo del sistema y es responsable de:
 
 ### Tablas principales
 
+**habits**
+
+- id (UUID)
+- user_id (UUID)
+- name (VARCHAR)
+- type (VARCHAR) — numeric | json
+- unit (VARCHAR)
+- created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
+
 **habits_log**
 
 - id (UUID)
 - user_id (UUID)
-- habit_type (VARCHAR)
+- habit_id (UUID)
 - value (JSONB)
-- category (VARCHAR)
+- metadata (JSONB)
 - created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
 
 **metrics**
 
 - id (UUID)
 - user_id (UUID)
-- habit_type (VARCHAR)
-- metric_type (VARCHAR) — 'daily_average'
+- habit_id (UUID)
+- metric_type (VARCHAR) — daily_average
 - value (NUMERIC)
 - date (DATE)
 - calculated_at (TIMESTAMP)
@@ -104,9 +115,10 @@ El backend en Node.js actúa como núcleo del sistema y es responsable de:
 
 - id (UUID)
 - user_id (UUID)
-- habit_type (VARCHAR)
+- habit_id (UUID)
 - target_value (NUMERIC)
 - created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
 
 ### Seguridad
 
@@ -124,13 +136,10 @@ La IA se utiliza como un asistente conversacional que:
 
 ### Contexto incluido
 
-- Últimos 3 días de registros.
-- 1 métrica diaria clave.
-- Últimas 2 interacciones con el asistente.
-
-Este enfoque asegura que la IA sea un componente integrado al análisis del sistema y no un simple wrapper.
-
-## Flujo DevOps
+- Métricas del día actual.
+- Métricas de los últimos 7 días.
+- Métricas de los últimos 3 meses.
+- Últimos 7 días de interacciones con el asistente.
 
 ### Pipeline CI/CD
 
@@ -138,9 +147,3 @@ Este enfoque asegura que la IA sea un componente integrado al análisis del sist
 2. Análisis de código (ESLint).
 3. Build del backend.
 4. Construcción de imagen Docker.
-
-### Beneficios
-
-- Entorno reproducible.
-- Automatización del ciclo de desarrollo.
-- Alineación con prácticas DevOps reales.
