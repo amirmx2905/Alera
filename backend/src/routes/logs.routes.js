@@ -8,6 +8,7 @@ const {
   deleteLog,
   upsertLogByDate,
 } = require("../services/logs.service");
+const { recalculateDailyAverage } = require("../services/metrics.service");
 const { createError } = require("../middleware/error");
 
 // NOTE: Rutas de registros diarios por hábito.
@@ -74,6 +75,8 @@ router.post("/:id/logs", async (req, res, next) => {
     const habit = await getHabit(req.user.id, req.params.id);
     validateLogValue(habit, payload.value);
     const log = await createLog(req.user.id, req.params.id, payload);
+    const date = log.created_at.slice(0, 10);
+    await recalculateDailyAverage(req.user.id, req.params.id, date);
     res.status(201).json(log);
   } catch (err) {
     next(err);
@@ -107,6 +110,8 @@ router.patch("/:id/logs/:logId", async (req, res, next) => {
       req.params.logId,
       payload,
     );
+    const date = updated.created_at.slice(0, 10);
+    await recalculateDailyAverage(req.user.id, req.params.id, date);
     res.json(updated);
   } catch (err) {
     next(err);
@@ -116,7 +121,15 @@ router.patch("/:id/logs/:logId", async (req, res, next) => {
 router.delete("/:id/logs/:logId", async (req, res, next) => {
   try {
     await getHabit(req.user.id, req.params.id);
-    await deleteLog(req.user.id, req.params.id, req.params.logId);
+    const deleted = await deleteLog(
+      req.user.id,
+      req.params.id,
+      req.params.logId,
+    );
+    if (deleted?.created_at) {
+      const date = deleted.created_at.slice(0, 10);
+      await recalculateDailyAverage(req.user.id, req.params.id, date);
+    }
     res.status(204).send();
   } catch (err) {
     next(err);
@@ -135,6 +148,7 @@ router.put("/:id/logs/by-date", async (req, res, next) => {
       date,
       payload,
     );
+    await recalculateDailyAverage(req.user.id, req.params.id, date);
     res.json(result);
   } catch (err) {
     next(err);

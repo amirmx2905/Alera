@@ -69,7 +69,7 @@ async function updateLog(userId, habitId, logId, payload) {
  * Elimina un log específico por id.
  */
 async function deleteLog(userId, habitId, logId) {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("habits_log")
     .delete()
     .eq("id", logId)
@@ -77,6 +77,7 @@ async function deleteLog(userId, habitId, logId) {
     .eq("user_id", userId);
 
   if (error) throw error;
+  return data?.[0] || null;
 }
 
 /**

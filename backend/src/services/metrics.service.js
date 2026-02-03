@@ -288,6 +288,55 @@ async function calculateDailyAverageForDate(targetDate) {
   return metrics;
 }
 
+/**
+ * Recalcula y persiste el promedio diario para un hábito y fecha específica.
+ */
+async function recalculateDailyAverage(userId, habitId, date) {
+  const start = new Date(`${date}T00:00:00.000Z`);
+  const end = new Date(`${date}T23:59:59.999Z`);
+
+  const { data, error } = await supabase
+    .from("habits_log")
+    .select("value")
+    .eq("user_id", userId)
+    .eq("habit_id", habitId)
+    .gte("created_at", start.toISOString())
+    .lte("created_at", end.toISOString());
+
+  if (error) throw error;
+
+  const avg = calculateAverage(data || []);
+
+  const { error: deleteError } = await supabase
+    .from("metrics")
+    .delete()
+    .eq("user_id", userId)
+    .eq("habit_id", habitId)
+    .eq("metric_type", "daily_average")
+    .eq("date", date);
+
+  if (deleteError) throw deleteError;
+
+  if (avg === null) {
+    return null;
+  }
+
+  const { data: metrics, error: insertError } = await supabase
+    .from("metrics")
+    .insert({
+      user_id: userId,
+      habit_id: habitId,
+      metric_type: "daily_average",
+      value: avg,
+      date,
+    })
+    .select()
+    .single();
+
+  if (insertError) throw insertError;
+  return metrics;
+}
+
 module.exports = {
   listDailyMetrics,
   listWeeklyMetrics,
@@ -295,4 +344,5 @@ module.exports = {
   comparePeriods,
   predictNextDailyAverage,
   calculateDailyAverageForDate,
+  recalculateDailyAverage,
 };
