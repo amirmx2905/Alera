@@ -5,6 +5,7 @@ const logsRoutes = require("./logs.routes");
 const metricsRoutes = require("./metrics.routes");
 const goalsRoutes = require("./goals.routes");
 const goalsRootRoutes = require("./goals.root.routes");
+const profilesRoutes = require("./profiles.routes");
 const aiRoutes = require("./ai.routes");
 const { aiLimiter } = require("../middleware/rateLimit");
 
@@ -19,6 +20,7 @@ router.use("/habits", logsRoutes);
 router.use("/habits", metricsRoutes);
 router.use("/habits", goalsRoutes);
 router.use("/goals", goalsRootRoutes);
+router.use("/profile", profilesRoutes);
 router.use("/ai", aiLimiter, aiRoutes);
 
 module.exports = router;
