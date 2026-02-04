@@ -138,8 +138,8 @@ function mockAiResponse(message, context) {
 function buildPrompt(message, context) {
   const system =
     'Eres la asistente/coach "Alera" experta en hábitos y bienestar. Responde breve, empática y accionable. ' +
-    "No des diagnósticos médicos ni trates temas ilegales o peligrosos. " +
-    "Puedes dar recomendaciones generales de bienestar/productividad aunque no estén en el historial, con tono amiguero y profesional. " +
+    "No des diagnósticos médicos ni trates temas ilegales o peligrosos. Presta atención al idioma en el que te preguntan para que constestes en el mismo idioma" +
+    "Puedes dar recomendaciones generales dentro del contexto de bienestar/productividad aunque no estén en el historial, con tono amiguero y profesional. " +
     "Si el usuario pide cómo llamarlo y no es ofensivo, hazlo. Usa el contexto. " +
     "No puedes crear/modificar/eliminar datos; si pide cambiar hábitos/metas, dile que debe hacerlo en la app. " +
     "Aclara que no tienes acceso a la interfaz ni a sus secciones.";
@@ -184,28 +184,18 @@ function getFallbackMessage(status) {
 
 async function callOpenAIWithRetry(input, options = {}) {
   const maxRetries = options.maxRetries ?? 2;
-  const timeoutMs = options.timeoutMs ?? 12000;
 
   let attempt = 0;
   while (attempt <= maxRetries) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
     try {
       const response = await openai.responses.create({
         model: "gpt-4.1-mini",
         input,
-        signal: controller.signal,
       });
-      clearTimeout(timeout);
       return { response, error: null };
     } catch (error) {
-      clearTimeout(timeout);
       const status = getErrorStatus(error);
-      const retriable =
-        status === 429 ||
-        (status && status >= 500) ||
-        error?.name === "AbortError";
+      const retriable = status === 429 || (status && status >= 500);
 
       if (attempt >= maxRetries || !retriable) {
         return { response: null, error };
@@ -259,10 +249,19 @@ async function createChatResponse(userId, message) {
     reply = mockAiResponse(message, context);
   }
 
-  await supabase.from("ai_conversations").insert([
-    { user_id: userId, message, role: "user" },
-    { user_id: userId, message: reply, role: "assistant" },
-  ]);
+  // Primero el mensaje del usuario
+  const { error: userError } = await supabase
+    .from("ai_conversations")
+    .insert({ user_id: userId, message, role: "user" });
+
+  if (userError) throw userError;
+
+  // Luego la respuesta del asistente
+  const { error: assistantError } = await supabase
+    .from("ai_conversations")
+    .insert({ user_id: userId, message: reply, role: "assistant" });
+
+  if (assistantError) throw assistantError;
 
   return {
     reply,
@@ -276,7 +275,39 @@ async function createChatResponse(userId, message) {
   };
 }
 
-module.exports = { createChatResponse };
+async function getChatHistory(userId, options = {}) {
+  const assistantLimit = options.assistantLimit ?? 50;
+  const lookbackLimit = options.lookbackLimit ?? assistantLimit * 4;
+
+  const { data, error } = await supabase
+    .from("ai_conversations")
+    .select("id, message, role, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(lookbackLimit);
+
+  if (error) throw error;
+
+  const sorted = (data || []).slice().sort((a, b) => {
+    return new Date(a.created_at) - new Date(b.created_at);
+  });
+
+  const assistantIndexes = [];
+  sorted.forEach((item, index) => {
+    if (item.role === "assistant") assistantIndexes.push(index);
+  });
+
+  if (assistantIndexes.length <= assistantLimit) {
+    return sorted;
+  }
+
+  const cutoffIndex =
+    assistantIndexes[assistantIndexes.length - assistantLimit];
+  const startIndex = Math.max(0, cutoffIndex - 1);
+  return sorted.slice(startIndex);
+}
+
+module.exports = { createChatResponse, getChatHistory };
 
 // TODO: Sanitizar y limitar contexto según tamaño/privacidad.
 // TODO: Ajustar modelo y políticas de contenido si aplica.
