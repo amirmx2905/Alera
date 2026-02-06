@@ -15,12 +15,14 @@ const createSchema = z.object({
   name: z.string().min(1),
   type: z.enum(["numeric", "json"]),
   unit: z.string().optional(),
+  status: z.enum(["active", "paused", "archived"]).optional(),
 });
 
 const updateSchema = z.object({
   name: z.string().min(1).optional(),
   type: z.enum(["numeric", "json"]).optional(),
   unit: z.string().nullable().optional(),
+  status: z.enum(["active", "paused", "archived"]).optional(),
 });
 
 router.post("/", async (req, res, next) => {

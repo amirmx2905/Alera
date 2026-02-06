@@ -12,7 +12,6 @@ const createGoalSchema = z.object({
     name: z.string().min(1),
     type: z.enum(["numeric", "json"]),
     unit: z.string().optional(),
-    category: z.string().optional(),
   }),
   target_value: z.number().positive(),
 });

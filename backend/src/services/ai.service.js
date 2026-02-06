@@ -35,6 +35,7 @@ async function buildContext(userId) {
     .from("metrics")
     .select("habit_id, metric_type, value, date")
     .eq("user_id", userId)
+    .eq("granularity", "daily")
     .gte("date", todayStart.toISOString().slice(0, 10))
     .lte("date", todayEnd.toISOString().slice(0, 10))
     .order("date", { ascending: false });
@@ -43,6 +44,7 @@ async function buildContext(userId) {
     .from("metrics")
     .select("habit_id, metric_type, value, date")
     .eq("user_id", userId)
+    .eq("granularity", "daily")
     .gte("date", last7DaysStart.toISOString().slice(0, 10))
     .order("date", { ascending: false });
 
@@ -50,12 +52,13 @@ async function buildContext(userId) {
     .from("metrics")
     .select("habit_id, metric_type, value, date")
     .eq("user_id", userId)
+    .eq("granularity", "daily")
     .gte("date", last3MonthsStart.toISOString().slice(0, 10))
     .order("date", { ascending: false });
 
   const habitsQuery = supabase
     .from("habits")
-    .select("id, name, type, unit")
+    .select("id, name, type, unit, status")
     .eq("user_id", userId);
 
   const conversationsQuery = supabase

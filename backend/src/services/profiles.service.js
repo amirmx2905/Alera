@@ -40,27 +40,4 @@ async function getProfile(userId) {
   return data;
 }
 
-/**
- * Actualiza username del perfil del usuario actual.
- */
-async function updateProfile(userId, username) {
-  const { data, error } = await supabase
-    .from("profiles")
-    .update({
-      username,
-    })
-    .eq("id", userId)
-    .select("id, username, created_at")
-    .single();
-
-  if (error && error.code === "23505") {
-    throw createError(409, "conflict", "Username ya existe");
-  }
-  if (error && error.code === "PGRST116") {
-    throw createError(404, "not_found", "Perfil no encontrado");
-  }
-  if (error) throw error;
-  return data;
-}
-
-module.exports = { createProfile, getProfile, updateProfile };
+module.exports = { createProfile, getProfile };

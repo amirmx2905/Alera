@@ -6,16 +6,19 @@ const { supabase } = require("../db/supabase");
  * Crea un log.
  */
 async function createLog(userId, habitId, payload) {
+  const insertPayload = {
+    user_id: userId,
+    habit_id: habitId,
+    value: payload.value,
+    metadata: payload.metadata || null,
+    created_at: payload.created_at || new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    ...(payload.source ? { source: payload.source } : {}),
+  };
+
   const { data, error } = await supabase
     .from("habits_log")
-    .insert({
-      user_id: userId,
-      habit_id: habitId,
-      value: payload.value,
-      metadata: payload.metadata || null,
-      created_at: payload.created_at || new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
+    .insert(insertPayload)
     .select()
     .single();
 
@@ -29,7 +32,7 @@ async function createLog(userId, habitId, payload) {
 async function listLogs(userId, habitId, from, to) {
   let query = supabase
     .from("habits_log")
-    .select("id, habit_id, value, metadata, created_at")
+    .select("id, habit_id, value, metadata, source, created_at")
     .eq("user_id", userId)
     .eq("habit_id", habitId)
     .order("created_at", { ascending: false });
@@ -49,6 +52,7 @@ async function updateLog(userId, habitId, logId, payload) {
   const updates = {
     ...(payload.value !== undefined ? { value: payload.value } : {}),
     ...(payload.metadata !== undefined ? { metadata: payload.metadata } : {}),
+    ...(payload.source ? { source: payload.source } : {}),
     updated_at: new Date().toISOString(),
   };
 
@@ -58,7 +62,7 @@ async function updateLog(userId, habitId, logId, payload) {
     .eq("id", logId)
     .eq("habit_id", habitId)
     .eq("user_id", userId)
-    .select("id, habit_id, value, metadata, created_at")
+    .select("id, habit_id, value, metadata, source, created_at")
     .single();
 
   if (error) throw error;
@@ -74,7 +78,8 @@ async function deleteLog(userId, habitId, logId) {
     .delete()
     .eq("id", logId)
     .eq("habit_id", habitId)
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .select("id, habit_id, value, metadata, source, created_at");
 
   if (error) throw error;
   return data?.[0] || null;

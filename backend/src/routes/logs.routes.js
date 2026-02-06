@@ -8,7 +8,6 @@ const {
   deleteLog,
   upsertLogByDate,
 } = require("../services/logs.service");
-const { recalculateDailyAverage } = require("../services/metrics.service");
 const { createError } = require("../middleware/error");
 
 // NOTE: Rutas de registros diarios por hábito.
@@ -19,17 +18,20 @@ const createSchema = z.object({
   value: z.any(),
   metadata: z.record(z.any()).optional(),
   created_at: z.string().datetime().optional(),
+  source: z.enum(["mobile", "watch", "backend", "system"]).optional(),
 });
 
 const updateSchema = z.object({
   value: z.any().optional(),
   metadata: z.record(z.any()).optional(),
+  source: z.enum(["mobile", "watch", "backend", "system"]).optional(),
 });
 
 const upsertByDateSchema = z.object({
   date: z.string().min(10),
   value: z.any(),
   metadata: z.record(z.any()).optional(),
+  source: z.enum(["mobile", "watch", "backend", "system"]).optional(),
 });
 
 function normalizeDateOnly(input) {
@@ -75,8 +77,6 @@ router.post("/:id/logs", async (req, res, next) => {
     const habit = await getHabit(req.user.id, req.params.id);
     validateLogValue(habit, payload.value);
     const log = await createLog(req.user.id, req.params.id, payload);
-    const date = log.created_at.slice(0, 10);
-    await recalculateDailyAverage(req.user.id, req.params.id, date);
     res.status(201).json(log);
   } catch (err) {
     next(err);
@@ -97,7 +97,11 @@ router.get("/:id/logs", async (req, res, next) => {
 router.patch("/:id/logs/:logId", async (req, res, next) => {
   try {
     const payload = updateSchema.parse(req.body);
-    if (payload.value === undefined && payload.metadata === undefined) {
+    if (
+      payload.value === undefined &&
+      payload.metadata === undefined &&
+      payload.source === undefined
+    ) {
       throw createError(400, "invalid_request", "Nada que actualizar");
     }
     const habit = await getHabit(req.user.id, req.params.id);
@@ -110,8 +114,6 @@ router.patch("/:id/logs/:logId", async (req, res, next) => {
       req.params.logId,
       payload,
     );
-    const date = updated.created_at.slice(0, 10);
-    await recalculateDailyAverage(req.user.id, req.params.id, date);
     res.json(updated);
   } catch (err) {
     next(err);
@@ -126,10 +128,6 @@ router.delete("/:id/logs/:logId", async (req, res, next) => {
       req.params.id,
       req.params.logId,
     );
-    if (deleted?.created_at) {
-      const date = deleted.created_at.slice(0, 10);
-      await recalculateDailyAverage(req.user.id, req.params.id, date);
-    }
     res.status(204).send();
   } catch (err) {
     next(err);
@@ -148,7 +146,6 @@ router.put("/:id/logs/by-date", async (req, res, next) => {
       date,
       payload,
     );
-    await recalculateDailyAverage(req.user.id, req.params.id, date);
     res.json(result);
   } catch (err) {
     next(err);

@@ -8,14 +8,17 @@ const { createError } = require("../middleware/error");
  * Valida conflictos por nombre único por usuario.
  */
 async function createHabit(userId, payload) {
+  const insertPayload = {
+    user_id: userId,
+    name: payload.name,
+    type: payload.type,
+    unit: payload.unit || null,
+    ...(payload.status ? { status: payload.status } : {}),
+  };
+
   const { data, error } = await supabase
     .from("habits")
-    .insert({
-      user_id: userId,
-      name: payload.name,
-      type: payload.type,
-      unit: payload.unit || null,
-    })
+    .insert(insertPayload)
     .select()
     .single();
 
@@ -32,7 +35,7 @@ async function createHabit(userId, payload) {
 async function listHabits(userId) {
   const { data, error } = await supabase
     .from("habits")
-    .select("id, name, type, unit, created_at, updated_at")
+    .select("id, name, type, unit, status, created_at, updated_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
@@ -49,6 +52,7 @@ async function updateHabit(userId, habitId, payload) {
     ...(payload.name ? { name: payload.name } : {}),
     ...(payload.type ? { type: payload.type } : {}),
     ...(payload.unit !== undefined ? { unit: payload.unit } : {}),
+    ...(payload.status ? { status: payload.status } : {}),
     updated_at: new Date().toISOString(),
   };
 
@@ -76,7 +80,10 @@ async function updateHabit(userId, habitId, payload) {
 async function deleteHabit(userId, habitId) {
   const { error } = await supabase
     .from("habits")
-    .delete()
+    .update({
+      status: "archived",
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", habitId)
     .eq("user_id", userId);
 
@@ -89,7 +96,7 @@ async function deleteHabit(userId, habitId) {
 async function getHabit(userId, habitId) {
   const { data, error } = await supabase
     .from("habits")
-    .select("id, name, type, unit")
+    .select("id, name, type, unit, status")
     .eq("id", habitId)
     .eq("user_id", userId)
     .single();
@@ -108,7 +115,7 @@ async function getHabit(userId, habitId) {
 async function findHabitByName(userId, name) {
   const { data, error } = await supabase
     .from("habits")
-    .select("id, name, type, unit")
+    .select("id, name, type, unit, status")
     .eq("user_id", userId)
     .eq("name", name)
     .single();
