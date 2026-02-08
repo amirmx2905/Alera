@@ -5,10 +5,10 @@ import { LoginScreen } from "../screens/auth/LoginScreen.tsx";
 import { RegisterScreen } from "../screens/auth/RegisterScreen.tsx";
 import { ConfirmEmailScreen } from "../screens/auth/ConfirmEmailScreen.tsx";
 import { ProfileSetupScreen } from "../screens/auth/ProfileSetupScreen.tsx";
-import { useAuth } from "../state/AuthContext";
+import { useAuth } from "../state/AuthContext.tsx";
 import { View, Animated } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { getProfile } from "../services/profile";
+import { getProfile } from "../services/profile.ts";
 import { DotLoader } from "../components/shared/DotLoader.tsx";
 
 type AuthStackParamList = {

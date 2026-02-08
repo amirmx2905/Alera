@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { View, ScrollView, Keyboard, Animated } from "react-native";
+import { supabase } from "../services/supabase";
 import { getChatHistory, sendChatMessage } from "../services/ai";
 import { ChatHeader } from "../components/chat/ChatHeader";
 import { ChatInput } from "../components/chat/ChatInput";
@@ -23,21 +24,32 @@ export function ChatScreen() {
 
   useEffect(() => {
     let isMounted = true;
-    getChatHistory()
-      .then((result) => {
-        if (!isMounted) return;
-        const history = (result?.messages || [])
-          .map((item, index) => ({
-            id: item.id ?? `history-${index}`,
-            role: item.role,
-            content: item.message,
-            createdAt: item.created_at ?? new Date(0).toISOString(),
-          }))
-          .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-        setMessages(history);
+    supabase.auth.getSession().then(({ data }) => {
+      if (!isMounted) return;
+      if (!data.session) {
+        setMessages([]);
         setIsLoadingHistory(false);
-      })
-      .catch(() => isMounted && (setMessages([]), setIsLoadingHistory(false)));
+        return;
+      }
+
+      getChatHistory()
+        .then((result) => {
+          if (!isMounted) return;
+          const history = (result?.messages || [])
+            .map((item, index) => ({
+              id: item.id ?? `history-${index}`,
+              role: item.role,
+              content: item.message,
+              createdAt: item.created_at ?? new Date(0).toISOString(),
+            }))
+            .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+          setMessages(history);
+          setIsLoadingHistory(false);
+        })
+        .catch(() =>
+          isMounted && (setMessages([]), setIsLoadingHistory(false)),
+        );
+    });
 
     return () => {
       isMounted = false;
@@ -77,6 +89,22 @@ export function ChatScreen() {
   const handleSend = async () => {
     if (isSending || !message.trim()) return;
     const trimmed = message.trim();
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      const errorMessageId = `${Date.now()}-assistant-error`;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: errorMessageId,
+          role: "assistant",
+          content: "Debes iniciar sesión para usar el chat.",
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+      setLastAddedMessageId(errorMessageId);
+      return;
+    }
+
     setMessage("");
 
     const userMessageId = `${Date.now()}-user`;
