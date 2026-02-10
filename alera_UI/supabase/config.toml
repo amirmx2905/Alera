@@ -1,0 +1,6 @@
+# Edge Functions Configuration
+[functions.ai-chat]
+verify_jwt = false
+
+[functions.calculate-metrics]
+verify_jwt = false
