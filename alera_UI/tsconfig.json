@@ -1,8 +1,9 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
+    "jsx": "react-native",
     "strict": true,
-    "types": ["nativewind/types"],
+    "types": ["nativewind/types", "react", "react-native"],
     "allowImportingTsExtensions": true
   },
   "include": [
@@ -11,5 +12,6 @@
     "src/**/*.ts",
     "src/**/*.tsx",
     "nativewind-env.d.ts"
-  ]
+  ],
+  "exclude": ["supabase/functions"]
 }

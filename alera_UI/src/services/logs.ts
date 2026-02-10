@@ -34,6 +34,37 @@ async function getCurrentUserId() {
   return data.user.id;
 }
 
+async function triggerMetricsCalculation(habitId: string, logicalDate?: string) {
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    
+    if (!token) {
+      console.warn("No auth token available for metrics calculation");
+      return;
+    }
+
+    const { data, error } = await supabase.functions.invoke('calculate-metrics', {
+      body: { 
+        habit_id: habitId,
+        ...(logicalDate && { logical_date: logicalDate })
+      },
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (error) {
+      console.error("Error calculating metrics:", error);
+      return;
+    }
+
+    console.log("Metrics updated:", data);
+  } catch (err) {
+    console.error("Failed to trigger metrics calculation:", err);
+  }
+}
+
 export async function listLogs(habitId: string, from?: string, to?: string) {
   const userId = await getCurrentUserId();
   let query = supabase
@@ -70,6 +101,10 @@ export async function createLog(habitId: string, payload: LogCreateInput) {
     .single();
 
   if (error) throw error;
+
+  // Trigger metrics recalculation (non-blocking)
+  triggerMetricsCalculation(habitId);
+
   return data as HabitLog;
 }
 
@@ -96,6 +131,10 @@ export async function updateLog(
     .single();
 
   if (error) throw error;
+
+  // Trigger metrics recalculation (non-blocking)
+  triggerMetricsCalculation(habitId);
+
   return data as HabitLog;
 }
 
@@ -110,37 +149,11 @@ export async function deleteLog(habitId: string, logId: string) {
     .select("id, habit_id, user_id, value, metadata, source, created_at");
 
   if (error) throw error;
-  return (data?.[0] as HabitLog) || null;
-}
 
-export async function upsertLogByDate(
-  habitId: string,
-  date: string,
-  payload: LogCreateInput,
-) {
-  const userId = await getCurrentUserId();
-  const start = new Date(`${date}T00:00:00.000Z`);
-  const end = new Date(`${date}T23:59:59.999Z`);
-
-  const { data: existing, error: findError } = await supabase
-    .from("habits_log")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("habit_id", habitId)
-    .gte("created_at", start.toISOString())
-    .lte("created_at", end.toISOString())
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (findError) throw findError;
-
-  if (existing?.id) {
-    return updateLog(habitId, existing.id, payload);
+  // Trigger metrics recalculation (non-blocking)
+  if (data?.[0]) {
+    triggerMetricsCalculation(habitId);
   }
 
-  return createLog(habitId, {
-    ...payload,
-    created_at: start.toISOString(),
-  });
+  return (data?.[0] as HabitLog) || null;
 }
