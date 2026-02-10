@@ -2,7 +2,7 @@
  * Utility functions for authentication and datetime handling
  */
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "@supabase/supabase-js";
 import { TIMEZONE } from "./config.ts";
 import type { HabitLogRecord } from "./types.ts";
 

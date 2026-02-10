@@ -5,8 +5,8 @@
  * Extracts user_id from JWT, calculates all metrics, and writes to database.
  */
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from "std/http/server.ts";
+import { createClient } from "@supabase/supabase-js";
 import type { RequestBody, Metric } from "./types.ts";
 import { getUserIdFromToken, getTodayInCDMX } from "./utils.ts";
 import { fetchRecordsForDate, writeMetrics } from "./database.ts";

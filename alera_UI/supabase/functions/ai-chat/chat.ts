@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { OPENAI_API_KEY, OPENAI_MODEL } from "./config.ts";
 import { buildContext } from "./context.ts";
 

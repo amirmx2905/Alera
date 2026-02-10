@@ -1,4 +1,5 @@
-import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { TIMEZONE } from "./datetime.ts";
 
 type ContextItem = Record<string, unknown>;
 
@@ -10,34 +11,39 @@ type HabitRecord = {
   status: string;
 };
 
+/**
+ * Get today's date in CDMX timezone (YYYY-MM-DD format)
+ */
+function getTodayInCDMX(): string {
+  const now = new Date(
+    new Date().toLocaleString("en-US", { timeZone: TIMEZONE }),
+  );
+  return now.toISOString().split("T")[0];
+}
+
+/**
+ * Get date N days ago in CDMX timezone
+ */
+function getDaysAgoInCDMX(daysAgo: number): string {
+  const now = new Date(
+    new Date().toLocaleString("en-US", { timeZone: TIMEZONE }),
+  );
+  now.setDate(now.getDate() - daysAgo);
+  return now.toISOString().split("T")[0];
+}
+
 export async function buildContext(supabase: SupabaseClient, userId: string) {
-  const now = new Date();
-  const todayStart = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
-  );
-  const todayEnd = new Date(
-    Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate(),
-      23,
-      59,
-      59,
-      999,
-    ),
-  );
-  const last7DaysStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const last3MonthsStart = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 3, now.getUTCDate()),
-  );
+  // All dates in CDMX timezone
+  const today = getTodayInCDMX();
+  const last7DaysStart = getDaysAgoInCDMX(7);
+  const last3MonthsStart = getDaysAgoInCDMX(90);
 
   const metricsTodayQuery = supabase
     .from("metrics")
     .select("habit_id, metric_type, value, date")
     .eq("user_id", userId)
     .eq("granularity", "daily")
-    .gte("date", todayStart.toISOString().slice(0, 10))
-    .lte("date", todayEnd.toISOString().slice(0, 10))
+    .eq("date", today)
     .order("date", { ascending: false });
 
   const metricsLast7DaysQuery = supabase
@@ -45,7 +51,7 @@ export async function buildContext(supabase: SupabaseClient, userId: string) {
     .select("habit_id, metric_type, value, date")
     .eq("user_id", userId)
     .eq("granularity", "daily")
-    .gte("date", last7DaysStart.toISOString().slice(0, 10))
+    .gte("date", last7DaysStart)
     .order("date", { ascending: false });
 
   const metricsLast3MonthsQuery = supabase
@@ -53,7 +59,7 @@ export async function buildContext(supabase: SupabaseClient, userId: string) {
     .select("habit_id, metric_type, value, date")
     .eq("user_id", userId)
     .eq("granularity", "daily")
-    .gte("date", last3MonthsStart.toISOString().slice(0, 10))
+    .gte("date", last3MonthsStart)
     .order("date", { ascending: false });
 
   const habitsQuery = supabase
@@ -65,8 +71,8 @@ export async function buildContext(supabase: SupabaseClient, userId: string) {
     .from("ai_conversations")
     .select("message, role, created_at")
     .eq("user_id", userId)
-    .gte("created_at", last7DaysStart.toISOString())
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(50);
 
   const goalsQuery = supabase
     .from("user_goals")
