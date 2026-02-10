@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { AppTabs } from "./AppTabs.tsx";
 import { LoginScreen } from "../screens/auth/LoginScreen.tsx";
@@ -72,12 +72,7 @@ export function RootNavigator() {
     };
   }, [session?.user.id]);
 
-  const ProfileSetupGate = useMemo(
-    () => () => (
-      <ProfileSetupScreen onComplete={() => setProfileStatus("ready")} />
-    ),
-    [],
-  );
+  const handleProfileComplete = () => setProfileStatus("ready");
 
   const isBusy = isLoading || (session && profileStatus === "loading");
 
@@ -107,10 +102,9 @@ export function RootNavigator() {
       >
         {session ? (
           profileStatus === "missing" ? (
-            <RootStack.Screen
-              name="ProfileSetup"
-              component={ProfileSetupGate}
-            />
+            <RootStack.Screen name="ProfileSetup">
+              {() => <ProfileSetupScreen onComplete={handleProfileComplete} />}
+            </RootStack.Screen>
           ) : (
             <RootStack.Screen name="App" component={AppTabs} />
           )

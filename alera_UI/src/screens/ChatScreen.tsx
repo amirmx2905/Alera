@@ -46,8 +46,8 @@ export function ChatScreen() {
           setMessages(history);
           setIsLoadingHistory(false);
         })
-        .catch(() =>
-          isMounted && (setMessages([]), setIsLoadingHistory(false)),
+        .catch(
+          () => isMounted && (setMessages([]), setIsLoadingHistory(false)),
         );
     });
 
@@ -97,7 +97,7 @@ export function ChatScreen() {
         {
           id: errorMessageId,
           role: "assistant",
-          content: "Debes iniciar sesión para usar el chat.",
+          content: "Please sign in to use the chat.",
           createdAt: new Date().toISOString(),
         },
       ]);
