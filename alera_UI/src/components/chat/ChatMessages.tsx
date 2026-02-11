@@ -2,7 +2,7 @@ import React from "react";
 import { View, ScrollView, Animated } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { DotLoader } from "../shared/DotLoader";
-import { EmptyState } from "./EmptyState";
+import { EmptyState } from "../shared/EmptyState";
 import { MessageBubble } from "./MessageBubble";
 import type { Message } from "../../types/chat";
 
@@ -49,7 +49,12 @@ export function ChatMessages({
             <DotLoader dotClassName="h-2 w-2 bg-slate-200" />
           </View>
         ) : messages.length === 0 ? (
-          <EmptyState opacity={fadeAnim} />
+          <EmptyState
+            opacity={fadeAnim}
+            title="Start a conversation"
+            message="Ask me about your habits, goals, or how to improve your routine"
+            iconName="sparkles"
+          />
         ) : (
           <Animated.View style={{ opacity: fadeAnim }}>
             {messages.map((item) => {

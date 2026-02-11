@@ -3,7 +3,7 @@ import { View, Pressable, Animated, Text } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { DotLoader } from "../shared/DotLoader";
 
-type AuthPrimaryButtonProps = {
+type PrimaryButtonProps = {
   label: string;
   isLoading: boolean;
   onPress: () => void;
@@ -12,14 +12,14 @@ type AuthPrimaryButtonProps = {
   scaleAnim: Animated.Value;
 };
 
-export function AuthPrimaryButton({
+export function PrimaryButton({
   label,
   isLoading,
   onPress,
   onPressIn,
   onPressOut,
   scaleAnim,
-}: AuthPrimaryButtonProps) {
+}: PrimaryButtonProps) {
   return (
     <Pressable
       onPress={onPress}

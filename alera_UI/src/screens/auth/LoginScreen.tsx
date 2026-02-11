@@ -12,7 +12,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useAuth } from "../../state/AuthContext";
 import { AuthCard } from "../../components/auth/AuthCard";
 import { AuthInputField } from "../../components/auth/AuthInputField";
-import { AuthPrimaryButton } from "../../components/auth/AuthPrimaryButton";
+import { PrimaryButton } from "../../components/shared/PrimaryButton";
 import { AuthLayout } from "../../layouts/AuthLayout";
 import type { AuthStackParamList } from "../../types/auth";
 type Props = NativeStackScreenProps<AuthStackParamList, "Login">;
@@ -86,7 +86,7 @@ export function LoginScreen({ navigation }: Props) {
             secureTextEntry
           />
 
-          <AuthPrimaryButton
+          <PrimaryButton
             label="Sign in"
             isLoading={isLoading}
             onPress={handleLogin}

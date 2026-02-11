@@ -11,7 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useAuth } from "../../state/AuthContext";
 import { AuthCard } from "../../components/auth/AuthCard";
-import { AuthPrimaryButton } from "../../components/auth/AuthPrimaryButton";
+import { PrimaryButton } from "../../components/shared/PrimaryButton";
 import { OtpInputRow } from "../../components/auth/OtpInputRow";
 import { AuthLayout } from "../../layouts/AuthLayout";
 import type { AuthStackParamList } from "../../types/auth";
@@ -118,7 +118,7 @@ export function ConfirmEmailScreen({ navigation, route }: Props) {
             />
           </Pressable>
 
-          <AuthPrimaryButton
+          <PrimaryButton
             label="Confirm"
             isLoading={isLoading}
             onPress={handleConfirm}

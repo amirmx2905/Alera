@@ -3,7 +3,7 @@ import { View, Text, TextInput, Alert, Animated } from "react-native";
 import { createProfile } from "../../services/profile";
 import { AuthCard } from "../../components/auth/AuthCard";
 import { AuthInputField } from "../../components/auth/AuthInputField";
-import { AuthPrimaryButton } from "../../components/auth/AuthPrimaryButton";
+import { PrimaryButton } from "../../components/shared/PrimaryButton";
 import { AuthLayout } from "../../layouts/AuthLayout";
 
 type Props = {
@@ -71,7 +71,7 @@ export function ProfileSetupScreen({ onComplete }: Props) {
             autoCapitalize="none"
           />
 
-          <AuthPrimaryButton
+          <PrimaryButton
             label="Continue"
             isLoading={isLoading}
             onPress={handleSave}

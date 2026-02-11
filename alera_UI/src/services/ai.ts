@@ -18,7 +18,7 @@ export async function sendChatMessage(message: string) {
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
   if (!token) {
-    throw new Error("No hay sesión activa");
+    throw new Error("There's no active session");
   }
 
   const { data, error } = await supabase.functions.invoke<ChatResponse>(
@@ -32,11 +32,11 @@ export async function sendChatMessage(message: string) {
   );
 
   if (error) {
-    throw new Error(error.message || "Error al enviar mensaje a IA");
+    throw new Error(error.message || "Error sending message to AI");
   }
 
   if (!data) {
-    throw new Error("Respuesta vacía de IA");
+    throw new Error("Empty response from AI");
   }
 
   return data;
@@ -46,7 +46,7 @@ export async function getChatHistory() {
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
   if (!token) {
-    throw new Error("No hay sesión activa");
+    throw new Error("Theres no Active session");
   }
 
   const { data, error } = await supabase.functions.invoke<{
@@ -59,7 +59,7 @@ export async function getChatHistory() {
   });
 
   if (error) {
-    throw new Error(error.message || "Error al obtener historial de IA");
+    throw new Error(error.message || "Error getting AI history");
   }
 
   if (!data) {

@@ -11,7 +11,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useAuth } from "../../state/AuthContext";
 import { AuthCard } from "../../components/auth/AuthCard";
 import { AuthInputField } from "../../components/auth/AuthInputField";
-import { AuthPrimaryButton } from "../../components/auth/AuthPrimaryButton";
+import { PrimaryButton } from "../../components/shared/PrimaryButton";
 import { AuthLayout } from "../../layouts/AuthLayout";
 import type { AuthStackParamList } from "../../types/auth";
 
@@ -106,7 +106,7 @@ export function RegisterScreen({ navigation }: Props) {
             secureTextEntry
           />
 
-          <AuthPrimaryButton
+          <PrimaryButton
             label="Create account"
             isLoading={isLoading}
             onPress={handleRegister}

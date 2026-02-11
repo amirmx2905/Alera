@@ -80,7 +80,10 @@ export function SettingsScreen() {
     <MainLayout
       title="Settings"
       subtitle="Manage your preferences."
-      contentClassName="flex-1 px-6 pt-20"
+      headerVariant="icon"
+      headerIconName="settings-outline"
+      scrollable
+      contentClassName="flex-1 px-6 pt-16"
     >
       <View className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl">
         <View className="flex-row items-center gap-4">

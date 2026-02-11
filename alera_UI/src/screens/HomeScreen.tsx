@@ -7,7 +7,10 @@ export function HomeScreen() {
     <MainLayout
       title="Home"
       subtitle="Your weekly overview will appear here."
-      contentClassName="flex-1 px-6 justify-center"
+      headerVariant="icon"
+      scrollable
+      headerIconName="home-outline"
+      contentClassName="flex-1 px-6 pt-16"
     >
       <View className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl">
         <Text className="text-white text-lg font-semibold">Coming soon</Text>

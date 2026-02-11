@@ -7,7 +7,10 @@ export function StatsScreen() {
     <MainLayout
       title="Stats"
       subtitle="Insights and trends will show here."
-      contentClassName="flex-1 px-6 justify-center"
+      headerVariant="icon"
+      scrollable
+      headerIconName="stats-chart-outline"
+      contentClassName="flex-1 px-6 pt-16"
     >
       <View className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl">
         <Text className="text-white text-lg font-semibold">

@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from "react";
 import { View, ScrollView, Keyboard, Animated } from "react-native";
 import { supabase } from "../services/supabase";
 import { getChatHistory, sendChatMessage } from "../services/ai";
-import { ChatHeader } from "../components/chat/ChatHeader";
 import { ChatInput } from "../components/chat/ChatInput";
 import { ChatMessages } from "../components/chat/ChatMessages";
 import { MainLayout } from "../layouts/MainLayout";
@@ -158,9 +157,11 @@ export function ChatScreen() {
 
   return (
     <MainLayout
-      title="Chat"
-      subtitle=""
-      header={<ChatHeader title="Alera" subtitle="Your habit coach" />}
+      title="Alera"
+      subtitle="Your habit coach"
+      headerVariant="icon"
+      headerIconFamily="antdesign"
+      headerIconName="aliwangwang"
       contentClassName="flex-1 px-6 pt-16"
       keyboardAvoiding
     >

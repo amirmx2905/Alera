@@ -4,9 +4,23 @@ import { Ionicons } from "@expo/vector-icons";
 
 type EmptyStateProps = {
   opacity: Animated.Value;
+  title: string;
+  message: string;
+  iconName: React.ComponentProps<typeof Ionicons>["name"];
+  iconColor?: string;
+  iconBackgroundColor?: string;
+  iconSize?: number;
 };
 
-export function EmptyState({ opacity }: EmptyStateProps) {
+export function EmptyState({
+  opacity,
+  title,
+  message,
+  iconName,
+  iconColor = "#a78bfa",
+  iconBackgroundColor = "rgba(124,58,237,0.2)",
+  iconSize = 28,
+}: EmptyStateProps) {
   return (
     <Animated.View
       style={{
@@ -33,13 +47,13 @@ export function EmptyState({ opacity }: EmptyStateProps) {
             width: 56,
             height: 56,
             borderRadius: 28,
-            backgroundColor: "rgba(124,58,237,0.2)",
+            backgroundColor: iconBackgroundColor,
             alignItems: "center",
             justifyContent: "center",
             marginBottom: 16,
           }}
         >
-          <Ionicons name="sparkles" size={28} color="#a78bfa" />
+          <Ionicons name={iconName} size={iconSize} color={iconColor} />
         </View>
         <Text
           style={{
@@ -50,7 +64,7 @@ export function EmptyState({ opacity }: EmptyStateProps) {
             textAlign: "center",
           }}
         >
-          Start a conversation
+          {title}
         </Text>
         <Text
           style={{
@@ -60,7 +74,7 @@ export function EmptyState({ opacity }: EmptyStateProps) {
             lineHeight: 20,
           }}
         >
-          Ask me about your habits, goals, or how to improve your routine
+          {message}
         </Text>
       </View>
     </Animated.View>
