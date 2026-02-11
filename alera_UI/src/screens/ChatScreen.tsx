@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, ScrollView, Keyboard, Animated } from "react-native";
+import { ScrollView, Keyboard, Animated } from "react-native";
 import { supabase } from "../services/supabase";
 import { getChatHistory, sendChatMessage } from "../services/ai";
 import { ChatInput } from "../components/chat/ChatInput";

@@ -1,0 +1,46 @@
+name: Frontend CI
+
+on:
+  # Run CI on pushes to main and on PRs targeting main.
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  ci:
+    # Use a hosted Linux runner.
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        # All shell commands run from the frontend folder.
+        working-directory: alera_UI
+
+    steps:
+      - name: Checkout
+        # Fetch the repo so the workflow can access code.
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        # Install Node.js and enable npm caching for faster installs.
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: alera_UI/package-lock.json
+
+      - name: Install deps
+        # Clean install based on package-lock.json for reproducible builds.
+        run: npm ci
+
+      - name: Typecheck
+        # Run TypeScript checks if the script exists.
+        run: npm run typecheck --if-present
+
+      - name: Lint
+        # Run ESLint if the script exists.
+        run: npm run lint --if-present
+
+      - name: Tests
+        # Run tests if the script exists.
+        run: npm test --if-present

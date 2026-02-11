@@ -1,11 +1,10 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback } from "react";
 import {
   View,
   Text,
   TextInput,
   Pressable,
   Alert,
-  Platform,
   Animated,
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -53,11 +52,6 @@ export function LoginScreen({ navigation }: Props) {
     [scaleAnim],
   );
 
-  const focusEmail = useCallback(() => emailInputRef.current?.focus(), []);
-  const focusPassword = useCallback(
-    () => passwordInputRef.current?.focus(),
-    [],
-  );
   const navigateToRegister = useCallback(
     () => navigation.navigate("Register"),
     [navigation],

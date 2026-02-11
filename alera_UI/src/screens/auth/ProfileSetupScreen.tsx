@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { View, Text, TextInput, Alert, Animated } from "react-native";
+import { View, TextInput, Alert, Animated } from "react-native";
 import { createProfile } from "../../services/profile";
 import { AuthCard } from "../../components/auth/AuthCard";
 import { AuthInputField } from "../../components/auth/AuthInputField";
