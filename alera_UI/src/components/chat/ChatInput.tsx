@@ -51,6 +51,8 @@ export function ChatInput({
           onPressOut={onPressOut}
           disabled={isSending}
           hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="send"
         >
           <Animated.View
             style={{

@@ -1,6 +1,14 @@
 module.exports = function (api) {
-  api.cache(true);
+  const isTest = api.cache.using(
+    () =>
+      process.env.BABEL_ENV === "test" ||
+      process.env.NODE_ENV === "test" ||
+      Boolean(process.env.JEST_WORKER_ID),
+  );
+
   return {
-    presets: ["babel-preset-expo", "nativewind/babel"],
+    presets: ["babel-preset-expo", !isTest && "nativewind/babel"].filter(
+      Boolean,
+    ),
   };
 };

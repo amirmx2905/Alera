@@ -3,7 +3,7 @@ name: Frontend CI
 on:
   # Run CI on pushes to main and on PRs targeting main.
   push:
-    branches: ["main"]
+    branches: ["**"]
   pull_request:
     branches: ["main"]
 
