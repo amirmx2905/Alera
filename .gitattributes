@@ -1,3 +1,0 @@
-# Force TypeScript to be the primary language
-*.ts linguist-language=TypeScript
-*.tsx linguist-language=TypeScript
