@@ -14,14 +14,16 @@ import { MainLayout } from "../layouts/MainLayout";
 
 export function SettingsScreen() {
   const { signOut, session } = useAuth();
-  const [username, setUsername] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const logoutScaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (!session?.user?.id) {
-      setUsername("");
+      setFirstName("");
+      setLastName("");
       setIsLoading(false);
       return;
     }
@@ -32,11 +34,13 @@ export function SettingsScreen() {
     getProfile()
       .then((profile) => {
         if (!isMounted) return;
-        setUsername(profile?.username ?? "");
+        setFirstName(profile?.first_name ?? "");
+        setLastName(profile?.last_name ?? "");
       })
       .catch(() => {
         if (!isMounted) return;
-        setUsername("");
+        setFirstName("");
+        setLastName("");
       })
       .finally(() => {
         if (!isMounted) return;
@@ -50,10 +54,11 @@ export function SettingsScreen() {
 
   const email = session?.user?.email ?? "";
   const displayName = useMemo(() => {
-    if (username) return username;
+    const fullName = `${firstName} ${lastName}`.trim();
+    if (fullName) return fullName;
     if (email) return email.split("@")[0];
     return "User";
-  }, [email, username]);
+  }, [email, firstName, lastName]);
 
   const handleSignOut = useCallback(async () => {
     if (isSigningOut) return;

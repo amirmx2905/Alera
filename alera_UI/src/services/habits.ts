@@ -1,12 +1,16 @@
 import { supabase } from "./supabase";
+import { getCurrentProfileId } from "./profile";
 
-export type HabitType = "numeric" | "json";
+export type HabitType = "numeric";
 export type HabitStatus = "active" | "paused" | "archived";
+export type GoalType = "daily" | "weekly" | "monthly";
 
 export type Habit = {
   id: string;
-  user_id: string;
+  profile_id: string;
+  category_id: string | null;
   name: string;
+  description: string;
   type: HabitType;
   unit: string | null;
   status: HabitStatus;
@@ -15,46 +19,61 @@ export type Habit = {
 };
 
 export type HabitCreateInput = {
+  category_id: string | null;
   name: string;
+  description: string;
   type: HabitType;
   unit?: string | null;
   status?: HabitStatus;
 };
 
 export type HabitUpdateInput = {
+  category_id?: string | null;
   name?: string;
+  description?: string;
   type?: HabitType;
   unit?: string | null;
   status?: HabitStatus;
 };
 
-async function getCurrentUserId() {
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data?.user?.id) {
-    throw new Error("No hay sesión activa");
-  }
-  return data.user.id;
+export type HabitGoalRow = {
+  goal_type: GoalType;
+  target_value: number;
+};
+
+export type HabitRow = Habit & {
+  category?: { id: string; name: string } | null;
+  user_goals?: HabitGoalRow[] | null;
+};
+
+async function getProfileId(profileId?: string) {
+  if (profileId) return profileId;
+  return getCurrentProfileId();
 }
 
-export async function listHabits() {
-  const userId = await getCurrentUserId();
+export async function listHabits(profileId?: string) {
+  const resolvedProfileId = await getProfileId(profileId);
   const { data, error } = await supabase
     .from("habits")
-    .select("id, user_id, name, type, unit, status, created_at, updated_at")
-    .eq("user_id", userId)
+    .select(
+      "id, profile_id, category_id, name, description, type, unit, status, created_at, updated_at, category:category_id ( id, name ), user_goals ( goal_type, target_value )",
+    )
+    .eq("profile_id", resolvedProfileId)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return data as Habit[];
+  return data as HabitRow[];
 }
 
-export async function getHabit(habitId: string) {
-  const userId = await getCurrentUserId();
+export async function getHabit(habitId: string, profileId?: string) {
+  const resolvedProfileId = await getProfileId(profileId);
   const { data, error } = await supabase
     .from("habits")
-    .select("id, user_id, name, type, unit, status, created_at, updated_at")
     .eq("id", habitId)
-    .eq("user_id", userId)
+    .select(
+      "id, profile_id, category_id, name, description, type, unit, status, created_at, updated_at",
+    )
+    .eq("profile_id", resolvedProfileId)
     .single();
 
   if (error && error.code !== "PGRST116") {
@@ -64,12 +83,14 @@ export async function getHabit(habitId: string) {
   return (data as Habit) || null;
 }
 
-export async function findHabitByName(name: string) {
-  const userId = await getCurrentUserId();
+export async function findHabitByName(name: string, profileId?: string) {
+  const resolvedProfileId = await getProfileId(profileId);
   const { data, error } = await supabase
     .from("habits")
-    .select("id, user_id, name, type, unit, status, created_at, updated_at")
-    .eq("user_id", userId)
+    .select(
+      "id, profile_id, category_id, name, description, type, unit, status, created_at, updated_at",
+    )
+    .eq("profile_id", resolvedProfileId)
     .eq("name", name)
     .single();
 
@@ -80,11 +101,16 @@ export async function findHabitByName(name: string) {
   return (data as Habit) || null;
 }
 
-export async function createHabit(payload: HabitCreateInput) {
-  const userId = await getCurrentUserId();
+export async function createHabit(
+  payload: HabitCreateInput,
+  profileId?: string,
+) {
+  const resolvedProfileId = await getProfileId(profileId);
   const insertPayload = {
-    user_id: userId,
+    profile_id: resolvedProfileId,
+    category_id: payload.category_id ?? null,
     name: payload.name,
+    description: payload.description,
     type: payload.type,
     unit: payload.unit ?? null,
     ...(payload.status ? { status: payload.status } : {}),
@@ -93,17 +119,29 @@ export async function createHabit(payload: HabitCreateInput) {
   const { data, error } = await supabase
     .from("habits")
     .insert(insertPayload)
-    .select("id, user_id, name, type, unit, status, created_at, updated_at")
+    .select(
+      "id, profile_id, category_id, name, description, type, unit, status, created_at, updated_at",
+    )
     .single();
 
   if (error) throw error;
   return data as Habit;
 }
 
-export async function updateHabit(habitId: string, payload: HabitUpdateInput) {
-  const userId = await getCurrentUserId();
+export async function updateHabit(
+  habitId: string,
+  payload: HabitUpdateInput,
+  profileId?: string,
+) {
+  const resolvedProfileId = await getProfileId(profileId);
   const updates = {
+    ...(payload.category_id !== undefined
+      ? { category_id: payload.category_id }
+      : {}),
     ...(payload.name ? { name: payload.name } : {}),
+    ...(payload.description !== undefined
+      ? { description: payload.description }
+      : {}),
     ...(payload.type ? { type: payload.type } : {}),
     ...(payload.unit !== undefined ? { unit: payload.unit } : {}),
     ...(payload.status ? { status: payload.status } : {}),
@@ -114,21 +152,23 @@ export async function updateHabit(habitId: string, payload: HabitUpdateInput) {
     .from("habits")
     .update(updates)
     .eq("id", habitId)
-    .eq("user_id", userId)
-    .select("id, user_id, name, type, unit, status, created_at, updated_at")
+    .eq("profile_id", resolvedProfileId)
+    .select(
+      "id, profile_id, category_id, name, description, type, unit, status, created_at, updated_at",
+    )
     .single();
 
   if (error) throw error;
   return data as Habit;
 }
 
-export async function archiveHabit(habitId: string) {
-  const userId = await getCurrentUserId();
+export async function archiveHabit(habitId: string, profileId?: string) {
+  const resolvedProfileId = await getProfileId(profileId);
   const { error } = await supabase
     .from("habits")
     .update({ status: "archived", updated_at: new Date().toISOString() })
     .eq("id", habitId)
-    .eq("user_id", userId);
+    .eq("profile_id", resolvedProfileId);
 
   if (error) throw error;
 }

@@ -4,12 +4,13 @@
 
 export interface RequestBody {
   habit_id: string;
+  profile_id: string;
   logical_date?: string; // Optional - defaults to today in CDMX
 }
 
 export interface HabitLogRecord {
   id: string;
-  user_id: string;
+  profile_id: string;
   habit_id: string;
   value: number;
   created_at: string;
@@ -17,8 +18,8 @@ export interface HabitLogRecord {
 }
 
 export interface Metric {
-  user_id: string;
-  habit_id: string;
+  profile_id: string;
+  habit_id: string | null;
   date: string;
   metric_type: string;
   granularity: string;
@@ -28,7 +29,7 @@ export interface Metric {
 
 export interface MetricsResponse {
   success: boolean;
-  user_id: string;
+  profile_id: string;
   habit_id: string;
   logical_date: string;
   records_found: number;

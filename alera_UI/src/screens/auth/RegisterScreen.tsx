@@ -125,7 +125,7 @@ export function RegisterScreen({ navigation }: Props) {
           >
             <Text className="text-slate-400">
               Already have an account?{" "}
-              <Text className="text-purple-400">Sign in</Text>
+              <Text className="text-purple-400 font-semibold">Sign in</Text>
             </Text>
           </Pressable>
         </View>

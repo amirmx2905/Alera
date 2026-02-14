@@ -96,7 +96,7 @@ export function LoginScreen({ navigation }: Props) {
           <Pressable onPress={navigateToRegister} className="items-center pt-2">
             <Text className="text-slate-400">
               Don't have an account?{" "}
-              <Text className="text-purple-400">Sign up</Text>
+              <Text className="text-purple-400 font-semibold">Sign up</Text>
             </Text>
           </Pressable>
         </View>

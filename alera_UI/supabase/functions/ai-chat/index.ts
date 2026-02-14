@@ -4,7 +4,9 @@ import { envInfo, supabaseAdmin } from "./config.ts";
 import { getUserIdFromToken } from "./auth.ts";
 import { createChatResponse, getChatHistory } from "./chat.ts";
 
-type ReqPayload = { action: "chat"; message: string } | { action: "history" };
+type ReqPayload =
+  | { action: "chat"; message: string; profile_id: string }
+  | { action: "history"; profile_id: string };
 
 console.info("env", envInfo);
 console.info("server started");
@@ -24,14 +26,29 @@ Deno.serve(async (req: Request) => {
     const payload = (await req.json()) as ReqPayload;
     console.info("request", { action: payload?.action });
 
-    const userId = await getUserIdFromToken(req);
+    const authUserId = await getUserIdFromToken(req);
 
     if (!payload?.action) {
       return jsonResponse({ error: "Missing action" }, 400);
     }
 
+    if (!("profile_id" in payload) || !payload.profile_id) {
+      return jsonResponse({ error: "Missing profile_id" }, 400);
+    }
+
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("id", payload.profile_id)
+      .eq("auth_user_id", authUserId)
+      .single();
+
+    if (profileError || !profile) {
+      return jsonResponse({ error: "Profile not found or access denied" }, 403);
+    }
+
     if (payload.action === "history") {
-      const messages = await getChatHistory(supabaseAdmin, userId);
+      const messages = await getChatHistory(supabaseAdmin, payload.profile_id);
       return jsonResponse({ messages });
     }
 
@@ -41,7 +58,7 @@ Deno.serve(async (req: Request) => {
       }
       const result = await createChatResponse(
         supabaseAdmin,
-        userId,
+        payload.profile_id,
         payload.message,
       );
       return jsonResponse(result);

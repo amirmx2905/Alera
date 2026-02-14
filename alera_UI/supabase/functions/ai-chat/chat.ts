@@ -80,10 +80,10 @@ export async function callOpenAI(messages: unknown) {
 
 export async function createChatResponse(
   supabase: SupabaseClient,
-  userId: string,
+  profileId: string,
   message: string,
 ) {
-  const context = await buildContext(supabase, userId);
+  const context = await buildContext(supabase, profileId);
   const messages = buildPrompt(message, context);
 
   let reply: string | null = null;
@@ -102,14 +102,14 @@ export async function createChatResponse(
 
   const { error: userError } = await supabase
     .from("ai_conversations")
-    .insert({ user_id: userId, message, role: "user" });
+    .insert({ profile_id: profileId, message, role: "user" });
 
   if (userError) throw userError;
 
   if (reply !== FALLBACK_REPLY) {
     const { error: assistantError } = await supabase
       .from("ai_conversations")
-      .insert({ user_id: userId, message: reply, role: "assistant" });
+      .insert({ profile_id: profileId, message: reply, role: "assistant" });
 
     if (assistantError) throw assistantError;
   }
@@ -117,11 +117,14 @@ export async function createChatResponse(
   return { reply };
 }
 
-export async function getChatHistory(supabase: SupabaseClient, userId: string) {
+export async function getChatHistory(
+  supabase: SupabaseClient,
+  profileId: string,
+) {
   const { data, error } = await supabase
     .from("ai_conversations")
     .select("id, message, role, created_at")
-    .eq("user_id", userId)
+    .eq("profile_id", profileId)
     .order("created_at", { ascending: false })
     .limit(200);
 

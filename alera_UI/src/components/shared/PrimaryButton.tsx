@@ -32,7 +32,7 @@ export function PrimaryButton({
         style={{ transform: [{ scale: scaleAnim }] }}
       >
         <LinearGradient
-          colors={isLoading ? ["#6b7280", "#4b5563"] : ["#7c3aed", "#4c1d95"]}
+          colors={isLoading ? ["#6b7280", "#4b5563"] : ["#5b21b6", "#2e1065"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{ paddingVertical: 15, alignItems: "center" }}

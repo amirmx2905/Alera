@@ -1,4 +1,5 @@
-import { supabase } from "./supabase";
+import { getCurrentProfileId } from "./profile";
+import { invokeEdgeFunction } from "./edgeFunctions";
 
 type ChatResponse = {
   reply: string;
@@ -12,28 +13,16 @@ export type ChatHistoryItem = {
   created_at?: string;
 };
 
-const AI_FUNCTION = process.env.EXPO_PUBLIC_AI_FUNCTION ?? "ai";
+const AI_FUNCTION = process.env.EXPO_PUBLIC_AI_FUNCTION ?? "ai-chat";
 
-export async function sendChatMessage(message: string) {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const token = sessionData.session?.access_token;
-  if (!token) {
-    throw new Error("There's no active session");
-  }
+export async function sendChatMessage(message: string, profileId?: string) {
+  const resolvedProfileId = profileId ?? (await getCurrentProfileId());
 
-  const { data, error } = await supabase.functions.invoke<ChatResponse>(
-    AI_FUNCTION,
-    {
-      body: { action: "chat", message },
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  );
-
-  if (error) {
-    throw new Error(error.message || "Error sending message to AI");
-  }
+  const { data } = await invokeEdgeFunction<ChatResponse>(AI_FUNCTION, {
+    action: "chat",
+    message,
+    profile_id: resolvedProfileId,
+  });
 
   if (!data) {
     throw new Error("Empty response from AI");
@@ -42,25 +31,15 @@ export async function sendChatMessage(message: string) {
   return data;
 }
 
-export async function getChatHistory() {
-  const { data: sessionData } = await supabase.auth.getSession();
-  const token = sessionData.session?.access_token;
-  if (!token) {
-    throw new Error("Theres no Active session");
-  }
+export async function getChatHistory(profileId?: string) {
+  const resolvedProfileId = profileId ?? (await getCurrentProfileId());
 
-  const { data, error } = await supabase.functions.invoke<{
+  const { data } = await invokeEdgeFunction<{
     messages: ChatHistoryItem[];
   }>(AI_FUNCTION, {
-    body: { action: "history" },
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    action: "history",
+    profile_id: resolvedProfileId,
   });
-
-  if (error) {
-    throw new Error(error.message || "Error getting AI history");
-  }
 
   if (!data) {
     return { messages: [] };

@@ -1,12 +1,14 @@
 import { supabase } from "./supabase";
+import { getCurrentProfileId } from "./profile";
+import { invokeEdgeFunction } from "./edgeFunctions";
 
-export type LogSource = "mobile" | "watch" | "backend" | "system";
+export type LogSource = "mobile" | "watch";
 
 export type HabitLog = {
   id: string;
   habit_id: string;
-  user_id: string;
-  value: unknown;
+  profile_id: string;
+  value: number;
   metadata: Record<string, unknown> | null;
   source: LogSource | null;
   created_at: string;
@@ -14,48 +16,44 @@ export type HabitLog = {
 };
 
 export type LogCreateInput = {
-  value: unknown;
+  value: number;
   metadata?: Record<string, unknown>;
   created_at?: string;
   source?: LogSource;
 };
 
 export type LogUpdateInput = {
-  value?: unknown;
+  value?: number;
   metadata?: Record<string, unknown>;
   source?: LogSource;
 };
 
-async function getCurrentUserId() {
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data?.user?.id) {
-    throw new Error("No hay sesión activa");
-  }
-  return data.user.id;
+const METRICS_FUNCTION =
+  process.env.EXPO_PUBLIC_METRICS_FUNCTION ?? "calculate-metrics";
+
+async function getProfileId(profileId?: string) {
+  if (profileId) return profileId;
+  return getCurrentProfileId();
 }
 
-async function triggerMetricsCalculation(habitId: string, logicalDate?: string) {
+async function triggerMetricsCalculation(
+  habitId: string,
+  profileId: string,
+  logicalDate?: string,
+) {
   try {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData.session?.access_token;
-    
-    if (!token) {
-      console.warn("No auth token available for metrics calculation");
-      return;
-    }
-
-    const { data, error } = await supabase.functions.invoke('calculate-metrics', {
-      body: { 
+    const { data, errorMessage } = await invokeEdgeFunction(
+      METRICS_FUNCTION,
+      {
         habit_id: habitId,
-        ...(logicalDate && { logical_date: logicalDate })
+        profile_id: profileId,
+        ...(logicalDate && { logical_date: logicalDate }),
       },
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
+      { throwOnError: false },
+    );
 
-    if (error) {
-      console.error("Error calculating metrics:", error);
+    if (errorMessage) {
+      console.error("Error calculating metrics:", errorMessage);
       return;
     }
 
@@ -65,12 +63,17 @@ async function triggerMetricsCalculation(habitId: string, logicalDate?: string) 
   }
 }
 
-export async function listLogs(habitId: string, from?: string, to?: string) {
-  const userId = await getCurrentUserId();
+export async function listLogs(
+  habitId: string,
+  from?: string,
+  to?: string,
+  profileId?: string,
+) {
+  const resolvedProfileId = await getProfileId(profileId);
   let query = supabase
     .from("habits_log")
-    .select("id, habit_id, user_id, value, metadata, source, created_at")
-    .eq("user_id", userId)
+    .select("id, habit_id, profile_id, value, metadata, source, created_at")
+    .eq("profile_id", resolvedProfileId)
     .eq("habit_id", habitId)
     .order("created_at", { ascending: false });
 
@@ -82,10 +85,14 @@ export async function listLogs(habitId: string, from?: string, to?: string) {
   return data as HabitLog[];
 }
 
-export async function createLog(habitId: string, payload: LogCreateInput) {
-  const userId = await getCurrentUserId();
+export async function createLog(
+  habitId: string,
+  payload: LogCreateInput,
+  profileId?: string,
+) {
+  const resolvedProfileId = await getProfileId(profileId);
   const insertPayload = {
-    user_id: userId,
+    profile_id: resolvedProfileId,
     habit_id: habitId,
     value: payload.value,
     metadata: payload.metadata ?? null,
@@ -97,13 +104,13 @@ export async function createLog(habitId: string, payload: LogCreateInput) {
   const { data, error } = await supabase
     .from("habits_log")
     .insert(insertPayload)
-    .select("id, habit_id, user_id, value, metadata, source, created_at")
+    .select("id, habit_id, profile_id, value, metadata, source, created_at")
     .single();
 
   if (error) throw error;
 
   // Trigger metrics recalculation (non-blocking)
-  triggerMetricsCalculation(habitId);
+  triggerMetricsCalculation(habitId, resolvedProfileId);
 
   return data as HabitLog;
 }
@@ -112,8 +119,9 @@ export async function updateLog(
   habitId: string,
   logId: string,
   payload: LogUpdateInput,
+  profileId?: string,
 ) {
-  const userId = await getCurrentUserId();
+  const resolvedProfileId = await getProfileId(profileId);
   const updates = {
     ...(payload.value !== undefined ? { value: payload.value } : {}),
     ...(payload.metadata !== undefined ? { metadata: payload.metadata } : {}),
@@ -126,33 +134,37 @@ export async function updateLog(
     .update(updates)
     .eq("id", logId)
     .eq("habit_id", habitId)
-    .eq("user_id", userId)
-    .select("id, habit_id, user_id, value, metadata, source, created_at")
+    .eq("profile_id", resolvedProfileId)
+    .select("id, habit_id, profile_id, value, metadata, source, created_at")
     .single();
 
   if (error) throw error;
 
   // Trigger metrics recalculation (non-blocking)
-  triggerMetricsCalculation(habitId);
+  triggerMetricsCalculation(habitId, resolvedProfileId);
 
   return data as HabitLog;
 }
 
-export async function deleteLog(habitId: string, logId: string) {
-  const userId = await getCurrentUserId();
+export async function deleteLog(
+  habitId: string,
+  logId: string,
+  profileId?: string,
+) {
+  const resolvedProfileId = await getProfileId(profileId);
   const { data, error } = await supabase
     .from("habits_log")
     .delete()
     .eq("id", logId)
     .eq("habit_id", habitId)
-    .eq("user_id", userId)
-    .select("id, habit_id, user_id, value, metadata, source, created_at");
+    .eq("profile_id", resolvedProfileId)
+    .select("id, habit_id, profile_id, value, metadata, source, created_at");
 
   if (error) throw error;
 
   // Trigger metrics recalculation (non-blocking)
   if (data?.[0]) {
-    triggerMetricsCalculation(habitId);
+    triggerMetricsCalculation(habitId, resolvedProfileId);
   }
 
   return (data?.[0] as HabitLog) || null;

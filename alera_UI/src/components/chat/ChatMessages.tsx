@@ -1,6 +1,5 @@
 import React from "react";
 import { View, ScrollView, Animated } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { DotLoader } from "../shared/DotLoader";
 import { EmptyState } from "../shared/EmptyState";
 import { MessageBubble } from "./MessageBubble";
@@ -88,17 +87,6 @@ export function ChatMessages({
           </View>
         )}
       </ScrollView>
-      <LinearGradient
-        colors={["#250036", "rgba(37, 0, 54, 0)"]}
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 40,
-          pointerEvents: "none",
-        }}
-      />
     </View>
   );
 }

@@ -32,7 +32,10 @@ function getDaysAgoInCDMX(daysAgo: number): string {
   return now.toISOString().split("T")[0];
 }
 
-export async function buildContext(supabase: SupabaseClient, userId: string) {
+export async function buildContext(
+  supabase: SupabaseClient,
+  profileId: string,
+) {
   // All dates in CDMX timezone
   const today = getTodayInCDMX();
   const last7DaysStart = getDaysAgoInCDMX(7);
@@ -41,7 +44,7 @@ export async function buildContext(supabase: SupabaseClient, userId: string) {
   const metricsTodayQuery = supabase
     .from("metrics")
     .select("habit_id, metric_type, value, date")
-    .eq("user_id", userId)
+    .eq("profile_id", profileId)
     .eq("granularity", "daily")
     .eq("date", today)
     .order("date", { ascending: false });
@@ -49,7 +52,7 @@ export async function buildContext(supabase: SupabaseClient, userId: string) {
   const metricsLast7DaysQuery = supabase
     .from("metrics")
     .select("habit_id, metric_type, value, date")
-    .eq("user_id", userId)
+    .eq("profile_id", profileId)
     .eq("granularity", "daily")
     .gte("date", last7DaysStart)
     .order("date", { ascending: false });
@@ -57,7 +60,7 @@ export async function buildContext(supabase: SupabaseClient, userId: string) {
   const metricsLast3MonthsQuery = supabase
     .from("metrics")
     .select("habit_id, metric_type, value, date")
-    .eq("user_id", userId)
+    .eq("profile_id", profileId)
     .eq("granularity", "daily")
     .gte("date", last3MonthsStart)
     .order("date", { ascending: false });
@@ -65,25 +68,25 @@ export async function buildContext(supabase: SupabaseClient, userId: string) {
   const habitsQuery = supabase
     .from("habits")
     .select("id, name, type, unit, status")
-    .eq("user_id", userId);
+    .eq("profile_id", profileId);
 
   const conversationsQuery = supabase
     .from("ai_conversations")
     .select("message, role, created_at")
-    .eq("user_id", userId)
+    .eq("profile_id", profileId)
     .order("created_at", { ascending: false })
     .limit(50);
 
   const goalsQuery = supabase
     .from("user_goals")
     .select("habit_id, target_value, updated_at")
-    .eq("user_id", userId)
+    .eq("profile_id", profileId)
     .order("updated_at", { ascending: false });
 
   const profileQuery = supabase
     .from("profiles")
-    .select("id, username")
-    .eq("id", userId)
+    .select("id, first_name, last_name")
+    .eq("id", profileId)
     .maybeSingle();
 
   const [
@@ -131,6 +134,12 @@ export async function buildContext(supabase: SupabaseClient, userId: string) {
       habit: habitMap.get(goal.habit_id as string) || null,
     })),
     habits: habits ?? [],
-    profile: profile ? { id: profile.id, username: profile.username } : null,
+    profile: profile
+      ? {
+          id: profile.id,
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+        }
+      : null,
   };
 }
