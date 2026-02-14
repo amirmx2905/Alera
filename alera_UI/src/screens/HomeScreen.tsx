@@ -13,6 +13,7 @@ export function HomeScreen() {
       headerVariant="icon"
       scrollable
       headerIconName="home-outline"
+      showBackground={false}
       contentClassName="flex-1 px-6 pt-16"
     >
       <View className="pb-20">

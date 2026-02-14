@@ -88,6 +88,7 @@ export function SettingsScreen() {
       headerVariant="icon"
       headerIconName="settings-outline"
       scrollable
+      showBackground={false}
       contentClassName="flex-1 px-6 pt-16"
     >
       <View className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl">

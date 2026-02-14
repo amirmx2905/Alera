@@ -162,6 +162,7 @@ export function ChatScreen() {
       headerVariant="icon"
       headerIconFamily="antdesign"
       headerIconName="aliwangwang"
+      showBackground={false}
       contentClassName="flex-1 px-6 pt-16"
       keyboardAvoiding
     >

@@ -74,6 +74,7 @@ export function HabitsScreen() {
         </View>
       }
       scrollable
+      showBackground={false}
       contentClassName="flex-1 px-6 pt-16"
       keyboardAvoiding
     >

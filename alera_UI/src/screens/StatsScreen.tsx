@@ -13,6 +13,7 @@ export function StatsScreen() {
       headerVariant="icon"
       scrollable
       headerIconName="stats-chart-outline"
+      showBackground={false}
       contentClassName="flex-1 px-6 pt-16"
     >
       <View className="pb-20">

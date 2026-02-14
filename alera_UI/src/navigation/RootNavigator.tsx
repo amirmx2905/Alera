@@ -10,6 +10,7 @@ import { View, Animated } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { getProfile } from "../services/profile.ts";
 import { DotLoader } from "../components/shared/DotLoader.tsx";
+import { AppBackground } from "../layouts/AppBackground.tsx";
 
 type AuthStackParamList = {
   Login: undefined;
@@ -37,6 +38,14 @@ function AuthNavigator() {
       <AuthStack.Screen name="Register" component={RegisterScreen} />
       <AuthStack.Screen name="ConfirmEmail" component={ConfirmEmailScreen} />
     </AuthStack.Navigator>
+  );
+}
+
+function AppTabsShell() {
+  return (
+    <AppBackground>
+      <AppTabs />
+    </AppBackground>
   );
 }
 
@@ -97,7 +106,7 @@ export function RootNavigator() {
       <RootStack.Navigator
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: "#0b0b0b" },
+          contentStyle: { backgroundColor: "transparent" },
         }}
       >
         {session ? (
@@ -106,7 +115,7 @@ export function RootNavigator() {
               {() => <ProfileScreen onComplete={handleProfileComplete} />}
             </RootStack.Screen>
           ) : (
-            <RootStack.Screen name="App" component={AppTabs} />
+            <RootStack.Screen name="App" component={AppTabsShell} />
           )
         ) : (
           <RootStack.Screen name="Auth" component={AuthNavigator} />
