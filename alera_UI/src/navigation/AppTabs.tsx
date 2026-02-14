@@ -112,9 +112,9 @@ const screenOptions = ({
   tabBarShowIcon: true,
   tabBarStyle: {
     backgroundColor: "#0b0b0b",
-    height: 86,
-    paddingBottom: 8,
-    paddingTop: 10,
+    height: 60,
+    paddingBottom: 4,
+    paddingTop: 4,
     marginHorizontal: 16,
     marginBottom: 12,
     borderRadius: 26,
@@ -134,10 +134,7 @@ const screenOptions = ({
   tabBarIndicatorStyle: {
     height: 0,
   },
-  tabBarLabelStyle: {
-    fontSize: 12,
-    marginBottom: 2,
-  },
+  tabBarShowLabel: false,
   tabBarActiveTintColor: "#ffffff",
   tabBarInactiveTintColor: "#7f7f7f",
   tabBarIcon: ({
