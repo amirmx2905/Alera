@@ -4,7 +4,7 @@ import { AppTabs } from "./AppTabs.tsx";
 import { LoginScreen } from "../screens/auth/LoginScreen.tsx";
 import { RegisterScreen } from "../screens/auth/RegisterScreen.tsx";
 import { ConfirmEmailScreen } from "../screens/auth/ConfirmEmailScreen.tsx";
-import { ProfileSetupScreen } from "../screens/auth/ProfileSetupScreen.tsx";
+import { ProfileScreen } from "../screens/ProfileScreen.tsx";
 import { useAuth } from "../state/AuthContext.tsx";
 import { View, Animated } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -103,7 +103,7 @@ export function RootNavigator() {
         {session ? (
           profileStatus === "missing" ? (
             <RootStack.Screen name="ProfileSetup">
-              {() => <ProfileSetupScreen onComplete={handleProfileComplete} />}
+              {() => <ProfileScreen onComplete={handleProfileComplete} />}
             </RootStack.Screen>
           ) : (
             <RootStack.Screen name="App" component={AppTabs} />

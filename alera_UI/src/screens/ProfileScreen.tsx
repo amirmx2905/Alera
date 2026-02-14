@@ -11,17 +11,17 @@ import {
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
-import { createProfile } from "../../services/profile";
-import { AuthCard } from "../../components/auth/AuthCard";
-import { AuthInputField } from "../../components/auth/AuthInputField";
-import { PrimaryButton } from "../../components/shared/PrimaryButton";
-import { AuthLayout } from "../../layouts/AuthLayout";
+import { createProfile } from "../services/profile";
+import { AuthCard } from "../components/auth/AuthCard";
+import { AuthInputField } from "../components/auth/AuthInputField";
+import { PrimaryButton } from "../components/shared/PrimaryButton";
+import { AuthLayout } from "../layouts/AuthLayout";
 
 type Props = {
   onComplete: () => void;
 };
 
-export function ProfileSetupScreen({ onComplete }: Props) {
+export function ProfileScreen({ onComplete }: Props) {
   const firstNameInputRef = useRef<TextInput | null>(null);
   const lastNameInputRef = useRef<TextInput | null>(null);
   const [firstName, setFirstName] = useState("");
