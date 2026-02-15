@@ -1,16 +1,19 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import type { NavigatorScreenParams } from "@react-navigation/native";
 import { AppTabs } from "./AppTabs.tsx";
 import { LoginScreen } from "../screens/auth/LoginScreen.tsx";
 import { RegisterScreen } from "../screens/auth/RegisterScreen.tsx";
 import { ConfirmEmailScreen } from "../screens/auth/ConfirmEmailScreen.tsx";
 import { ProfileScreen } from "../screens/ProfileScreen.tsx";
+import { CreateHabitScreen } from "../screens/habits/CreateHabitScreen";
 import { useAuth } from "../state/AuthContext.tsx";
 import { View, Animated } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { getProfile } from "../services/profile.ts";
 import { DotLoader } from "../components/shared/DotLoader.tsx";
 import { AppBackground } from "../layouts/AppBackground.tsx";
+import type { AppTabParamList } from "./AppTabs";
 
 type AuthStackParamList = {
   Login: undefined;
@@ -18,10 +21,11 @@ type AuthStackParamList = {
   ConfirmEmail: { email: string };
 };
 
-type RootStackParamList = {
+export type RootStackParamList = {
   Auth: undefined;
-  App: undefined;
+  App: NavigatorScreenParams<AppTabParamList>;
   ProfileSetup: undefined;
+  CreateHabit: undefined;
 };
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
@@ -120,6 +124,19 @@ export function RootNavigator() {
         ) : (
           <RootStack.Screen name="Auth" component={AuthNavigator} />
         )}
+        <RootStack.Screen
+          name="CreateHabit"
+          options={{
+            presentation: "modal",
+            gestureEnabled: true,
+          }}
+        >
+          {(props) => (
+            <AppBackground>
+              <CreateHabitScreen {...props} />
+            </AppBackground>
+          )}
+        </RootStack.Screen>
       </RootStack.Navigator>
 
       {showLoadingOverlay ? (

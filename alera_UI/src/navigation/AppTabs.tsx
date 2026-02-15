@@ -1,16 +1,17 @@
 import React, { useEffect, useRef } from "react";
 import { Animated } from "react-native";
+import type { NavigatorScreenParams } from "@react-navigation/native";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { HomeScreen } from "../screens/HomeScreen.tsx";
-import { HabitsScreen } from "../screens/HabitsScreen.tsx";
+import { HabitsStack, type HabitsStackParamList } from "./HabitsStack";
 import { StatsScreen } from "../screens/StatsScreen.tsx";
 import { ChatScreen } from "../screens/ChatScreen.tsx";
 import { SettingsScreen } from "../screens/SettingsScreen.tsx";
 
 export type AppTabParamList = {
   Home: undefined;
-  Habits: undefined;
+  Habits: NavigatorScreenParams<HabitsStackParamList> | undefined;
   Stats: undefined;
   Chat: undefined;
   Settings: undefined;
@@ -164,7 +165,7 @@ export function AppTabs() {
       tabBarPosition="bottom"
       initialRouteName="Home"
     >
-      <Tab.Screen name="Habits" component={HabitsScreen} />
+      <Tab.Screen name="Habits" component={HabitsStack} />
       <Tab.Screen name="Stats" component={StatsScreen} />
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Chat" component={ChatScreen} />

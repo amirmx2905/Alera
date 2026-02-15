@@ -3,6 +3,7 @@ import {
   View,
   Text,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
   ScrollView,
 } from "react-native";
@@ -15,6 +16,7 @@ type MainLayoutProps = {
   subtitle?: string;
   showHeader?: boolean;
   showBackground?: boolean;
+  dismissKeyboardOnPress?: boolean;
   headerVariant?: "default" | "icon";
   headerIconFamily?: "ionicons" | "antdesign";
   headerIconName?:
@@ -37,6 +39,7 @@ export function MainLayout({
   subtitle,
   showHeader = true,
   showBackground = true,
+  dismissKeyboardOnPress = true,
   headerVariant = "default",
   headerIconFamily = "ionicons",
   headerIconName,
@@ -164,9 +167,24 @@ export function MainLayout({
     content
   );
 
+  const wrappedLayout = dismissKeyboardOnPress ? (
+    <View
+      className="flex-1"
+      onStartShouldSetResponderCapture={() => {
+        Keyboard.dismiss();
+        return false;
+      }}
+      accessible={false}
+    >
+      {layout}
+    </View>
+  ) : (
+    layout
+  );
+
   if (!showBackground) {
-    return layout;
+    return wrappedLayout;
   }
 
-  return <AppBackground>{layout}</AppBackground>;
+  return <AppBackground>{wrappedLayout}</AppBackground>;
 }

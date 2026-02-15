@@ -172,3 +172,14 @@ export async function archiveHabit(habitId: string, profileId?: string) {
 
   if (error) throw error;
 }
+
+export async function deleteHabit(habitId: string, profileId?: string) {
+  const resolvedProfileId = await getProfileId(profileId);
+  const { error } = await supabase
+    .from("habits")
+    .delete()
+    .eq("id", habitId)
+    .eq("profile_id", resolvedProfileId);
+
+  if (error) throw error;
+}

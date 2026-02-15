@@ -10,6 +10,10 @@ type PrimaryButtonProps = {
   onPressIn: () => void;
   onPressOut: () => void;
   scaleAnim: Animated.Value;
+  disabled?: boolean;
+  containerClassName?: string;
+  labelClassName?: string;
+  pressableClassName?: string;
 };
 
 export function PrimaryButton({
@@ -19,20 +23,32 @@ export function PrimaryButton({
   onPressIn,
   onPressOut,
   scaleAnim,
+  disabled = false,
+  containerClassName,
+  labelClassName,
+  pressableClassName,
 }: PrimaryButtonProps) {
+  const isDisabled = isLoading || disabled;
+  const gradientColors = isDisabled
+    ? ["#6b7280", "#4b5563"]
+    : ["#5b21b6", "#2e1065"];
+
   return (
     <Pressable
       onPress={onPress}
       onPressIn={onPressIn}
       onPressOut={onPressOut}
-      disabled={isLoading}
+      disabled={isDisabled}
+      className={pressableClassName}
     >
       <Animated.View
-        className="rounded-2xl overflow-hidden self-center w-3/4"
+        className={`rounded-2xl overflow-hidden ${
+          containerClassName ?? "self-center w-3/4"
+        }`}
         style={{ transform: [{ scale: scaleAnim }] }}
       >
         <LinearGradient
-          colors={isLoading ? ["#6b7280", "#4b5563"] : ["#5b21b6", "#2e1065"]}
+          colors={gradientColors}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{ paddingVertical: 15, alignItems: "center" }}
@@ -42,7 +58,11 @@ export function PrimaryButton({
               <DotLoader />
             ) : (
               <View>
-                <Text className="text-white font-semibold text-base">
+                <Text
+                  className={`text-white font-semibold text-base${
+                    labelClassName ? ` ${labelClassName}` : ""
+                  }`}
+                >
                   {label}
                 </Text>
               </View>
