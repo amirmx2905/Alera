@@ -20,8 +20,8 @@ export function HabitDetailActions({
   const isBusy = isArchiveLoading || isDeleteLoading;
 
   return (
-    <View className="rounded-3xl border border-red-500/20 bg-red-500/5 p-5">
-      <Text className="text-red-200 text-sm font-semibold">Danger Zone</Text>
+    <View className="rounded-3xl border border-white/10 bg-white/5 p-5">
+      <Text className="text-red-300 text-sm font-semibold">Danger Zone</Text>
       <View className="flex-row gap-5 mt-4">
         <Pressable
           onPress={onArchive}
