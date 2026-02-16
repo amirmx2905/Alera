@@ -61,7 +61,7 @@ export async function listDailyMetrics(
   return listMetrics(
     habitId,
     {
-      metricType: "daily_average",
+      metricType: "daily_total",
       granularity: "daily",
       from,
       to,

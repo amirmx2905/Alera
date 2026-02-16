@@ -1,6 +1,7 @@
 import { supabase } from "../../../services/supabase";
 import { getCurrentProfileId } from "../../../services/profile";
 import { invokeEdgeFunction } from "../../../services/edgeFunctions";
+import { toLocalDateKey } from "../utils/dates";
 
 export type HabitType = "numeric";
 export type HabitStatus = "active" | "paused" | "archived";
@@ -49,13 +50,6 @@ export type HabitRow = Habit & {
 
 const METRICS_FUNCTION =
   process.env.EXPO_PUBLIC_METRICS_FUNCTION ?? "calculate-metrics";
-
-const toLocalDateKey = (value: Date) => {
-  const year = value.getFullYear();
-  const month = `${value.getMonth() + 1}`.padStart(2, "0");
-  const day = `${value.getDate()}`.padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
 
 async function getProfileId(profileId?: string) {
   if (profileId) return profileId;

@@ -1,19 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
-import {
-  ScrollView,
-  Keyboard,
-  Animated,
-  Pressable,
-  View,
-  Platform,
-} from "react-native";
+import { ScrollView, Keyboard, Animated, View, Platform } from "react-native";
 import { supabase } from "../../../services/supabase";
 import { getChatHistory, sendChatMessage } from "../services/ai";
 import { ChatMessages } from "../components/ChatMessages";
+import { ChatInput } from "../components/ChatInput";
 import { MainLayout } from "../../../layouts/MainLayout";
 import type { Message } from "../types";
-import { InputField } from "../../../components/shared/InputField";
-import { Ionicons } from "@expo/vector-icons";
 const TAB_BAR_HEIGHT = 60;
 const TAB_BAR_BOTTOM_GAP = 20;
 
@@ -207,40 +199,15 @@ export function ChatScreen() {
             : TAB_BAR_HEIGHT + TAB_BAR_BOTTOM_GAP + 12,
         }}
       >
-        <InputField
+        <ChatInput
           value={message}
           onChangeText={setMessage}
-          placeholder="Ask here"
-          returnKeyType="send"
+          onSend={handleSend}
           onSubmitEditing={handleSend}
-          inputClassName="text-slate-200 text-base"
-          useDefaultContainerStyles={false}
-          containerClassName="flex-row items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2"
-          rightElement={
-            <Pressable
-              onPress={handleSend}
-              onPressIn={() => animateSendButton(0.85)}
-              onPressOut={() => animateSendButton(1)}
-              disabled={isSending}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel="send"
-            >
-              <Animated.View
-                style={{
-                  height: 40,
-                  width: 40,
-                  borderRadius: 20,
-                  backgroundColor: "#7c3aed",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transform: [{ scale: sendButtonScale }],
-                }}
-              >
-                <Ionicons name="send" size={18} color="#f8fafc" />
-              </Animated.View>
-            </Pressable>
-          }
+          onPressIn={() => animateSendButton(0.85)}
+          onPressOut={() => animateSendButton(1)}
+          isSending={isSending}
+          sendButtonScale={sendButtonScale}
         />
       </View>
     </MainLayout>
