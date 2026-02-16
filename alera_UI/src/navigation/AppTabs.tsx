@@ -2,13 +2,17 @@ import React, { useEffect, useRef } from "react";
 import { Animated } from "react-native";
 import type { NavigatorScreenParams } from "@react-navigation/native";
 import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
-import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
+import {
+  createMaterialTopTabNavigator,
+  MaterialTopTabBar,
+  type MaterialTopTabBarProps,
+} from "@react-navigation/material-top-tabs";
 import { Ionicons } from "@expo/vector-icons";
-import { HomeScreen } from "../screens/HomeScreen.tsx";
+import { HomeScreen } from "../features/home/screens/HomeScreen.tsx";
 import { HabitsStack, type HabitsStackParamList } from "./HabitsStack";
-import { StatsScreen } from "../screens/StatsScreen.tsx";
-import { ChatScreen } from "../screens/ChatScreen.tsx";
-import { SettingsScreen } from "../screens/SettingsScreen.tsx";
+import { StatsScreen } from "../features/stats/screens/StatsScreen.tsx";
+import { ChatScreen } from "../features/chat/screens/ChatScreen.tsx";
+import { SettingsScreen } from "../features/settings/screens/SettingsScreen.tsx";
 
 export type AppTabParamList = {
   Home: undefined;
@@ -19,6 +23,8 @@ export type AppTabParamList = {
 };
 
 const Tab = createMaterialTopTabNavigator<AppTabParamList>();
+const TAB_BAR_HEIGHT = 60;
+const TAB_BAR_BOTTOM_GAP = 20;
 const iconMap: Record<
   keyof AppTabParamList,
   {
@@ -32,6 +38,38 @@ const iconMap: Record<
   Chat: { focused: "chatbubble", unfocused: "chatbubble-outline" },
   Settings: { focused: "settings", unfocused: "settings-outline" },
 };
+
+function AnimatedTabBar(props: MaterialTopTabBarProps) {
+  const focusedRoute = props.state.routes[props.state.index];
+  const nestedRouteName = getFocusedRouteNameFromRoute(focusedRoute);
+  const isHidden =
+    focusedRoute.name === "Habits" && nestedRouteName === "HabitDetail";
+  const visibility = useRef(new Animated.Value(isHidden ? 0 : 1)).current;
+
+  useEffect(() => {
+    Animated.timing(visibility, {
+      toValue: isHidden ? 0 : 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [isHidden, visibility]);
+  const translateY = visibility.interpolate({
+    inputRange: [0, 1],
+    outputRange: [20, 0],
+  });
+
+  return (
+    <Animated.View
+      style={{
+        opacity: visibility,
+        transform: [{ translateY }],
+      }}
+      pointerEvents={isHidden ? "none" : "auto"}
+    >
+      <MaterialTopTabBar {...props} />
+    </Animated.View>
+  );
+}
 
 function TabBarIcon({
   routeName,
@@ -115,50 +153,26 @@ const screenOptions = ({
     return !(route.name === "Habits" && nestedRoute === "HabitDetail");
   })(),
   tabBarShowIcon: true,
-  tabBarStyle: (() => {
-    const nestedRoute = getFocusedRouteNameFromRoute(route) ?? "HabitsHome";
-    const isHidden = route.name === "Habits" && nestedRoute === "HabitDetail";
-    if (isHidden) {
-      return {
-        backgroundColor: "transparent",
-        height: 0,
-        paddingBottom: 0,
-        paddingTop: 0,
-        marginHorizontal: 0,
-        marginBottom: 0,
-        borderRadius: 0,
-        overflow: "hidden",
-        opacity: 0,
-        pointerEvents: "none",
-        shadowOpacity: 0,
-        shadowRadius: 0,
-        shadowOffset: { width: 0, height: 0 },
-        elevation: 0,
-      };
-    }
-    return {
-      backgroundColor: "#0b0b0b",
-      height: 60,
-      paddingBottom: 4,
-      paddingTop: 4,
-      marginHorizontal: 16,
-      marginBottom: 12,
-      borderRadius: 26,
-      overflow: "hidden",
-      shadowColor: "#000",
-      shadowOpacity: 0.25,
-      shadowRadius: 18,
-      shadowOffset: { width: 0, height: 10 },
-      elevation: 12,
-    };
-  })(),
-  tabBarContentContainerStyle: (() => {
-    const nestedRoute = getFocusedRouteNameFromRoute(route) ?? "HabitsHome";
-    if (route.name === "Habits" && nestedRoute === "HabitDetail") {
-      return { paddingHorizontal: 0 };
-    }
-    return { paddingHorizontal: 6 };
-  })(),
+  tabBarStyle: {
+    backgroundColor: "#0b0b0b",
+    height: TAB_BAR_HEIGHT,
+    position: "absolute",
+    left: 16,
+    right: 16,
+    bottom: TAB_BAR_BOTTOM_GAP,
+    paddingBottom: 4,
+    paddingTop: 4,
+    borderRadius: 26,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 12,
+  },
+  tabBarContentContainerStyle: {
+    paddingHorizontal: 6,
+  },
   sceneStyle: {
     backgroundColor: "transparent",
   },
@@ -192,6 +206,7 @@ export function AppTabs() {
   return (
     <Tab.Navigator
       screenOptions={screenOptions}
+      tabBar={(props) => <AnimatedTabBar {...props} />}
       tabBarPosition="bottom"
       initialRouteName="Home"
     >

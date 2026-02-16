@@ -6,16 +6,16 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import type { Entry, Habit } from "../types/habits";
-import { listHabitCategories } from "../services/habitCategories";
+import type { Entry, Habit } from "../features/habits/types";
+import { listHabitCategories } from "../features/habits/services/habitCategories";
 import {
   createHabit,
   deleteHabit,
   listHabits,
   updateHabit,
-} from "../services/habits";
-import { listLogsForHabits } from "../services/logs";
-import { upsertGoal } from "../services/goals";
+} from "../features/habits/services/habits";
+import { listLogsForHabits } from "../features/habits/services/logs";
+import { upsertGoal } from "../features/habits/services/goals";
 
 type HabitsContextValue = {
   habits: Habit[];
@@ -84,13 +84,9 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    let isMounted = true;
     refreshHabits().catch(() => {
       // ignore initial load failures here; UI can retry later
     });
-    return () => {
-      isMounted = false;
-    };
   }, [refreshHabits]);
 
   const refreshHabits = useCallback(async () => {

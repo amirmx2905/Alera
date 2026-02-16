@@ -1,7 +1,7 @@
 import React from "react";
 import { render } from "@testing-library/react-native";
 import { Animated } from "react-native";
-import { ChatInput } from "../components/chat/ChatInput";
+import { ChatInput } from "../features/chat/components/ChatInput";
 
 describe("ChatInput", () => {
   it("disables send when isSending", () => {
@@ -17,8 +17,8 @@ describe("ChatInput", () => {
       />,
     );
 
-    expect(
-      getByLabelText("send").props.accessibilityState?.disabled
-    ).toBe(true);
+    expect(getByLabelText("send").props.accessibilityState?.disabled).toBe(
+      true,
+    );
   });
 });

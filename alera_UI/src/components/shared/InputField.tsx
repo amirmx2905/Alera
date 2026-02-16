@@ -17,6 +17,7 @@ type InputFieldProps = {
   numberOfLines?: number;
   textAlignVertical?: TextInputProps["textAlignVertical"];
   autoFocus?: boolean;
+  editable?: boolean;
   containerClassName?: string;
   inputClassName?: string;
   useDefaultContainerStyles?: boolean;
@@ -38,6 +39,7 @@ export function InputField({
   numberOfLines,
   textAlignVertical,
   autoFocus,
+  editable = true,
   containerClassName,
   inputClassName,
   useDefaultContainerStyles = true,
@@ -52,12 +54,13 @@ export function InputField({
   return (
     <Pressable
       className={containerClasses}
-      onPress={() => resolvedRef.current?.focus()}
+      onPress={editable ? () => resolvedRef.current?.focus() : undefined}
     >
       <View className="flex-row items-center gap-3">
         {icon ? <Ionicons name={icon} size={18} color="#94a3b8" /> : null}
         <TextInput
           ref={resolvedRef}
+          editable={editable}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}

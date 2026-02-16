@@ -1,6 +1,6 @@
 import React from "react";
 import { render, fireEvent } from "@testing-library/react-native";
-import { AuthInputField } from "../components/auth/AuthInputField";
+import { AuthInputField } from "../features/auth/components/AuthInputField";
 
 describe("AuthInputField", () => {
   it("calls onChangeText", () => {
