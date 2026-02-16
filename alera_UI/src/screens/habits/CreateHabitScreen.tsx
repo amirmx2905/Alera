@@ -2,8 +2,8 @@ import React, { useCallback, useRef, useState } from "react";
 import { View, Alert, Animated } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { MainLayout } from "../../layouts/MainLayout";
-import { CreateHabitStepOne } from "../../components/habits/CreateHabitStepOne";
-import { CreateHabitStepTwo } from "../../components/habits/CreateHabitStepTwo";
+import { CreateHabitStepOne } from "../../components/habits/creation/CreateHabitStepOne";
+import { CreateHabitStepTwo } from "../../components/habits/creation/CreateHabitStepTwo";
 import {
   CATEGORY_UNITS,
   CURRENCIES,

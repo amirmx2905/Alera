@@ -41,7 +41,10 @@ export function ProfileScreen({ onComplete }: Props) {
   };
 
   const formatDateForApi = (dateValue: Date) => {
-    return dateValue.toISOString().split("T")[0];
+    const year = dateValue.getFullYear();
+    const month = `${dateValue.getMonth() + 1}`.padStart(2, "0");
+    const day = `${dateValue.getDate()}`.padStart(2, "0");
+    return `${year}-${month}-${day}`;
   };
 
   const handleSave = async () => {
@@ -63,12 +66,11 @@ export function ProfileScreen({ onComplete }: Props) {
       onComplete();
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : String(error ?? "Unknown error");
+        error instanceof Error
+          ? error.message
+          : String(error ?? "Unknown error");
       console.error("Profile creation failed:", error);
-      Alert.alert(
-        "Error",
-        message || "Unable to save profile.",
-      );
+      Alert.alert("Error", message || "Unable to save profile.");
     } finally {
       setIsLoading(false);
     }

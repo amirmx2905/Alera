@@ -2,8 +2,8 @@ import React from "react";
 import { View, Text, Pressable, Animated } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { PrimaryButton } from "../shared/PrimaryButton";
-import { InputField } from "../shared/InputField";
+import { PrimaryButton } from "../../shared/PrimaryButton";
+import { InputField } from "../../shared/InputField";
 import { ScrollableSelection } from "./ScrollableSelection";
 import type { CreateHabitFormState } from "../../types/createHabitTypes";
 

@@ -145,6 +145,7 @@ export function MainLayout({
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 32, flexGrow: 1 }}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
         {bodyContent}
       </ScrollView>

@@ -7,7 +7,7 @@ import type { NavigationProp } from "@react-navigation/native";
 import { MainLayout } from "../../layouts/MainLayout";
 import { EmptyState } from "../../components/shared/EmptyState";
 import { HabitCard } from "../../components/habits/HabitCard";
-import type { Entry, Habit } from "../../types/habits";
+import { getProgressData } from "../../composables/habits/useHabitProgress";
 import type { HabitsStackParamList } from "../../navigation/HabitsStack";
 import type { RootStackParamList } from "../../navigation/RootNavigator";
 import { useHabits } from "../../state/HabitsContext";
@@ -28,33 +28,6 @@ export function HabitsScreen({ navigation }: Props) {
       speed: 50,
       bounciness: 4,
     }).start();
-  };
-
-  const calculateProgress = (habit: Habit) => {
-    const now = new Date();
-    let relevantEntries: Entry[] = [];
-
-    if (habit.goalType === "daily") {
-      const today = now.toISOString().split("T")[0];
-      relevantEntries = habit.entries.filter((entry) => entry.date === today);
-    } else if (habit.goalType === "weekly") {
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() - now.getDay());
-      weekStart.setHours(0, 0, 0, 0);
-      relevantEntries = habit.entries.filter(
-        (entry) => new Date(entry.date) >= weekStart,
-      );
-    } else {
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      relevantEntries = habit.entries.filter(
-        (entry) => new Date(entry.date) >= monthStart,
-      );
-    }
-
-    const total = relevantEntries.reduce((sum, entry) => sum + entry.amount, 0);
-
-    if (!habit.goalAmount) return 0;
-    return Math.min((total / habit.goalAmount) * 100, 100);
   };
 
   const displayHabits = useMemo(() => {
@@ -143,33 +116,12 @@ export function HabitsScreen({ navigation }: Props) {
         ) : (
           <View className="gap-4">
             {displayHabits.map((habit) => {
-              const progress = calculateProgress(habit);
+              const { progress, currentAmount } = getProgressData({
+                entries: habit.entries,
+                goalAmount: habit.goalAmount,
+                goalType: habit.goalType,
+              });
               const progressValue = Math.round(progress);
-              const now = new Date();
-              let currentAmount = 0;
-
-              if (habit.goalType === "daily") {
-                const today = now.toISOString().split("T")[0];
-                currentAmount = habit.entries
-                  .filter((entry) => entry.date === today)
-                  .reduce((sum, entry) => sum + entry.amount, 0);
-              } else if (habit.goalType === "weekly") {
-                const weekStart = new Date(now);
-                weekStart.setDate(now.getDate() - now.getDay());
-                weekStart.setHours(0, 0, 0, 0);
-                currentAmount = habit.entries
-                  .filter((entry) => new Date(entry.date) >= weekStart)
-                  .reduce((sum, entry) => sum + entry.amount, 0);
-              } else {
-                const monthStart = new Date(
-                  now.getFullYear(),
-                  now.getMonth(),
-                  1,
-                );
-                currentAmount = habit.entries
-                  .filter((entry) => new Date(entry.date) >= monthStart)
-                  .reduce((sum, entry) => sum + entry.amount, 0);
-              }
 
               return (
                 <HabitCard
@@ -178,6 +130,9 @@ export function HabitsScreen({ navigation }: Props) {
                   progress={progress}
                   progressValue={progressValue}
                   currentAmount={currentAmount}
+                  onPress={() =>
+                    navigation.navigate("HabitDetail", { habitId: habit.id })
+                  }
                 />
               );
             })}

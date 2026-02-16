@@ -14,6 +14,7 @@ type PrimaryButtonProps = {
   containerClassName?: string;
   labelClassName?: string;
   pressableClassName?: string;
+  fixedHeight?: boolean;
 };
 
 export function PrimaryButton({
@@ -27,11 +28,15 @@ export function PrimaryButton({
   containerClassName,
   labelClassName,
   pressableClassName,
+  fixedHeight = false,
 }: PrimaryButtonProps) {
   const isDisabled = isLoading || disabled;
   const gradientColors = isDisabled
     ? ["#6b7280", "#4b5563"]
     : ["#5b21b6", "#2e1065"];
+  const gradientStyle = fixedHeight
+    ? { height: "100%", alignItems: "center", justifyContent: "center" }
+    : { paddingVertical: 15, alignItems: "center" };
 
   return (
     <Pressable
@@ -51,7 +56,7 @@ export function PrimaryButton({
           colors={gradientColors}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={{ paddingVertical: 15, alignItems: "center" }}
+          style={gradientStyle}
         >
           <View className="h-6 justify-center">
             {isLoading ? (

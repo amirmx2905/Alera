@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { Animated } from "react-native";
 import type { NavigatorScreenParams } from "@react-navigation/native";
+import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { HomeScreen } from "../screens/HomeScreen.tsx";
@@ -109,26 +110,55 @@ const screenOptions = ({
   route: { name: keyof AppTabParamList };
 }) => ({
   headerShown: false,
-  swipeEnabled: true,
+  swipeEnabled: (() => {
+    const nestedRoute = getFocusedRouteNameFromRoute(route) ?? "HabitsHome";
+    return !(route.name === "Habits" && nestedRoute === "HabitDetail");
+  })(),
   tabBarShowIcon: true,
-  tabBarStyle: {
-    backgroundColor: "#0b0b0b",
-    height: 60,
-    paddingBottom: 4,
-    paddingTop: 4,
-    marginHorizontal: 16,
-    marginBottom: 12,
-    borderRadius: 26,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOpacity: 0.25,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 12,
-  },
-  tabBarContentContainerStyle: {
-    paddingHorizontal: 6,
-  },
+  tabBarStyle: (() => {
+    const nestedRoute = getFocusedRouteNameFromRoute(route) ?? "HabitsHome";
+    const isHidden = route.name === "Habits" && nestedRoute === "HabitDetail";
+    if (isHidden) {
+      return {
+        backgroundColor: "transparent",
+        height: 0,
+        paddingBottom: 0,
+        paddingTop: 0,
+        marginHorizontal: 0,
+        marginBottom: 0,
+        borderRadius: 0,
+        overflow: "hidden",
+        opacity: 0,
+        pointerEvents: "none",
+        shadowOpacity: 0,
+        shadowRadius: 0,
+        shadowOffset: { width: 0, height: 0 },
+        elevation: 0,
+      };
+    }
+    return {
+      backgroundColor: "#0b0b0b",
+      height: 60,
+      paddingBottom: 4,
+      paddingTop: 4,
+      marginHorizontal: 16,
+      marginBottom: 12,
+      borderRadius: 26,
+      overflow: "hidden",
+      shadowColor: "#000",
+      shadowOpacity: 0.25,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 10 },
+      elevation: 12,
+    };
+  })(),
+  tabBarContentContainerStyle: (() => {
+    const nestedRoute = getFocusedRouteNameFromRoute(route) ?? "HabitsHome";
+    if (route.name === "Habits" && nestedRoute === "HabitDetail") {
+      return { paddingHorizontal: 0 };
+    }
+    return { paddingHorizontal: 6 };
+  })(),
   sceneStyle: {
     backgroundColor: "transparent",
   },

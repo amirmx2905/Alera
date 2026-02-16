@@ -3,7 +3,7 @@
  */
 
 export interface RequestBody {
-  habit_id: string;
+  habit_id?: string;
   profile_id: string;
   logical_date?: string; // Optional - defaults to today in CDMX
 }
@@ -30,7 +30,7 @@ export interface Metric {
 export interface MetricsResponse {
   success: boolean;
   profile_id: string;
-  habit_id: string;
+  habit_id: string | null;
   logical_date: string;
   records_found: number;
   metrics_calculated: number;

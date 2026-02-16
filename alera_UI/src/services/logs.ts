@@ -18,7 +18,6 @@ export type HabitLog = {
 export type LogCreateInput = {
   value: number;
   metadata?: Record<string, unknown>;
-  created_at?: string;
   source?: LogSource;
 };
 
@@ -30,6 +29,13 @@ export type LogUpdateInput = {
 
 const METRICS_FUNCTION =
   process.env.EXPO_PUBLIC_METRICS_FUNCTION ?? "calculate-metrics";
+
+const toLocalDateKey = (value: Date) => {
+  const year = value.getFullYear();
+  const month = `${value.getMonth() + 1}`.padStart(2, "0");
+  const day = `${value.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 async function getProfileId(profileId?: string) {
   if (profileId) return profileId;
@@ -85,6 +91,29 @@ export async function listLogs(
   return data as HabitLog[];
 }
 
+export async function listLogsForHabits(
+  habitIds: string[],
+  from?: string,
+  to?: string,
+  profileId?: string,
+) {
+  if (habitIds.length === 0) return [] as HabitLog[];
+  const resolvedProfileId = await getProfileId(profileId);
+  let query = supabase
+    .from("habits_log")
+    .select("id, habit_id, profile_id, value, metadata, source, created_at")
+    .eq("profile_id", resolvedProfileId)
+    .in("habit_id", habitIds)
+    .order("created_at", { ascending: false });
+
+  if (from) query = query.gte("created_at", from);
+  if (to) query = query.lte("created_at", to);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data as HabitLog[];
+}
+
 export async function createLog(
   habitId: string,
   payload: LogCreateInput,
@@ -96,7 +125,6 @@ export async function createLog(
     habit_id: habitId,
     value: payload.value,
     metadata: payload.metadata ?? null,
-    created_at: payload.created_at ?? new Date().toISOString(),
     updated_at: new Date().toISOString(),
     ...(payload.source ? { source: payload.source } : {}),
   };
@@ -110,7 +138,11 @@ export async function createLog(
   if (error) throw error;
 
   // Trigger metrics recalculation (non-blocking)
-  triggerMetricsCalculation(habitId, resolvedProfileId);
+  triggerMetricsCalculation(
+    habitId,
+    resolvedProfileId,
+    toLocalDateKey(new Date(data.created_at)),
+  );
 
   return data as HabitLog;
 }
@@ -141,7 +173,11 @@ export async function updateLog(
   if (error) throw error;
 
   // Trigger metrics recalculation (non-blocking)
-  triggerMetricsCalculation(habitId, resolvedProfileId);
+  triggerMetricsCalculation(
+    habitId,
+    resolvedProfileId,
+    toLocalDateKey(new Date(data.created_at)),
+  );
 
   return data as HabitLog;
 }
@@ -164,7 +200,11 @@ export async function deleteLog(
 
   // Trigger metrics recalculation (non-blocking)
   if (data?.[0]) {
-    triggerMetricsCalculation(habitId, resolvedProfileId);
+    triggerMetricsCalculation(
+      habitId,
+      resolvedProfileId,
+      toLocalDateKey(new Date(data[0].created_at)),
+    );
   }
 
   return (data?.[0] as HabitLog) || null;

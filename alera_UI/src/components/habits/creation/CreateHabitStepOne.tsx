@@ -1,8 +1,8 @@
 import React from "react";
 import { View, Text, Animated } from "react-native";
-import { DotLoader } from "../shared/DotLoader";
-import { PrimaryButton } from "../shared/PrimaryButton";
-import { InputField } from "../shared/InputField";
+import { DotLoader } from "../../shared/DotLoader";
+import { PrimaryButton } from "../../shared/PrimaryButton";
+import { InputField } from "../../shared/InputField";
 import { ScrollableSelection } from "./ScrollableSelection";
 import type { CreateHabitFormState } from "../../types/createHabitTypes";
 

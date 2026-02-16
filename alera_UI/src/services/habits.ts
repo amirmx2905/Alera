@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { getCurrentProfileId } from "./profile";
+import { invokeEdgeFunction } from "./edgeFunctions";
 
 export type HabitType = "numeric";
 export type HabitStatus = "active" | "paused" | "archived";
@@ -44,6 +45,16 @@ export type HabitGoalRow = {
 export type HabitRow = Habit & {
   category?: { id: string; name: string } | null;
   user_goals?: HabitGoalRow[] | null;
+};
+
+const METRICS_FUNCTION =
+  process.env.EXPO_PUBLIC_METRICS_FUNCTION ?? "calculate-metrics";
+
+const toLocalDateKey = (value: Date) => {
+  const year = value.getFullYear();
+  const month = `${value.getMonth() + 1}`.padStart(2, "0");
+  const day = `${value.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
 };
 
 async function getProfileId(profileId?: string) {
@@ -175,11 +186,28 @@ export async function archiveHabit(habitId: string, profileId?: string) {
 
 export async function deleteHabit(habitId: string, profileId?: string) {
   const resolvedProfileId = await getProfileId(profileId);
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("habits")
     .delete()
     .eq("id", habitId)
-    .eq("profile_id", resolvedProfileId);
+    .eq("profile_id", resolvedProfileId)
+    .select("id");
 
   if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error("Habit not deleted. Check permissions or ownership.");
+  }
+
+  try {
+    await invokeEdgeFunction(
+      METRICS_FUNCTION,
+      {
+        profile_id: resolvedProfileId,
+        logical_date: toLocalDateKey(new Date()),
+      },
+      { throwOnError: false },
+    );
+  } catch (err) {
+    console.error("Failed to recalculate profile metrics:", err);
+  }
 }

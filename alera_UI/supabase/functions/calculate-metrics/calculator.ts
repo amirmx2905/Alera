@@ -318,6 +318,7 @@ export async function calculateTotalEntriesDaily(
     habitIds,
     logicalDate,
   );
+  const totalValue = sumValues(records);
 
   return {
     profile_id: profileId,
@@ -325,9 +326,10 @@ export async function calculateTotalEntriesDaily(
     date: logicalDate,
     metric_type: "total_entries",
     granularity: "daily",
-    value: Math.round(sumValues(records) * 10) / 10,
+    value: records.length,
     metadata: {
       habit_count: habitIds.length,
+      total_value: Math.round(totalValue * 10) / 10,
     },
   };
 }
@@ -348,6 +350,7 @@ export async function calculateTotalEntriesWeekly(
     WEEKLY_WINDOW_DAYS - 1,
     logicalDate,
   );
+  const totalValue = sumValues(records);
 
   // Calculate Sunday
   const date = new Date(logicalDate);
@@ -363,10 +366,11 @@ export async function calculateTotalEntriesWeekly(
     date: sundayDate,
     metric_type: "total_entries",
     granularity: "weekly",
-    value: Math.round(sumValues(records) * 10) / 10,
+    value: records.length,
     metadata: {
       habit_count: habitIds.length,
       window_days: WEEKLY_WINDOW_DAYS,
+      total_value: Math.round(totalValue * 10) / 10,
     },
   };
 }
@@ -387,6 +391,7 @@ export async function calculateTotalEntriesMonthly(
     MONTHLY_WINDOW_DAYS - 1,
     logicalDate,
   );
+  const totalValue = sumValues(records);
 
   // Calculate last day of month
   const date = new Date(logicalDate);
@@ -399,10 +404,11 @@ export async function calculateTotalEntriesMonthly(
     date: lastDayOfMonth,
     metric_type: "total_entries",
     granularity: "monthly",
-    value: Math.round(sumValues(records) * 10) / 10,
+    value: records.length,
     metadata: {
       habit_count: habitIds.length,
       window_days: MONTHLY_WINDOW_DAYS,
+      total_value: Math.round(totalValue * 10) / 10,
     },
   };
 }
@@ -527,9 +533,10 @@ export async function calculateTotalEntriesAllTime(
     date: logicalDate,
     metric_type: "total_entries_all_time",
     granularity: "all_time",
-    value: Math.round(sumValues(historicalData) * 10) / 10,
+    value: historicalData.length,
     metadata: {
       window: "all_time",
+      total_value: Math.round(sumValues(historicalData) * 10) / 10,
     },
   };
 }

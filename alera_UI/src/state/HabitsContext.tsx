@@ -6,7 +6,7 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import type { Habit } from "../types/habits";
+import type { Entry, Habit } from "../types/habits";
 import { listHabitCategories } from "../services/habitCategories";
 import {
   createHabit,
@@ -14,6 +14,7 @@ import {
   listHabits,
   updateHabit,
 } from "../services/habits";
+import { listLogsForHabits } from "../services/logs";
 import { upsertGoal } from "../services/goals";
 
 type HabitsContextValue = {
@@ -30,6 +31,9 @@ type HabitsContextValue = {
     goalAmount: number;
     goalType: "daily" | "weekly" | "monthly";
   }) => Promise<void>;
+  addEntry: (habitId: string, entry: Entry) => void;
+  updateEntry: (habitId: string, entryId: string, amount: number) => void;
+  deleteEntry: (habitId: string, entryId: string) => void;
   toggleArchive: (id: string) => Promise<void>;
   removeHabit: (id: string) => Promise<void>;
 };
@@ -94,7 +98,9 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
     try {
       const rows = await listHabits();
       const mapped = rows.map<Habit>((row) => {
-        const goal = row.user_goals?.[0];
+        const goal = Array.isArray(row.user_goals)
+          ? row.user_goals[0]
+          : row.user_goals;
         const goalValue = goal?.target_value;
         const parsedGoal =
           goalValue === undefined || goalValue === null ? 0 : Number(goalValue);
@@ -111,6 +117,26 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
         };
       });
       setHabits(mapped);
+
+      if (mapped.length > 0) {
+        const logs = await listLogsForHabits(mapped.map((habit) => habit.id));
+        const grouped = logs.reduce<Record<string, Entry[]>>((acc, log) => {
+          if (!acc[log.habit_id]) acc[log.habit_id] = [];
+          acc[log.habit_id].push({
+            id: log.id,
+            date: log.created_at,
+            amount: log.value,
+          });
+          return acc;
+        }, {});
+
+        setHabits((prev) =>
+          prev.map((habit) => ({
+            ...habit,
+            entries: grouped[habit.id] ?? [],
+          })),
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -173,6 +199,47 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
     [categoryMap],
   );
 
+  const addEntry = useCallback((habitId: string, entry: Entry) => {
+    setHabits((prev) =>
+      prev.map((habit) =>
+        habit.id === habitId
+          ? { ...habit, entries: [...habit.entries, entry] }
+          : habit,
+      ),
+    );
+  }, []);
+
+  const updateEntry = useCallback(
+    (habitId: string, entryId: string, amount: number) => {
+      setHabits((prev) =>
+        prev.map((habit) =>
+          habit.id === habitId
+            ? {
+                ...habit,
+                entries: habit.entries.map((entry) =>
+                  entry.id === entryId ? { ...entry, amount } : entry,
+                ),
+              }
+            : habit,
+        ),
+      );
+    },
+    [],
+  );
+
+  const deleteEntry = useCallback((habitId: string, entryId: string) => {
+    setHabits((prev) =>
+      prev.map((habit) =>
+        habit.id === habitId
+          ? {
+              ...habit,
+              entries: habit.entries.filter((entry) => entry.id !== entryId),
+            }
+          : habit,
+      ),
+    );
+  }, []);
+
   const toggleArchive = useCallback(
     async (id: string) => {
       const habit = habits.find((item) => item.id === id);
@@ -201,6 +268,9 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
       isCategoriesLoading,
       refreshHabits,
       createHabitWithGoal,
+      addEntry,
+      updateEntry,
+      deleteEntry,
       toggleArchive,
       removeHabit,
     }),
@@ -211,6 +281,9 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
       isCategoriesLoading,
       refreshHabits,
       createHabitWithGoal,
+      addEntry,
+      updateEntry,
+      deleteEntry,
       toggleArchive,
       removeHabit,
     ],

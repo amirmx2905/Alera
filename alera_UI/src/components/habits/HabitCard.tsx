@@ -7,6 +7,7 @@ type HabitCardProps = {
   progress: number;
   progressValue: number;
   currentAmount: number;
+  onPress?: () => void;
 };
 
 export function HabitCard({
@@ -14,9 +15,13 @@ export function HabitCard({
   progress,
   progressValue,
   currentAmount,
+  onPress,
 }: HabitCardProps) {
   return (
-    <Pressable className="rounded-3xl border border-white/10 bg-white/5 p-6">
+    <Pressable
+      onPress={onPress}
+      className="rounded-3xl border border-white/10 bg-white/5 p-6"
+    >
       <View className="flex-row items-start justify-between mb-4">
         <View className="flex-1">
           <Text className="text-white text-lg font-semibold mb-2">

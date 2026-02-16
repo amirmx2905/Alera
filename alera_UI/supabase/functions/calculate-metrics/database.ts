@@ -208,44 +208,76 @@ export async function writeMetrics(
   const habitMetrics = metrics.filter((m) => m.habit_id);
   const profileMetrics = metrics.filter((m) => !m.habit_id);
 
-  if (habitMetrics.length > 0) {
-    const habitPayload = habitMetrics.map((m) => ({
-      profile_id: m.profile_id,
-      habit_id: m.habit_id,
-      date: m.date,
-      metric_type: m.metric_type,
-      granularity: m.granularity,
-      value: m.value,
-      metadata: JSON.stringify(m.metadata),
-    }));
+  const upsertMetric = async (
+    payload: Record<string, unknown>,
+    match: Record<string, unknown>,
+    isProfileMetric: boolean,
+  ) => {
+    let updateQuery = supabase.from("metrics").update(payload).match(match);
+    if (isProfileMetric) {
+      updateQuery = updateQuery.is("habit_id", null);
+    }
 
-    const { error: habitError } = await supabase
+    const { data: updated, error: updateError } =
+      await updateQuery.select("id");
+    if (updateError) throw updateError;
+
+    if (updated?.length) return;
+
+    const { error: insertError } = await supabase
       .from("metrics")
-      .upsert(habitPayload, {
-        onConflict: "profile_id,habit_id,date,metric_type,granularity",
-      });
+      .insert(payload);
 
-    if (habitError) throw habitError;
+    if (insertError) throw insertError;
+  };
+
+  if (habitMetrics.length > 0) {
+    for (const metric of habitMetrics) {
+      const payload = {
+        profile_id: metric.profile_id,
+        habit_id: metric.habit_id,
+        date: metric.date,
+        metric_type: metric.metric_type,
+        granularity: metric.granularity,
+        value: metric.value,
+        metadata: metric.metadata,
+      };
+      await upsertMetric(
+        payload,
+        {
+          profile_id: metric.profile_id,
+          habit_id: metric.habit_id,
+          date: metric.date,
+          metric_type: metric.metric_type,
+          granularity: metric.granularity,
+        },
+        false,
+      );
+    }
   }
 
   if (profileMetrics.length > 0) {
-    const profilePayload = profileMetrics.map((m) => ({
-      profile_id: m.profile_id,
-      habit_id: null,
-      date: m.date,
-      metric_type: m.metric_type,
-      granularity: m.granularity,
-      value: m.value,
-      metadata: JSON.stringify(m.metadata),
-    }));
-
-    const { error: profileError } = await supabase
-      .from("metrics")
-      .upsert(profilePayload, {
-        onConflict: "profile_id,date,metric_type,granularity",
-      });
-
-    if (profileError) throw profileError;
+    for (const metric of profileMetrics) {
+      const payload = {
+        profile_id: metric.profile_id,
+        habit_id: null,
+        date: metric.date,
+        metric_type: metric.metric_type,
+        granularity: metric.granularity,
+        value: metric.value,
+        metadata: metric.metadata,
+      };
+      await upsertMetric(
+        payload,
+        {
+          profile_id: metric.profile_id,
+          date: metric.date,
+          metric_type: metric.metric_type,
+          granularity: metric.granularity,
+        },
+        true,
+      );
+    }
   }
 
   return metrics.length;
