@@ -73,17 +73,17 @@ export async function listHabits(profileId?: string) {
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return data as HabitRow[];
+  return (data ?? []) as unknown as HabitRow[];
 }
 
 export async function getHabit(habitId: string, profileId?: string) {
   const resolvedProfileId = await getProfileId(profileId);
   const { data, error } = await supabase
     .from("habits")
-    .eq("id", habitId)
     .select(
       "id, profile_id, category_id, name, description, type, unit, status, created_at, updated_at",
     )
+    .eq("id", habitId)
     .eq("profile_id", resolvedProfileId)
     .single();
 

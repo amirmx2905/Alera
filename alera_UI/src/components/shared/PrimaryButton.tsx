@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Pressable, Animated, Text } from "react-native";
+import { View, Pressable, Animated, Text, type ViewStyle } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { DotLoader } from "../shared/DotLoader";
 
@@ -31,12 +31,20 @@ export function PrimaryButton({
   fixedHeight = false,
 }: PrimaryButtonProps) {
   const isDisabled = isLoading || disabled;
-  const gradientColors = isDisabled
-    ? ["#6b7280", "#4b5563"]
-    : ["#5b21b6", "#2e1065"];
-  const gradientStyle = fixedHeight
-    ? { height: "100%", alignItems: "center", justifyContent: "center" }
-    : { paddingVertical: 15, alignItems: "center" };
+  const enabledColors: [string, string] = ["#5b21b6", "#2e1065"];
+  const disabledColors: [string, string] = ["#6b7280", "#4b5563"];
+  const gradientColors = isDisabled ? disabledColors : enabledColors;
+  const gradientStyle: ViewStyle = fixedHeight
+    ? {
+        height: "100%",
+        alignItems: "center",
+        justifyContent: "center",
+      }
+    : {
+        paddingVertical: 15,
+        alignItems: "center",
+        justifyContent: "center",
+      };
 
   return (
     <Pressable

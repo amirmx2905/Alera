@@ -10,6 +10,14 @@ type InvokeResult<T> = {
   errorMessage?: string;
 };
 
+type FunctionBody =
+  | string
+  | Blob
+  | ArrayBuffer
+  | FormData
+  | ReadableStream<Uint8Array>
+  | Record<string, unknown>;
+
 async function getFunctionErrorMessage(error: unknown, fallback: string) {
   if (!error || typeof error !== "object") return fallback;
 
@@ -44,7 +52,7 @@ async function getFunctionErrorMessage(error: unknown, fallback: string) {
 
 export async function invokeEdgeFunction<T>(
   functionName: string,
-  body: unknown,
+  body: FunctionBody,
   options: InvokeOptions = {},
 ): Promise<InvokeResult<T>> {
   const { throwOnError = true, includeAuth = true } = options;

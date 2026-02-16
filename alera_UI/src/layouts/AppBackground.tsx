@@ -6,9 +6,15 @@ type AppBackgroundProps = {
   children: React.ReactNode;
 };
 
+const MAIN_GRADIENT_COLORS: [string, string, string] = [
+  "#2b0a4e",
+  "#14001f",
+  "#0b0012",
+];
+
 const GRADIENTS = [
   {
-    colors: ["#7c3aed", "transparent"],
+    colors: ["#7c3aed", "transparent"] as const,
     start: { x: 0.1, y: 0 },
     end: { x: 0.9, y: 0.6 },
     style: {
@@ -21,7 +27,7 @@ const GRADIENTS = [
     },
   },
   {
-    colors: ["#4c1d95", "transparent"],
+    colors: ["#4c1d95", "transparent"] as const,
     start: { x: 1, y: 0 },
     end: { x: 0, y: 1 },
     style: {
@@ -91,7 +97,7 @@ export function AppBackground({ children }: AppBackgroundProps) {
   return (
     <View className="flex-1 bg-[#0b0012]">
       <LinearGradient
-        colors={["#2b0a4e", "#14001f", "#0b0012"]}
+        colors={MAIN_GRADIENT_COLORS}
         start={{ x: 0.2, y: 0 }}
         end={{ x: 0.9, y: 1 }}
         style={absoluteStyle}
@@ -112,7 +118,7 @@ export function AppBackground({ children }: AppBackgroundProps) {
         />
       ))}
       <LinearGradient
-        colors={["#a855f7", "transparent"]}
+        colors={["#a855f7", "transparent"] as const}
         start={{ x: 0, y: 0 }}
         end={{ x: 0.6, y: 0.8 }}
         style={{

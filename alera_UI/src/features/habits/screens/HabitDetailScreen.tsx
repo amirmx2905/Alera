@@ -292,7 +292,7 @@ export function HabitDetailScreen({ navigation, route }: Props) {
         </View>
 
         <HabitDetailActions
-          archived={habit.archived}
+          archived={Boolean(habit.archived)}
           isArchiveLoading={isArchiveLoading}
           isDeleteLoading={isDeleteLoading}
           onArchive={handleArchive}

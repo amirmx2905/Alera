@@ -83,12 +83,6 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  useEffect(() => {
-    refreshHabits().catch(() => {
-      // ignore initial load failures here; UI can retry later
-    });
-  }, [refreshHabits]);
-
   const refreshHabits = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -137,6 +131,12 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    refreshHabits().catch(() => {
+      // ignore initial load failures here; UI can retry later
+    });
+  }, [refreshHabits]);
 
   const createHabitWithGoal = useCallback(
     async (payload: {

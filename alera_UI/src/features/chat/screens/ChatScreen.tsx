@@ -1,5 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ScrollView, Keyboard, Animated, Pressable, View } from "react-native";
+import {
+  ScrollView,
+  Keyboard,
+  Animated,
+  Pressable,
+  View,
+  Platform,
+} from "react-native";
 import { supabase } from "../../../services/supabase";
 import { getChatHistory, sendChatMessage } from "../services/ai";
 import { ChatMessages } from "../components/ChatMessages";
@@ -18,6 +25,7 @@ export function ChatScreen() {
   const [lastAddedMessageId, setLastAddedMessageId] = useState<string | null>(
     null,
   );
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   const scrollRef = useRef<ScrollView>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -73,10 +81,21 @@ export function ChatScreen() {
   }, [messages]);
 
   useEffect(() => {
-    const showSub = Keyboard.addListener("keyboardDidShow", () =>
-      scrollRef.current?.scrollToEnd({ animated: true }),
-    );
-    return () => showSub.remove();
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const showSub = Keyboard.addListener(showEvent, () => {
+      setIsKeyboardVisible(true);
+      scrollRef.current?.scrollToEnd({ animated: true });
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setIsKeyboardVisible(false);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
   }, []);
 
   const animateSendButton = (toValue: number) => {
@@ -183,7 +202,9 @@ export function ChatScreen() {
       <View
         style={{
           marginTop: 12,
-          marginBottom: TAB_BAR_HEIGHT + TAB_BAR_BOTTOM_GAP + 20,
+          marginBottom: isKeyboardVisible
+            ? 15
+            : TAB_BAR_HEIGHT + TAB_BAR_BOTTOM_GAP + 12,
         }}
       >
         <InputField

@@ -74,12 +74,12 @@ function AnimatedTabBar(props: MaterialTopTabBarProps) {
 function TabBarIcon({
   routeName,
   color,
-  size,
+  size = 22,
   focused,
 }: {
   routeName: keyof AppTabParamList;
   color: string;
-  size: number;
+  size?: number;
   focused: boolean;
 }) {
   const scaleAnim = useRef(new Animated.Value(focused ? 1.08 : 1)).current;
@@ -156,14 +156,14 @@ const screenOptions = ({
   tabBarStyle: {
     backgroundColor: "#0b0b0b",
     height: TAB_BAR_HEIGHT,
-    position: "absolute",
+    position: "absolute" as const,
     left: 16,
     right: 16,
     bottom: TAB_BAR_BOTTOM_GAP,
     paddingBottom: 4,
     paddingTop: 4,
     borderRadius: 26,
-    overflow: "hidden",
+    overflow: "hidden" as const,
     shadowColor: "#000",
     shadowOpacity: 0.25,
     shadowRadius: 18,
@@ -182,20 +182,12 @@ const screenOptions = ({
   tabBarShowLabel: false,
   tabBarActiveTintColor: "#ffffff",
   tabBarInactiveTintColor: "#7f7f7f",
-  tabBarIcon: ({
-    color,
-    size,
-    focused,
-  }: {
-    color: string;
-    size: number;
-    focused: boolean;
-  }) => {
+  tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => {
     return (
       <TabBarIcon
         routeName={route.name}
         color={color}
-        size={size}
+        size={22}
         focused={focused}
       />
     );
