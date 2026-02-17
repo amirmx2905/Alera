@@ -33,6 +33,8 @@ logs/
 .expo/
 .expo-shared/
 web-build/
+.metro-health-check*
+expo-env.d.ts
 
 # Temp
 *.tmp

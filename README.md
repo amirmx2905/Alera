@@ -1,149 +1,95 @@
 # Alera
 
-Plataforma móvil inteligente para el registro, análisis y consulta de datos personales mediante IA. Alera permite a los usuarios documentar sus hábitos diarios, analizar tendencias y obtener insights personalizados a través de un asistente conversacional integrado.
+Mobile platform for tracking habits, analyzing trends, and querying personal data with an AI assistant. Alera lets users log daily habits, view metrics, and get personalized insights through a conversational interface.
 
-## Problema o necesidad que atiende
+## Problem
 
-Los usuarios generan datos personales de forma continua sobre sus hábitos y actividades diarias (salud, productividad y bienestar). Sin embargo, estas métricas suelen estar dispersas o sin análisis estructurado. Alera resuelve esto al permitir:
+Users generate personal data continuously (health, productivity, wellbeing), but insights are often fragmented. Alera addresses this by enabling:
 
-- Registrar información de forma organizada y consistente.
-- Analizar tendencias básicas a partir de datos históricos.
-- Obtener insights personalizados mediante lenguaje natural.
-- Visualizar métricas clave de manera clara e intuitiva.
+- Consistent habit logging.
+- Trend visualization from processed metrics.
+- Natural‑language insights via AI.
+- Clear dashboards for daily/weekly/monthly views.
 
-## Arquitectura del sistema
+## System Architecture
 
-La arquitectura se compone de seis capas principales:
+The system is composed of these main layers:
 
-1. **Aplicación móvil (Frontend)** — React Native + Expo.
-2. **Backend/API** — Node.js con API REST y cron jobs.
-3. **Base de datos** — PostgreSQL administrado con Supabase (local).
-4. **Autenticación** — Supabase Auth con JWT.
-5. **Inteligencia artificial** — Integración vía OpenAI API (o mock académico).
-6. **DevOps** — CI/CD con GitHub Actions y Docker.
+1. **Mobile App (Frontend)** — React Native + Expo.
+2. **Backend/API** — Node.js REST API (read‑only for metrics).
+3. **Database** — PostgreSQL via Supabase.
+4. **Auth** — Supabase Auth with JWT.
+5. **AI** — OpenAI API (or mock).
+6. **Data Pipeline** — AWS (EventBridge + Lambda + S3 + Glue + Athena) for metrics processing.
+7. **DevOps** — GitHub Actions + Docker.
 
-## Aplicación móvil (cliente)
+## Mobile App
 
-### Tipo de aplicación
+### Stack
 
 - React Native + Expo.
-- Código único para Android e iOS.
+- Single codebase for Android and iOS.
 
-### Funcionalidades principales (MVP)
+### Core features (MVP)
 
-1. Autenticación de usuarios (login y registro).
-2. Registro de hábitos diarios (hábitos ilimitados).
-3. Visualización de métricas diarias básicas.
-4. Asistente conversacional con IA (contexto limitado).
-5. Gestión básica de objetivos diarios.
+1. User authentication (login + signup).
+2. Habit logging (unlimited habits).
+3. Metrics visualization (daily/weekly/monthly from `metrics`).
+4. AI assistant (limited context).
+5. Basic habit goals management.
 
-### Tipo de información gestionada
+### Data handled
 
-- Datos de perfil del usuario.
-- Registros diarios de hábitos.
-- Métricas diarias agregadas.
-- Historial limitado de conversaciones con IA.
-- Objetivos diarios por hábito.
+- User profile.
+- Raw habit logs.
+- Processed metrics (read‑only).
+- AI conversation history.
+- Per‑habit goals.
 
-## Servidor (Backend API)
+## Backend API
 
-### Funciones del servidor
+### Responsibilities
 
-El backend en Node.js actúa como núcleo del sistema y es responsable de:
+The Node.js backend:
 
-- Exponer una API REST para la aplicación móvil.
-- Validar tokens JWT emitidos por Supabase Auth.
-- Orquestar la lógica de negocio.
-- Ejecutar cron jobs para análisis de datos.
-- Preparar contexto y comunicarse con la IA.
+- Exposes REST endpoints for the mobile app.
+- Validates Supabase JWTs.
+- Implements business logic for habits, logs, goals, profiles.
+- Prepares limited context for the AI assistant.
+- **Does not** compute metrics (read‑only from `metrics`).
 
-### Procesos implementados (MVP)
+### Implemented processes (MVP)
 
-- CRUD de registros de hábitos.
-- Validación de datos de entrada.
-- Cálculo de métricas diarias.
-- Ejecución de un cron job diario.
-- Integración con IA con contexto limitado.
-- Rate limiting básico por usuario.
-- Métricas semanales y mensuales.
-- Comparaciones entre períodos.
-- Análisis predictivo.
+- CRUD for habits and logs.
+- Input validation.
+- AI chat + history endpoints.
+- Basic rate limiting per user.
+- Metrics endpoints (read‑only from `metrics`).
 
-## Base de datos
+## Database [Supabase]
 
-### Tablas principales
+### Security
 
-**habits**
+- Supabase Auth manages identity and JWT.
+- Row Level Security (RLS) isolates data per user.
 
-- id (UUID)
-- user_id (UUID)
-- name (VARCHAR)
-- type (VARCHAR) — numeric | json
-- unit (VARCHAR)
-- created_at (TIMESTAMP)
-- updated_at (TIMESTAMP)
+## AI Assistant
 
-**habits_log**
+### Usage
 
-- id (UUID)
-- user_id (UUID)
-- habit_id (UUID)
-- value (JSONB)
-- metadata (JSONB)
-- created_at (TIMESTAMP)
-- updated_at (TIMESTAMP)
+- Conversational assistant about recent habits.
+- Limited context prepared by the backend.
 
-**metrics**
+### Context included
 
-- id (UUID)
-- user_id (UUID)
-- habit_id (UUID)
-- metric_type (VARCHAR) — daily_average
-- value (NUMERIC)
-- date (DATE)
-- calculated_at (TIMESTAMP)
+- Metrics for today.
+- Metrics for the last 7 days.
+- Metrics for the last 3 months.
+- Last 7 days of AI conversations.
 
-**ai_conversations**
+## CI/CD Pipeline
 
-- id (UUID)
-- user_id (UUID)
-- message (TEXT)
-- role (VARCHAR)
-- created_at (TIMESTAMP)
-
-**user_goals**
-
-- id (UUID)
-- user_id (UUID)
-- habit_id (UUID)
-- target_value (NUMERIC)
-- created_at (TIMESTAMP)
-- updated_at (TIMESTAMP)
-
-### Seguridad
-
-- Supabase Auth gestiona identidad y JWT.
-- Row Level Security (RLS) garantiza aislamiento por usuario.
-
-## Inteligencia artificial
-
-### Uso de IA
-
-La IA se utiliza como un asistente conversacional que:
-
-- Responde preguntas sobre hábitos recientes.
-- Usa contexto limitado preparado por el backend.
-
-### Contexto incluido
-
-- Métricas del día actual.
-- Métricas de los últimos 7 días.
-- Métricas de los últimos 3 meses.
-- Últimos 7 días de interacciones con el asistente.
-
-### Pipeline CI/CD
-
-1. Trigger por push o pull request.
-2. Análisis de código (ESLint).
-3. Build del backend.
-4. Construcción de imagen Docker.
+1. Trigger on push or pull request.
+2. Linting.
+3. Backend and Frontend build.
+4. Docker image build.
