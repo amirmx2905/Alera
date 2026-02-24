@@ -3,15 +3,11 @@
  * Derives all data from the existing HabitsContext — no extra network calls
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useHabits } from "../../../state/HabitsContext";
 import { TodaysHabitSummary, HomeGoalFilter, HomeScreenData } from "../types";
 import { getCdmxDateKey } from "../../habits/utils/dates";
-import {
-  inferHabitCompletionFromEntries,
-  type GoalProgressSnapshot,
-} from "../../habits/utils/goalProgress";
-import { loadGoalProgressMapForHabits } from "../../habits/utils/goalProgressApi";
+import { inferHabitCompletionFromEntries } from "../../habits/utils/goalProgress";
 import { calculateTodaysProgress, getGreeting } from "../services/homeData";
 
 interface UseHomeDataReturn {
@@ -27,32 +23,6 @@ interface UseHomeDataReturn {
  */
 export function useHomeData(goalType: HomeGoalFilter): UseHomeDataReturn {
   const { habits, isLoading, streaksByHabitId } = useHabits();
-  const [goalProgressByHabitId, setGoalProgressByHabitId] = useState<
-    Record<string, GoalProgressSnapshot>
-  >({});
-
-  useEffect(() => {
-    if (isLoading) return;
-
-    const activeHabits = habits.filter(
-      (habit) => !habit.archived && habit.goalType === goalType,
-    );
-
-    if (activeHabits.length === 0) {
-      setGoalProgressByHabitId({});
-      return;
-    }
-
-    loadGoalProgressMapForHabits(
-      activeHabits.map((habit) => ({ id: habit.id, goalType: habit.goalType })),
-    )
-      .then((metrics) => {
-        setGoalProgressByHabitId(metrics);
-      })
-      .catch(() => {
-        setGoalProgressByHabitId({});
-      });
-  }, [goalType, habits, isLoading]);
 
   const data: HomeScreenData | null = useMemo(() => {
     if (isLoading) return null;
@@ -61,13 +31,7 @@ export function useHomeData(goalType: HomeGoalFilter): UseHomeDataReturn {
     const activeHabits = habits.filter((habit) => !habit.archived);
 
     const todaysHabits: TodaysHabitSummary[] = activeHabits.map((habit) => {
-      let completed: boolean;
-      const goalProgress = goalProgressByHabitId[habit.id];
-      if (goalProgress && goalProgress.targetValue > 0) {
-        completed = goalProgress.totalValue >= goalProgress.targetValue;
-      } else {
-        completed = inferHabitCompletionFromEntries(habit, today);
-      }
+      const completed = inferHabitCompletionFromEntries(habit, today);
 
       return {
         id: habit.id,
@@ -87,7 +51,7 @@ export function useHomeData(goalType: HomeGoalFilter): UseHomeDataReturn {
       progress: calculateTodaysProgress(filteredHabits),
       greeting: getGreeting(),
     };
-  }, [goalProgressByHabitId, goalType, habits, isLoading, streaksByHabitId]);
+  }, [goalType, habits, isLoading, streaksByHabitId]);
 
   /**
    * No-op — completion on the home screen is read-only.

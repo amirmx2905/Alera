@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { View, Text, Pressable, Animated } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -11,17 +11,12 @@ import { getProgressData } from "../hooks/useHabitProgress";
 import type { HabitsStackParamList } from "../../../navigation/HabitsStack";
 import type { RootStackParamList } from "../../../navigation/RootNavigator";
 import { useHabits } from "../../../state/HabitsContext";
-import { type GoalProgressSnapshot } from "../utils/goalProgress";
-import { loadGoalProgressMapForHabits } from "../utils/goalProgressApi";
 
 type Props = NativeStackScreenProps<HabitsStackParamList, "HabitsHome">;
 
 export function HabitsScreen({ navigation }: Props) {
   const { habits, isLoading } = useHabits();
   const [showArchived, setShowArchived] = useState(false);
-  const [goalProgressByHabitId, setGoalProgressByHabitId] = useState<
-    Record<string, GoalProgressSnapshot>
-  >({});
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const archiveButtonScale = useRef(new Animated.Value(1)).current;
   const addButtonScale = useRef(new Animated.Value(1)).current;
@@ -40,23 +35,6 @@ export function HabitsScreen({ navigation }: Props) {
     const archived = habits.filter((habit) => habit.archived);
     return showArchived ? archived : active;
   }, [habits, showArchived]);
-
-  useEffect(() => {
-    if (isLoading) return;
-
-    loadGoalProgressMapForHabits(
-      displayHabits.map((habit) => ({
-        id: habit.id,
-        goalType: habit.goalType,
-      })),
-    )
-      .then((nextMap) => {
-        setGoalProgressByHabitId(nextMap);
-      })
-      .catch(() => {
-        setGoalProgressByHabitId({});
-      });
-  }, [displayHabits, isLoading]);
 
   const rootNavigation = navigation.getParent()?.getParent() as
     | NavigationProp<RootStackParamList>
@@ -143,19 +121,15 @@ export function HabitsScreen({ navigation }: Props) {
                 goalAmount: habit.goalAmount,
                 goalType: habit.goalType,
               });
-              const goalProgress = goalProgressByHabitId[habit.id];
-              const resolvedProgress =
-                goalProgress?.progressPercent ?? progress;
-              const resolvedAmount = goalProgress?.totalValue ?? currentAmount;
-              const progressValue = Math.round(resolvedProgress);
+              const progressValue = Math.round(progress);
 
               return (
                 <HabitCard
                   key={habit.id}
                   habit={habit}
-                  progress={resolvedProgress}
+                  progress={progress}
                   progressValue={progressValue}
-                  currentAmount={resolvedAmount}
+                  currentAmount={currentAmount}
                   onPress={() =>
                     navigation.navigate("HabitDetail", { habitId: habit.id })
                   }
