@@ -49,6 +49,11 @@ export function HabitEntryHistory({
 }: Props) {
   const popAnimations = useRef(new Map<string, Animated.Value>()).current;
   const lastPopNonce = useRef<number | null>(null);
+  const formatUnit = (value: number) => {
+    if (value === 1 && unit === "Times") return "time";
+    if (value === 1 && unit === "days") return "day";
+    return unit;
+  };
 
   const sortedEntries = useMemo(() => {
     return entries
@@ -160,7 +165,7 @@ export function HabitEntryHistory({
       </Modal>
 
       {isLogsLoading ? (
-        <View className="items-center py-8">
+        <View className="items-center py-[50px]">
           <DotLoader dotClassName="h-2 w-2 bg-purple-300" />
         </View>
       ) : entries.length === 0 ? (
@@ -184,7 +189,7 @@ export function HabitEntryHistory({
                 <View className="flex-row items-center justify-between">
                   <View>
                     <Text className="text-white text-base font-semibold">
-                      {entry.amount} {unit}
+                      {entry.amount} {formatUnit(entry.amount)}
                     </Text>
                     <Text className="text-slate-400 text-xs mt-1">
                       {parseEntryDate(entry.date).toLocaleString(undefined, {
@@ -198,16 +203,14 @@ export function HabitEntryHistory({
                   </View>
                   {showActions ? (
                     <View className="flex-row gap-2">
-                      <Pressable
-                        onPress={
-                          onEditEntry ? () => onEditEntry(entry) : undefined
-                        }
-                        disabled={!onEditEntry}
-                        className="h-9 w-12 items-center justify-center rounded-xl border border-white/10 bg-white/5"
-                        style={{ opacity: onEditEntry ? 1 : 0.5 }}
-                      >
-                        <Ionicons name="pencil" size={14} color="#cbd5f5" />
-                      </Pressable>
+                      {onEditEntry ? (
+                        <Pressable
+                          onPress={() => onEditEntry(entry)}
+                          className="h-9 w-12 items-center justify-center rounded-xl border border-white/10 bg-white/5"
+                        >
+                          <Ionicons name="pencil" size={14} color="#cbd5f5" />
+                        </Pressable>
+                      ) : null}
                       <Pressable
                         onPress={
                           onDeleteEntry
@@ -242,7 +245,13 @@ export function HabitEntryHistory({
           <View className="flex-row items-center justify-between">
             <Text className="text-slate-400 text-sm">Total</Text>
             <Text className="text-white text-base font-semibold">
-              {entries.reduce((sum, entry) => sum + entry.amount, 0)} {unit}
+              {(() => {
+                const total = entries.reduce(
+                  (sum, entry) => sum + entry.amount,
+                  0,
+                );
+                return `${total} ${formatUnit(total)}`;
+              })()}
             </Text>
           </View>
         </View>

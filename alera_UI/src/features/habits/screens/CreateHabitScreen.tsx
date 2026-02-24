@@ -1,7 +1,8 @@
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { View, Alert, Animated } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { MainLayout } from "../../../layouts/MainLayout";
+import { CreateHabitStepType } from "../components/creation/CreateHabitStepType";
 import { CreateHabitStepOne } from "../components/creation/CreateHabitStepOne";
 import { CreateHabitStepTwo } from "../components/creation/CreateHabitStepTwo";
 import {
@@ -22,6 +23,7 @@ const initialFormState: CreateHabitFormState = {
   unit: "",
   goalAmount: "",
   goalType: "daily",
+  type: "numeric",
 };
 
 export function CreateHabitScreen({ navigation }: Props) {
@@ -34,6 +36,15 @@ export function CreateHabitScreen({ navigation }: Props) {
   const continueScaleAnim = useRef(new Animated.Value(1)).current;
   const createScaleAnim = useRef(new Animated.Value(1)).current;
 
+  useEffect(() => {
+    if (formData.type !== "binary") return;
+    setFormData((prev) => ({
+      ...prev,
+      unit: "Times",
+      goalAmount: prev.goalAmount || "1",
+    }));
+  }, [formData.type]);
+
   const animateScale = useCallback((scale: Animated.Value, toValue: number) => {
     Animated.spring(scale, {
       toValue,
@@ -44,13 +55,17 @@ export function CreateHabitScreen({ navigation }: Props) {
   }, []);
 
   const handleContinue = () => {
-    if (formData.name && formData.category) {
+    if (step === 1) {
       setStep(2);
+      return;
+    }
+    if (step === 2 && formData.name && formData.category) {
+      setStep(3);
     }
   };
 
   const handleBack = () => {
-    setStep(1);
+    setStep((prev) => Math.max(1, prev - 1));
   };
 
   const handleFieldChange = useCallback(
@@ -60,12 +75,10 @@ export function CreateHabitScreen({ navigation }: Props) {
     [],
   );
 
-  const formatGoalType = (value: CreateHabitFormState["goalType"]) =>
-    `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
-
   const handleCreate = async () => {
     const goalAmountNumber = Number(formData.goalAmount);
-    if (!goalAmountNumber || !formData.unit) return;
+    if (!goalAmountNumber) return;
+    if (formData.type === "numeric" && !formData.unit) return;
     if (isSubmitting) return;
 
     try {
@@ -77,6 +90,7 @@ export function CreateHabitScreen({ navigation }: Props) {
         unit: formData.unit,
         goalAmount: goalAmountNumber,
         goalType: formData.goalType,
+        type: formData.type,
       });
       navigation.goBack();
     } catch (error) {
@@ -114,10 +128,23 @@ export function CreateHabitScreen({ navigation }: Props) {
                 step >= 2 ? "bg-purple-500" : "bg-white/10"
               }`}
             />
+            <View
+              className={`h-1 flex-1 rounded-full ${
+                step >= 3 ? "bg-purple-500" : "bg-white/10"
+              }`}
+            />
           </View>
         </View>
 
         {step === 1 ? (
+          <CreateHabitStepType
+            formData={formData}
+            onFieldChange={handleFieldChange}
+            onContinue={handleContinue}
+            continueScaleAnim={continueScaleAnim}
+            animateScale={animateScale}
+          />
+        ) : step === 2 ? (
           <CreateHabitStepOne
             formData={formData}
             categories={categories}
@@ -138,7 +165,6 @@ export function CreateHabitScreen({ navigation }: Props) {
             isSubmitting={isSubmitting}
             createScaleAnim={createScaleAnim}
             animateScale={animateScale}
-            formatGoalType={formatGoalType}
             categoryUnits={CATEGORY_UNITS[formData.category] || UNITS}
             currencies={CURRENCIES}
           />

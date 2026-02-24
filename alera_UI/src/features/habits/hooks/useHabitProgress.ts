@@ -1,5 +1,9 @@
 import type { Entry } from "../types";
-import { parseEntryDate, toLocalDateKey } from "../utils/dates";
+import {
+  getMondayStartKey,
+  parseEntryDate,
+  toLocalDateKey,
+} from "../utils/dates";
 
 type GoalType = "daily" | "weekly" | "monthly";
 
@@ -23,10 +27,10 @@ const getRelevantEntries = (
   }
 
   if (goalType === "weekly") {
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - now.getDay());
-    weekStart.setHours(0, 0, 0, 0);
-    return entries.filter((entry) => parseEntryDate(entry.date) >= weekStart);
+    const weekStartKey = getMondayStartKey(toLocalDateKey(now));
+    return entries.filter(
+      (entry) => toLocalDateKey(parseEntryDate(entry.date)) >= weekStartKey,
+    );
   }
 
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);

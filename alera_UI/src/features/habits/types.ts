@@ -4,6 +4,8 @@ export type Entry = {
   amount: number;
 };
 
+export type HabitType = "numeric" | "binary";
+
 export type Habit = {
   id: string;
   name: string;
@@ -12,6 +14,7 @@ export type Habit = {
   unit: string;
   goalAmount: number;
   goalType: "daily" | "weekly" | "monthly";
+  type: HabitType;
   entries: Entry[];
   archived?: boolean;
 };
@@ -23,4 +26,5 @@ export type CreateHabitFormState = {
   unit: string;
   goalAmount: string;
   goalType: "daily" | "weekly" | "monthly";
+  type: HabitType;
 };

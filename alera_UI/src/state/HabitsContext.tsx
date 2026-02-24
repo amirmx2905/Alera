@@ -4,8 +4,10 @@ import React, {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
   useState,
 } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Entry, Habit } from "../features/habits/types";
 import { listHabitCategories } from "../features/habits/services/habitCategories";
 import {
@@ -16,13 +18,29 @@ import {
 } from "../features/habits/services/habits";
 import { listLogsForHabits } from "../features/habits/services/logs";
 import { upsertGoal } from "../features/habits/services/goals";
+import {
+  listStreakMetrics,
+  recalculateProfileMetrics,
+} from "../features/habits/services/metrics";
+import {
+  toLocalDateKey,
+  getMondayStartKey,
+  getMonthStartKey,
+  getMonthEndKey,
+  getSundayDateKey,
+  getCdmxDateKey,
+} from "../features/habits/utils/dates";
+import { useAuth } from "./AuthContext";
 
 type HabitsContextValue = {
   habits: Habit[];
   isLoading: boolean;
+  streaksByHabitId: Record<string, number>;
+  isStreaksLoading: boolean;
   categories: { id: string; name: string }[];
   isCategoriesLoading: boolean;
   refreshHabits: () => Promise<void>;
+  refreshStreaks: () => Promise<void>;
   createHabitWithGoal: (payload: {
     name: string;
     description?: string;
@@ -30,6 +48,7 @@ type HabitsContextValue = {
     unit: string;
     goalAmount: number;
     goalType: "daily" | "weekly" | "monthly";
+    type: Habit["type"];
   }) => Promise<void>;
   addEntry: (habitId: string, entry: Entry) => void;
   updateEntry: (habitId: string, entryId: string, amount: number) => void;
@@ -39,34 +58,142 @@ type HabitsContextValue = {
 };
 
 const HabitsContext = createContext<HabitsContextValue | null>(null);
+const HABITS_CACHE_KEY = "habits_cache_v1:";
+const parseDateKey = (value: string) => new Date(`${value}T00:00:00`);
+
+const getExpectedMetricDate = (
+  goalType: Habit["goalType"],
+  todayKey: string,
+) => {
+  if (goalType === "daily") return todayKey;
+  if (goalType === "weekly") return getSundayDateKey(todayKey);
+  return getMonthEndKey(todayKey);
+};
+
+const calculateLocalStreak = (
+  entries: Entry[],
+  goalType: Habit["goalType"],
+  goalAmount: number,
+) => {
+  if (entries.length === 0) return 0;
+  if (goalType !== "daily" && goalAmount <= 0) return 0;
+
+  const totalsByDay = entries.reduce<Record<string, number>>((acc, entry) => {
+    const amount = Number(entry.amount);
+    if (amount <= 0) return acc;
+    const dateKey = toLocalDateKey(new Date(entry.date));
+    acc[dateKey] = (acc[dateKey] || 0) + amount;
+    return acc;
+  }, {});
+
+  const isDayComplete = (dateKey: string) => {
+    const total = totalsByDay[dateKey] ?? 0;
+    return goalAmount > 0 ? total >= goalAmount : total > 0;
+  };
+
+  if (goalType === "daily") {
+    const todayKey = toLocalDateKey(new Date());
+    const cursor = new Date();
+    if (!isDayComplete(todayKey)) {
+      cursor.setDate(cursor.getDate() - 1);
+    }
+
+    let streak = 0;
+    while (true) {
+      const key = toLocalDateKey(cursor);
+      if (!isDayComplete(key)) break;
+      streak += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    return streak;
+  }
+
+  const totalsByPeriod = entries.reduce<Record<string, number>>(
+    (acc, entry) => {
+      const amount = Number(entry.amount);
+      if (amount <= 0) return acc;
+      const dateKey = toLocalDateKey(new Date(entry.date));
+      const periodKey =
+        goalType === "weekly"
+          ? getMondayStartKey(dateKey)
+          : getMonthStartKey(dateKey);
+      acc[periodKey] = (acc[periodKey] || 0) + amount;
+      return acc;
+    },
+    {},
+  );
+
+  const todayKey = toLocalDateKey(new Date());
+  const currentPeriodKey =
+    goalType === "weekly"
+      ? getMondayStartKey(todayKey)
+      : getMonthStartKey(todayKey);
+
+  if ((totalsByPeriod[currentPeriodKey] ?? 0) < goalAmount) return 0;
+
+  let streak = 0;
+  let cursorKey = currentPeriodKey;
+  while (true) {
+    const total = totalsByPeriod[cursorKey] ?? 0;
+    if (total < goalAmount) break;
+    streak += 1;
+
+    const cursorDate = parseDateKey(cursorKey);
+    if (goalType === "weekly") {
+      cursorDate.setDate(cursorDate.getDate() - 7);
+      cursorKey = getMondayStartKey(toLocalDateKey(cursorDate));
+    } else {
+      cursorDate.setMonth(cursorDate.getMonth() - 1);
+      cursorKey = getMonthStartKey(toLocalDateKey(cursorDate));
+    }
+  }
+
+  return streak;
+};
 
 export function HabitsProvider({ children }: { children: React.ReactNode }) {
+  const { session } = useAuth();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasHydrated, setHasHydrated] = useState(false);
+  const [streaksByHabitId, setStreaksByHabitId] = useState<
+    Record<string, number>
+  >({});
+  const [isStreaksLoading, setIsStreaksLoading] = useState(false);
   const [categoryMap, setCategoryMap] = useState<Record<string, string>>({});
   const [categories, setCategories] = useState<{ id: string; name: string }[]>(
     [],
   );
   const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
+  const habitsRef = useRef<Habit[]>([]);
+
+  const buildCategoryState = useCallback(
+    (items: { id: string; name: string }[]) => ({
+      nextCategories: items.map((category) => ({
+        id: category.id,
+        name: category.name,
+      })),
+      nextMap: items.reduce<Record<string, string>>((acc, category) => {
+        acc[category.name] = category.id;
+        return acc;
+      }, {}),
+    }),
+    [],
+  );
+
+  useEffect(() => {
+    habitsRef.current = habits;
+  }, [habits]);
 
   useEffect(() => {
     let isMounted = true;
     setIsCategoriesLoading(true);
     listHabitCategories()
-      .then((categories) => {
+      .then((rawCategories) => {
         if (!isMounted) return;
-        setCategories(
-          categories.map((category) => ({
-            id: category.id,
-            name: category.name,
-          })),
-        );
-        setCategoryMap(
-          categories.reduce<Record<string, string>>((acc, category) => {
-            acc[category.name] = category.id;
-            return acc;
-          }, {}),
-        );
+        const { nextCategories, nextMap } = buildCategoryState(rawCategories);
+        setCategories(nextCategories);
+        setCategoryMap(nextMap);
       })
       .catch(() => {
         if (!isMounted) return;
@@ -81,9 +208,108 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [buildCategoryState]);
+
+  const refreshStreaks = useCallback(async () => {
+    if (!session) {
+      setStreaksByHabitId({});
+      setIsStreaksLoading(false);
+      return;
+    }
+    setIsStreaksLoading(true);
+    try {
+      const fromDate = new Date();
+      fromDate.setDate(fromDate.getDate() - 120);
+      const from = toLocalDateKey(fromDate);
+      const metrics = await listStreakMetrics(from);
+      const latestByHabit: Record<string, { date: string; value: number }> = {};
+      const todayKey = getCdmxDateKey();
+      for (const metric of metrics) {
+        if (!metric.habit_id) continue;
+        const current = latestByHabit[metric.habit_id];
+        if (!current || metric.date > current.date) {
+          latestByHabit[metric.habit_id] = {
+            date: metric.date,
+            value: Number(metric.value ?? 0),
+          };
+        }
+      }
+
+      const nextMap: Record<string, number> = {};
+      for (const habit of habitsRef.current) {
+        const payload = latestByHabit[habit.id];
+        const expectedDate = getExpectedMetricDate(habit.goalType, todayKey);
+
+        const localFallback = calculateLocalStreak(
+          habit.entries,
+          habit.goalType,
+          habit.goalAmount,
+        );
+
+        if (!payload) {
+          nextMap[habit.id] = localFallback;
+          continue;
+        }
+
+        if (payload.date < expectedDate) {
+          nextMap[habit.id] = localFallback;
+          continue;
+        }
+
+        nextMap[habit.id] = payload.value;
+      }
+      setStreaksByHabitId(nextMap);
+    } finally {
+      setIsStreaksLoading(false);
+    }
+  }, [session]);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!session) {
+      setHabits([]);
+      setIsLoading(false);
+      setHasHydrated(false);
+      setStreaksByHabitId({});
+      setIsStreaksLoading(false);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    setHasHydrated(false);
+    const cacheKey = `${HABITS_CACHE_KEY}${session.user.id}`;
+    AsyncStorage.getItem(cacheKey)
+      .then((cached) => {
+        if (!isMounted || !cached) return;
+        try {
+          const parsed = JSON.parse(cached) as Habit[];
+          if (Array.isArray(parsed)) {
+            setHabits(parsed);
+          }
+        } catch {
+          // ignore malformed cache
+        }
+      })
+      .catch(() => {
+        // ignore cache errors; network refresh will still run
+      })
+      .finally(() => {
+        if (!isMounted) return;
+        setHasHydrated(true);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [session?.user.id]);
 
   const refreshHabits = useCallback(async () => {
+    if (!session) {
+      setHabits([]);
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
       const rows = await listHabits();
@@ -102,6 +328,7 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
           unit: row.unit ?? "",
           goalAmount: Number.isNaN(parsedGoal) ? 0 : parsedGoal,
           goalType: goal?.goal_type ?? "daily",
+          type: row.type ?? "numeric",
           entries: [],
           archived: row.status === "archived",
         };
@@ -114,7 +341,7 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
           if (!acc[log.habit_id]) acc[log.habit_id] = [];
           acc[log.habit_id].push({
             id: log.id,
-            date: log.created_at,
+            date: log.logged_at ?? log.created_at,
             amount: log.value,
           });
           return acc;
@@ -127,16 +354,49 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
           })),
         );
       }
+
+      await recalculateProfileMetrics().catch(() => {
+        // ignore metrics refresh failures
+      });
+
+      await refreshStreaks();
+
+      setTimeout(() => {
+        refreshStreaks().catch(() => {
+          // ignore delayed streak refresh failures
+        });
+      }, 1200);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [refreshStreaks, session]);
 
   useEffect(() => {
+    if (!session) {
+      setHabits([]);
+      setIsLoading(false);
+      return;
+    }
+    if (!hasHydrated) return;
     refreshHabits().catch(() => {
       // ignore initial load failures here; UI can retry later
     });
-  }, [refreshHabits]);
+  }, [session?.user.id, hasHydrated, refreshHabits]);
+
+  useEffect(() => {
+    if (!session || !hasHydrated) return;
+    refreshStreaks().catch(() => {
+      // ignore streak refresh failures here
+    });
+  }, [session?.user.id, hasHydrated, refreshStreaks]);
+
+  useEffect(() => {
+    if (!session || !hasHydrated) return;
+    const cacheKey = `${HABITS_CACHE_KEY}${session.user.id}`;
+    AsyncStorage.setItem(cacheKey, JSON.stringify(habits)).catch(() => {
+      // ignore cache write failures
+    });
+  }, [habits, hasHydrated, session?.user.id]);
 
   const createHabitWithGoal = useCallback(
     async (payload: {
@@ -146,32 +406,24 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
       unit: string;
       goalAmount: number;
       goalType: "daily" | "weekly" | "monthly";
+      type: Habit["type"];
     }) => {
       let categoryId = categoryMap[payload.category] ?? null;
       if (!categoryId) {
         const refreshed = await listHabitCategories();
-        const refreshedMap = refreshed.reduce<Record<string, string>>(
-          (acc, category) => {
-            acc[category.name] = category.id;
-            return acc;
-          },
-          {},
-        );
-        setCategoryMap(refreshedMap);
-        setCategories(
-          refreshed.map((category) => ({
-            id: category.id,
-            name: category.name,
-          })),
-        );
-        categoryId = refreshedMap[payload.category] ?? null;
+        const { nextCategories, nextMap } = buildCategoryState(refreshed);
+        setCategories(nextCategories);
+        setCategoryMap(nextMap);
+        categoryId = nextMap[payload.category] ?? null;
       }
+      const resolvedUnit = payload.type === "binary" ? "Times" : payload.unit;
+
       const habit = await createHabit({
         category_id: categoryId,
         name: payload.name,
         description: payload.description ?? "",
-        type: "numeric",
-        unit: payload.unit,
+        type: payload.type,
+        unit: resolvedUnit,
         status: "active",
       });
 
@@ -183,58 +435,76 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
           name: habit.name,
           description: habit.description || undefined,
           category: payload.category,
-          unit: payload.unit,
+          unit: resolvedUnit,
           goalAmount: payload.goalAmount,
           goalType: payload.goalType,
+          type: payload.type,
           entries: [],
           archived: false,
         },
         ...prev,
       ]);
     },
-    [categoryMap],
+    [buildCategoryState, categoryMap],
   );
 
-  const addEntry = useCallback((habitId: string, entry: Entry) => {
-    setHabits((prev) =>
-      prev.map((habit) =>
-        habit.id === habitId
-          ? { ...habit, entries: [...habit.entries, entry] }
-          : habit,
-      ),
-    );
-  }, []);
+  const updateHabitEntriesWithStreak = useCallback(
+    (habitId: string, transformEntries: (entries: Entry[]) => Entry[]) => {
+      setHabits((prev) => {
+        let nextStreak: number | null = null;
 
-  const updateEntry = useCallback(
-    (habitId: string, entryId: string, amount: number) => {
-      setHabits((prev) =>
-        prev.map((habit) =>
-          habit.id === habitId
-            ? {
-                ...habit,
-                entries: habit.entries.map((entry) =>
-                  entry.id === entryId ? { ...entry, amount } : entry,
-                ),
-              }
-            : habit,
-        ),
-      );
+        const nextHabits = prev.map((habit) => {
+          if (habit.id !== habitId) return habit;
+
+          const entries = transformEntries(habit.entries);
+          nextStreak = calculateLocalStreak(
+            entries,
+            habit.goalType,
+            habit.goalAmount,
+          );
+
+          return { ...habit, entries };
+        });
+
+        if (nextStreak !== null) {
+          setStreaksByHabitId((current) => ({
+            ...current,
+            [habitId]: nextStreak as number,
+          }));
+        }
+
+        return nextHabits;
+      });
     },
     [],
   );
 
-  const deleteEntry = useCallback((habitId: string, entryId: string) => {
-    setHabits((prev) =>
-      prev.map((habit) =>
-        habit.id === habitId
-          ? {
-              ...habit,
-              entries: habit.entries.filter((entry) => entry.id !== entryId),
-            }
-          : habit,
-      ),
-    );
-  }, []);
+  const addEntry = useCallback(
+    (habitId: string, entry: Entry) => {
+      updateHabitEntriesWithStreak(habitId, (entries) => [...entries, entry]);
+    },
+    [updateHabitEntriesWithStreak],
+  );
+
+  const updateEntry = useCallback(
+    (habitId: string, entryId: string, amount: number) => {
+      updateHabitEntriesWithStreak(habitId, (entries) =>
+        entries.map((entry) =>
+          entry.id === entryId ? { ...entry, amount } : entry,
+        ),
+      );
+    },
+    [updateHabitEntriesWithStreak],
+  );
+
+  const deleteEntry = useCallback(
+    (habitId: string, entryId: string) => {
+      updateHabitEntriesWithStreak(habitId, (entries) =>
+        entries.filter((entry) => entry.id !== entryId),
+      );
+    },
+    [updateHabitEntriesWithStreak],
+  );
 
   const toggleArchive = useCallback(
     async (id: string) => {
@@ -260,9 +530,12 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
     () => ({
       habits,
       isLoading,
+      streaksByHabitId,
+      isStreaksLoading,
       categories,
       isCategoriesLoading,
       refreshHabits,
+      refreshStreaks,
       createHabitWithGoal,
       addEntry,
       updateEntry,
@@ -273,9 +546,12 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
     [
       habits,
       isLoading,
+      streaksByHabitId,
+      isStreaksLoading,
       categories,
       isCategoriesLoading,
       refreshHabits,
+      refreshStreaks,
       createHabitWithGoal,
       addEntry,
       updateEntry,

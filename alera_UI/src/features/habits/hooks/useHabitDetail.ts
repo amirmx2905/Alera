@@ -17,6 +17,19 @@ type Params = {
   deleteEntry: (habitId: string, entryId: string) => void;
 };
 
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) return error.message;
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof (error as { message?: unknown }).message === "string"
+  ) {
+    return (error as { message: string }).message;
+  }
+  return fallback;
+}
+
 export const useHabitDetail = ({
   habit,
   addEntry,
@@ -63,7 +76,7 @@ export const useHabitDetail = ({
         setEntries(
           logs.map((log) => ({
             id: log.id,
-            date: log.created_at,
+            date: log.logged_at ?? log.created_at,
             amount: log.value,
           })),
         );
@@ -102,39 +115,52 @@ export const useHabitDetail = ({
       (entry) => toLocalDateKey(parseEntryDate(entry.date)) === selectedDateStr,
     );
   }, [entries, selectedDateStr]);
+  const hasEntryForSelectedDate = entriesForSelectedDate.length > 0;
 
   const handleAddEntry = useCallback(async () => {
-    if (!habit || !entryState.amount || isFuture || isEntrySaving) return;
-    const amountValue = Number(entryState.amount);
+    if (!habit || isFuture || isEntrySaving) return;
+    if (habit.type === "binary" && hasEntryForSelectedDate) return;
+    if (!entryState.amount && habit.type !== "binary") return;
+    const amountValue = habit.type === "binary" ? 1 : Number(entryState.amount);
     if (Number.isNaN(amountValue)) return;
+    const selectedDateIso = new Date(
+      `${selectedDateStr}T12:00:00`,
+    ).toISOString();
     setIsEntrySaving(true);
     try {
       const created = await createLog(habit.id, {
         value: amountValue,
+        logged_at: selectedDateIso,
       });
       setEntries((prev) => [
         {
           id: created.id,
-          date: created.created_at,
+          date: created.logged_at ?? created.created_at,
           amount: created.value,
         },
         ...prev,
       ]);
       addEntry(habit.id, {
         id: created.id,
-        date: created.created_at,
+        date: created.logged_at ?? created.created_at,
         amount: created.value,
       });
       setLastTouchedEntry({ id: created.id, nonce: Date.now() });
       setEntryState({ amount: "", editingEntry: null });
     } catch (error) {
-      throw new Error(
-        error instanceof Error ? error.message : "Unable to add entry.",
-      );
+      throw new Error(getErrorMessage(error, "Unable to add entry."));
     } finally {
       setIsEntrySaving(false);
     }
-  }, [addEntry, entryState.amount, habit, isEntrySaving, isFuture]);
+  }, [
+    addEntry,
+    entryState.amount,
+    habit,
+    hasEntryForSelectedDate,
+    isEntrySaving,
+    isFuture,
+    selectedDateStr,
+  ]);
 
   const handleUpdateEntry = useCallback(async () => {
     if (
@@ -146,10 +172,14 @@ export const useHabitDetail = ({
       return;
     const amountValue = Number(entryState.amount);
     if (Number.isNaN(amountValue)) return;
+    const editingDateIso = new Date(
+      `${toLocalDateKey(parseEntryDate(entryState.editingEntry.date))}T12:00:00`,
+    ).toISOString();
     setIsEntrySaving(true);
     try {
       const updated = await updateLog(habit.id, entryState.editingEntry.id, {
         value: amountValue,
+        logged_at: editingDateIso,
       });
       setEntries((prev) =>
         prev.map((entry) =>
@@ -160,9 +190,7 @@ export const useHabitDetail = ({
       setLastTouchedEntry({ id: updated.id, nonce: Date.now() });
       setEntryState({ amount: "", editingEntry: null });
     } catch (error) {
-      throw new Error(
-        error instanceof Error ? error.message : "Unable to update entry.",
-      );
+      throw new Error(getErrorMessage(error, "Unable to update entry."));
     } finally {
       setIsEntrySaving(false);
     }
@@ -171,6 +199,8 @@ export const useHabitDetail = ({
     entryState.editingEntry,
     habit,
     isEntrySaving,
+    parseEntryDate,
+    toLocalDateKey,
     updateEntry,
   ]);
 
@@ -187,9 +217,7 @@ export const useHabitDetail = ({
         setEntries((prev) => prev.filter((entry) => entry.id !== entryId));
         deleteEntry(habit.id, entryId);
       } catch (error) {
-        throw new Error(
-          error instanceof Error ? error.message : "Unable to delete entry.",
-        );
+        throw new Error(getErrorMessage(error, "Unable to delete entry."));
       } finally {
         setDeletingEntryId((current) => (current === entryId ? null : current));
       }
@@ -231,6 +259,7 @@ export const useHabitDetail = ({
     entryState,
     setEntryState,
     entries,
+    hasEntryForSelectedDate,
     selectedDate,
     isToday,
     isFuture,

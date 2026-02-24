@@ -1,7 +1,12 @@
 import React, { useRef, useCallback, useEffect, useState } from "react";
 import { View, Text, Pressable, Alert, Animated } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import {
+  useNavigation,
+  useRoute,
+  type RouteProp,
+} from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { MainLayout } from "../../../layouts/MainLayout";
 import { PrimaryButton } from "../../../components/shared/PrimaryButton";
 import { HabitDetailActions } from "../components/details/HabitDetailActions";
@@ -9,13 +14,23 @@ import { HabitEntryForm } from "../components/details/HabitEntryForm";
 import { HabitEntryHistory } from "../components/details/HabitEntryHistory";
 import { HabitProgressCard } from "../components/details/HabitProgressCard";
 import type { HabitsStackParamList } from "../../../navigation/HabitsStack";
+import type { RootStackParamList } from "../../../navigation/RootNavigator";
 import { useHabits } from "../../../state/HabitsContext";
 import { useHabitDetail } from "../hooks/useHabitDetail";
 import { getProgressData } from "../hooks/useHabitProgress";
 
-type Props = NativeStackScreenProps<HabitsStackParamList, "HabitDetail">;
+type HabitDetailRoute = RouteProp<
+  HabitsStackParamList & RootStackParamList,
+  "HabitDetail"
+>;
+type HabitDetailNavigation = NativeStackNavigationProp<
+  HabitsStackParamList & RootStackParamList,
+  "HabitDetail"
+>;
 
-export function HabitDetailScreen({ navigation, route }: Props) {
+export function HabitDetailScreen() {
+  const navigation = useNavigation<HabitDetailNavigation>();
+  const route = useRoute<HabitDetailRoute>();
   const { habitId } = route.params;
   const {
     habits,
@@ -53,6 +68,7 @@ export function HabitDetailScreen({ navigation, route }: Props) {
     entryState,
     setEntryState,
     entries,
+    hasEntryForSelectedDate,
     selectedDate,
     isToday,
     isFuture,
@@ -167,6 +183,9 @@ export function HabitDetailScreen({ navigation, route }: Props) {
   });
   const isArchived = habit.archived;
   const isLocked = isArchiveLoading || isDeleteLoading;
+  const isBinary = habit.type === "binary";
+  const progressUnitLabel = isBinary ? "days" : habit.unit;
+  const entryUnitLabel = habit.unit;
 
   return (
     <MainLayout
@@ -197,7 +216,7 @@ export function HabitDetailScreen({ navigation, route }: Props) {
             progress={progress}
             currentAmount={currentAmount}
             goalAmount={habit.goalAmount}
-            unit={habit.unit}
+            unit={progressUnitLabel}
             goalType={habit.goalType}
           />
 
@@ -205,7 +224,9 @@ export function HabitDetailScreen({ navigation, route }: Props) {
             <HabitEntryForm
               amount={entryState.amount}
               editingEntry={entryState.editingEntry}
-              unit={habit.unit}
+              unit={entryUnitLabel}
+              habitType={habit.type}
+              hasEntryForDate={hasEntryForSelectedDate}
               isFuture={isFuture}
               isSaving={isEntrySaving}
               isReadOnly={isLocked}
@@ -252,7 +273,7 @@ export function HabitDetailScreen({ navigation, route }: Props) {
             showDatePicker={showDatePicker}
             minDate={minDate}
             entries={entriesForSelectedDate}
-            unit={habit.unit}
+            unit={entryUnitLabel}
             isLogsLoading={isLogsLoading}
             showActions={!isArchived && !isLocked}
             deletingEntryId={deletingEntryId}
@@ -262,7 +283,7 @@ export function HabitDetailScreen({ navigation, route }: Props) {
             onNextDay={goToNextDay}
             onToday={goToToday}
             onDateChange={handleDateChange}
-            onEditEntry={handleEditEntry}
+            onEditEntry={isBinary ? undefined : handleEditEntry}
             onDeleteEntry={async (entryId) => {
               Alert.alert(
                 "Delete entry",

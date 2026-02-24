@@ -10,22 +10,22 @@ export type HabitLog = {
   habit_id: string;
   profile_id: string;
   value: number;
-  metadata: Record<string, unknown> | null;
   source: LogSource | null;
+  logged_at: string | null;
   created_at: string;
   updated_at?: string | null;
 };
 
 export type LogCreateInput = {
   value: number;
-  metadata?: Record<string, unknown>;
   source?: LogSource;
+  logged_at?: string | null;
 };
 
 export type LogUpdateInput = {
   value?: number;
-  metadata?: Record<string, unknown>;
   source?: LogSource;
+  logged_at?: string | null;
 };
 
 const METRICS_FUNCTION =
@@ -72,7 +72,7 @@ export async function listLogs(
   const resolvedProfileId = await getProfileId(profileId);
   let query = supabase
     .from("habits_log")
-    .select("id, habit_id, profile_id, value, metadata, source, created_at")
+    .select("id, habit_id, profile_id, value, source, logged_at, created_at")
     .eq("profile_id", resolvedProfileId)
     .eq("habit_id", habitId)
     .order("created_at", { ascending: false });
@@ -95,7 +95,7 @@ export async function listLogsForHabits(
   const resolvedProfileId = await getProfileId(profileId);
   let query = supabase
     .from("habits_log")
-    .select("id, habit_id, profile_id, value, metadata, source, created_at")
+    .select("id, habit_id, profile_id, value, source, logged_at, created_at")
     .eq("profile_id", resolvedProfileId)
     .in("habit_id", habitIds)
     .order("created_at", { ascending: false });
@@ -118,7 +118,7 @@ export async function createLog(
     profile_id: resolvedProfileId,
     habit_id: habitId,
     value: payload.value,
-    metadata: payload.metadata ?? null,
+    logged_at: payload.logged_at ?? null,
     updated_at: new Date().toISOString(),
     ...(payload.source ? { source: payload.source } : {}),
   };
@@ -126,7 +126,7 @@ export async function createLog(
   const { data, error } = await supabase
     .from("habits_log")
     .insert(insertPayload)
-    .select("id, habit_id, profile_id, value, metadata, source, created_at")
+    .select("id, habit_id, profile_id, value, source, logged_at, created_at")
     .single();
 
   if (error) throw error;
@@ -135,7 +135,7 @@ export async function createLog(
   triggerMetricsCalculation(
     habitId,
     resolvedProfileId,
-    toLocalDateKey(new Date(data.created_at)),
+    toLocalDateKey(new Date(data.logged_at ?? data.created_at)),
   );
 
   return data as HabitLog;
@@ -150,8 +150,10 @@ export async function updateLog(
   const resolvedProfileId = await getProfileId(profileId);
   const updates = {
     ...(payload.value !== undefined ? { value: payload.value } : {}),
-    ...(payload.metadata !== undefined ? { metadata: payload.metadata } : {}),
     ...(payload.source ? { source: payload.source } : {}),
+    ...(payload.logged_at !== undefined
+      ? { logged_at: payload.logged_at }
+      : {}),
     updated_at: new Date().toISOString(),
   };
 
@@ -161,7 +163,7 @@ export async function updateLog(
     .eq("id", logId)
     .eq("habit_id", habitId)
     .eq("profile_id", resolvedProfileId)
-    .select("id, habit_id, profile_id, value, metadata, source, created_at")
+    .select("id, habit_id, profile_id, value, source, logged_at, created_at")
     .single();
 
   if (error) throw error;
@@ -170,7 +172,7 @@ export async function updateLog(
   triggerMetricsCalculation(
     habitId,
     resolvedProfileId,
-    toLocalDateKey(new Date(data.created_at)),
+    toLocalDateKey(new Date(data.logged_at ?? data.created_at)),
   );
 
   return data as HabitLog;
@@ -188,7 +190,7 @@ export async function deleteLog(
     .eq("id", logId)
     .eq("habit_id", habitId)
     .eq("profile_id", resolvedProfileId)
-    .select("id, habit_id, profile_id, value, metadata, source, created_at");
+    .select("id, habit_id, profile_id, value, source, logged_at, created_at");
 
   if (error) throw error;
 
@@ -197,7 +199,7 @@ export async function deleteLog(
     triggerMetricsCalculation(
       habitId,
       resolvedProfileId,
-      toLocalDateKey(new Date(data[0].created_at)),
+      toLocalDateKey(new Date(data[0].logged_at ?? data[0].created_at)),
     );
   }
 

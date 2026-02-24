@@ -14,7 +14,9 @@ import {
   fetchHabitAllTimeData,
   fetchProfileRecordsForDate,
   fetchProfileHistoricalDataForHabits,
+  fetchRecordsForDate,
   fetchHabitGoalTarget,
+  fetchHabitGoalConfig,
   fetchHabitGoalTargets,
 } from "./database.ts";
 import { convertToLogicalDate } from "./utils.ts";
@@ -67,6 +69,51 @@ function groupTotalsByHabit(records: HabitLogRecord[]): Record<string, number> {
       (totals[record.habit_id] || 0) + (record.value || 0);
   }
   return totals;
+}
+
+function toDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function parseDateKey(dateKey: string): Date {
+  return new Date(`${dateKey}T00:00:00`);
+}
+
+function getMondayStartKey(dateKey: string): string {
+  const date = parseDateKey(dateKey);
+  const day = date.getDay();
+  const diff = (day + 6) % 7;
+  date.setDate(date.getDate() - diff);
+  return toDateKey(date);
+}
+
+function getMonthStartKey(dateKey: string): string {
+  const date = parseDateKey(dateKey);
+  return toDateKey(new Date(date.getFullYear(), date.getMonth(), 1));
+}
+
+function getSundayDateKey(dateKey: string): string {
+  const date = parseDateKey(dateKey);
+  const dayOfWeek = date.getDay();
+  const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+  date.setDate(date.getDate() + daysUntilSunday);
+  return toDateKey(date);
+}
+
+function getMonthEndKey(dateKey: string): string {
+  const date = parseDateKey(dateKey);
+  const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+  return toDateKey(lastDay);
+}
+
+function getDaysBetween(startKey: string, endKey: string): number {
+  const start = parseDateKey(startKey);
+  const end = parseDateKey(endKey);
+  const diffMs = end.getTime() - start.getTime();
+  return Math.max(0, Math.floor(diffMs / (24 * 60 * 60 * 1000)));
 }
 
 /**
@@ -213,6 +260,12 @@ export async function calculateStreak(
   habitId: string,
   logicalDate: string,
 ): Promise<Metric | null> {
+  const goalConfig = await fetchHabitGoalConfig(supabase, profileId, habitId);
+  if (!goalConfig) return null;
+  if (goalConfig.goal_type !== "daily" && goalConfig.target_value <= 0) {
+    return null;
+  }
+
   const historicalData = await fetchHistoricalData(
     supabase,
     profileId,
@@ -223,37 +276,88 @@ export async function calculateStreak(
 
   if (historicalData.length === 0) return null;
 
-  // Get unique dates
-  const datesWithData = new Set<string>();
-  for (const record of historicalData) {
-    datesWithData.add(convertToLogicalDate(record));
+  const dailyTotals = groupDailyTotals(historicalData);
+
+  if (goalConfig.goal_type === "daily") {
+    const completedDates = Object.entries(dailyTotals)
+      .filter(([, total]) =>
+        goalConfig.target_value > 0
+          ? total >= goalConfig.target_value
+          : total > 0,
+      )
+      .map(([dateKey]) => dateKey);
+
+    const sortedDates = completedDates
+      .map((d) => parseDateKey(d))
+      .sort((a, b) => b.getTime() - a.getTime());
+
+    if (sortedDates.length === 0) return null;
+
+    const currentDate = parseDateKey(logicalDate);
+    let streak = 0;
+
+    for (let i = 0; i < sortedDates.length; i++) {
+      const expectedDate = new Date(currentDate);
+      expectedDate.setDate(expectedDate.getDate() - i);
+
+      const expectedStr = toDateKey(expectedDate);
+      const actualStr = toDateKey(sortedDates[i]);
+
+      if (expectedStr === actualStr) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+
+    if (streak === 0) return null;
+
+    return {
+      profile_id: profileId,
+      habit_id: habitId,
+      date: logicalDate,
+      metric_type: "streak",
+      granularity: "daily",
+      value: streak,
+      metadata: { consecutive_days: streak },
+    };
   }
 
-  const sortedDates = Array.from(datesWithData)
-    .map((d) => new Date(d))
-    .sort((a, b) => b.getTime() - a.getTime());
+  const totalsByPeriod: Record<string, number> = {};
+  for (const [dateKey, total] of Object.entries(dailyTotals)) {
+    const periodKey =
+      goalConfig.goal_type === "weekly"
+        ? getMondayStartKey(dateKey)
+        : getMonthStartKey(dateKey);
+    totalsByPeriod[periodKey] = (totalsByPeriod[periodKey] || 0) + total;
+  }
 
-  if (sortedDates.length === 0) return null;
+  const currentPeriodKey =
+    goalConfig.goal_type === "weekly"
+      ? getMondayStartKey(logicalDate)
+      : getMonthStartKey(logicalDate);
 
-  // Calculate consecutive days
-  const currentDate = new Date(logicalDate);
+  if ((totalsByPeriod[currentPeriodKey] ?? 0) < goalConfig.target_value) {
+    return null;
+  }
+
+  let cursorKey = currentPeriodKey;
+
   let streak = 0;
+  while (true) {
+    const total = totalsByPeriod[cursorKey] ?? 0;
+    if (total < goalConfig.target_value) break;
+    streak += 1;
 
-  for (let i = 0; i < sortedDates.length; i++) {
-    const expectedDate = new Date(currentDate);
-    expectedDate.setDate(expectedDate.getDate() - i);
-
-    const expectedStr = expectedDate.toISOString().split("T")[0];
-    const actualStr = sortedDates[i].toISOString().split("T")[0];
-
-    if (expectedStr === actualStr) {
-      streak++;
+    const cursorDate = parseDateKey(cursorKey);
+    if (goalConfig.goal_type === "weekly") {
+      cursorDate.setDate(cursorDate.getDate() - 7);
+      cursorKey = getMondayStartKey(toDateKey(cursorDate));
     } else {
-      break;
+      cursorDate.setMonth(cursorDate.getMonth() - 1);
+      cursorKey = getMonthStartKey(toDateKey(cursorDate));
     }
   }
-
-  if (streak === 0) return null;
 
   return {
     profile_id: profileId,
@@ -262,8 +366,110 @@ export async function calculateStreak(
     metric_type: "streak",
     granularity: "daily",
     value: streak,
-    metadata: { consecutive_days: streak },
+    metadata: {
+      period: goalConfig.goal_type,
+      target_value: goalConfig.target_value,
+    },
   };
+}
+
+/**
+ * Calculate goal progress for a habit based on its goal type
+ */
+export async function calculateGoalProgress(
+  supabase: any,
+  profileId: string,
+  habitId: string,
+  logicalDate: string,
+): Promise<Metric | null> {
+  const goalConfig = await fetchHabitGoalConfig(supabase, profileId, habitId);
+  if (!goalConfig) return null;
+
+  const targetValue = Number(goalConfig.target_value ?? 0);
+  if (targetValue <= 0) return null;
+
+  let totalValue = 0;
+  let periodStart = logicalDate;
+  let periodEnd = logicalDate;
+
+  if (goalConfig.goal_type === "daily") {
+    const records = await fetchRecordsForDate(
+      supabase,
+      profileId,
+      habitId,
+      logicalDate,
+    );
+    totalValue = sumValues(records);
+  } else {
+    periodStart =
+      goalConfig.goal_type === "weekly"
+        ? getMondayStartKey(logicalDate)
+        : getMonthStartKey(logicalDate);
+    periodEnd =
+      goalConfig.goal_type === "weekly"
+        ? getSundayDateKey(logicalDate)
+        : getMonthEndKey(logicalDate);
+
+    const daysBack = getDaysBetween(periodStart, logicalDate);
+    const historicalData = await fetchHistoricalData(
+      supabase,
+      profileId,
+      habitId,
+      daysBack,
+      logicalDate,
+    );
+
+    const dailyTotals = groupDailyTotals(historicalData);
+    const totalsByPeriod: Record<string, number> = {};
+
+    for (const [dateKey, total] of Object.entries(dailyTotals)) {
+      const periodKey =
+        goalConfig.goal_type === "weekly"
+          ? getMondayStartKey(dateKey)
+          : getMonthStartKey(dateKey);
+      totalsByPeriod[periodKey] = (totalsByPeriod[periodKey] || 0) + total;
+    }
+
+    totalValue = totalsByPeriod[periodStart] ?? 0;
+  }
+
+  const progressPercent = Math.min((totalValue / targetValue) * 100, 100);
+
+  return {
+    profile_id: profileId,
+    habit_id: habitId,
+    date: periodEnd,
+    metric_type: "goal_progress",
+    granularity: goalConfig.goal_type,
+    value: Math.round(progressPercent * 10) / 10,
+    metadata: {
+      goal_type: goalConfig.goal_type,
+      target_value: targetValue,
+      total_value: Math.round(totalValue * 10) / 10,
+      progress_percent: Math.round(progressPercent * 10) / 10,
+      period_start: periodStart,
+      period_end: periodEnd,
+    },
+  };
+}
+
+export async function calculateGoalProgressForHabits(
+  supabase: any,
+  profileId: string,
+  habitIds: string[],
+  logicalDate: string,
+): Promise<Metric[]> {
+  const metrics: Metric[] = [];
+  for (const habitId of habitIds) {
+    const metric = await calculateGoalProgress(
+      supabase,
+      profileId,
+      habitId,
+      logicalDate,
+    );
+    if (metric) metrics.push(metric);
+  }
+  return metrics;
 }
 
 /**

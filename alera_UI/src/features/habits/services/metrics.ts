@@ -1,13 +1,16 @@
 import { supabase } from "../../../services/supabase";
 import { getCurrentProfileId } from "../../../services/profile";
+import { invokeEdgeFunction } from "../../../services/edgeFunctions";
 
 export type MetricGranularity = "daily" | "weekly" | "monthly" | "all_time";
 
 export type Metric = {
+  habit_id: string | null;
   date: string;
   metric_type: string;
   granularity: MetricGranularity;
   value: number;
+  metadata?: Record<string, unknown> | null;
 };
 
 export type MetricsQuery = {
@@ -32,7 +35,7 @@ export async function listMetrics(
 
   let query = supabase
     .from("metrics")
-    .select("date, metric_type, granularity, value")
+    .select("habit_id, date, metric_type, granularity, value, metadata")
     .eq("profile_id", resolvedProfileId)
     .order("date", { ascending: true });
 
@@ -48,6 +51,28 @@ export async function listMetrics(
   if (to) query = query.lte("date", to);
 
   const { data, error } = await query;
+  if (error) throw error;
+  return data as Metric[];
+}
+
+export async function listGoalProgressMetrics(
+  habitIds: string[],
+  granularity: MetricGranularity,
+  date: string,
+  profileId?: string,
+) {
+  if (habitIds.length === 0) return [] as Metric[];
+  const resolvedProfileId = await getProfileId(profileId);
+  const { data, error } = await supabase
+    .from("metrics")
+    .select("habit_id, date, metric_type, granularity, value, metadata")
+    .eq("profile_id", resolvedProfileId)
+    .in("habit_id", habitIds)
+    .eq("metric_type", "goal_progress")
+    .eq("granularity", granularity)
+    .eq("date", date)
+    .order("habit_id", { ascending: true });
+
   if (error) throw error;
   return data as Metric[];
 }
@@ -68,4 +93,41 @@ export async function listDailyMetrics(
     },
     profileId,
   );
+}
+
+export async function listStreakMetrics(
+  from?: string,
+  to?: string,
+  profileId?: string,
+) {
+  return listMetrics(
+    undefined,
+    {
+      metricType: "streak",
+      granularity: "daily",
+      from,
+      to,
+    },
+    profileId,
+  );
+}
+
+const METRICS_FUNCTION =
+  process.env.EXPO_PUBLIC_METRICS_FUNCTION ?? "calculate-metrics";
+
+export async function recalculateProfileMetrics(profileId?: string) {
+  const resolvedProfileId = await getProfileId(profileId);
+  const { data, errorMessage } = await invokeEdgeFunction(
+    METRICS_FUNCTION,
+    {
+      profile_id: resolvedProfileId,
+    },
+    { throwOnError: false },
+  );
+
+  if (errorMessage) {
+    console.error("Error recalculating profile metrics:", errorMessage);
+  }
+
+  return data;
 }

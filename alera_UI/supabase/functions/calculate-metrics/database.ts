@@ -5,6 +5,19 @@
 import type { HabitLogRecord, Metric } from "./types.ts";
 import { getDateRangeForWindow, convertToLogicalDate } from "./utils.ts";
 
+function applyLogicalTimestampWindow(
+  query: any,
+  utcStart: string,
+  utcEnd: string,
+) {
+  return query.or(
+    [
+      `and(logged_at.gte.${utcStart},logged_at.lte.${utcEnd})`,
+      `and(logged_at.is.null,created_at.gte.${utcStart},created_at.lte.${utcEnd})`,
+    ].join(","),
+  );
+}
+
 /**
  * Fetch all records for a specific user/habit on a specific date
  */
@@ -17,13 +30,15 @@ export async function fetchRecordsForDate(
   // Get UTC range for the date
   const [utcStart, utcEnd] = getDateRangeForWindow(logicalDate, 0);
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("habits_log")
     .select("*")
     .eq("profile_id", profileId)
-    .eq("habit_id", habitId)
-    .gte("created_at", utcStart)
-    .lte("created_at", utcEnd);
+    .eq("habit_id", habitId);
+
+  query = applyLogicalTimestampWindow(query, utcStart, utcEnd);
+
+  const { data, error } = await query;
 
   if (error) throw error;
 
@@ -45,13 +60,15 @@ export async function fetchHistoricalData(
 ): Promise<HabitLogRecord[]> {
   const [utcStart, utcEnd] = getDateRangeForWindow(endDate, daysBack);
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("habits_log")
     .select("*")
     .eq("profile_id", profileId)
-    .eq("habit_id", habitId)
-    .gte("created_at", utcStart)
-    .lte("created_at", utcEnd);
+    .eq("habit_id", habitId);
+
+  query = applyLogicalTimestampWindow(query, utcStart, utcEnd);
+
+  const { data, error } = await query;
 
   if (error) throw error;
   return data || [];
@@ -68,12 +85,14 @@ export async function fetchProfileHistoricalData(
 ): Promise<HabitLogRecord[]> {
   const [utcStart, utcEnd] = getDateRangeForWindow(endDate, daysBack);
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("habits_log")
     .select("*")
-    .eq("profile_id", profileId)
-    .gte("created_at", utcStart)
-    .lte("created_at", utcEnd);
+    .eq("profile_id", profileId);
+
+  query = applyLogicalTimestampWindow(query, utcStart, utcEnd);
+
+  const { data, error } = await query;
 
   if (error) throw error;
   return data || [];
@@ -92,13 +111,15 @@ export async function fetchProfileRecordsForDate(
 
   const [utcStart, utcEnd] = getDateRangeForWindow(logicalDate, 0);
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("habits_log")
     .select("*")
     .eq("profile_id", profileId)
-    .in("habit_id", habitIds)
-    .gte("created_at", utcStart)
-    .lte("created_at", utcEnd);
+    .in("habit_id", habitIds);
+
+  query = applyLogicalTimestampWindow(query, utcStart, utcEnd);
+
+  const { data, error } = await query;
 
   if (error) throw error;
 
@@ -121,13 +142,15 @@ export async function fetchProfileHistoricalDataForHabits(
 
   const [utcStart, utcEnd] = getDateRangeForWindow(endDate, daysBack);
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("habits_log")
     .select("*")
     .eq("profile_id", profileId)
-    .in("habit_id", habitIds)
-    .gte("created_at", utcStart)
-    .lte("created_at", utcEnd);
+    .in("habit_id", habitIds);
+
+  query = applyLogicalTimestampWindow(query, utcStart, utcEnd);
+
+  const { data, error } = await query;
 
   if (error) throw error;
   return data || [];
@@ -168,6 +191,55 @@ export async function fetchHabitGoalTarget(
 
   if (error) throw error;
   return data?.target_value ?? null;
+}
+
+export type HabitGoalConfig = {
+  target_value: number;
+  goal_type: "daily" | "weekly" | "monthly";
+};
+
+export type HabitType = "numeric" | "binary";
+
+/**
+ * Fetch goal target and goal type for a habit
+ */
+export async function fetchHabitGoalConfig(
+  supabase: any,
+  profileId: string,
+  habitId: string,
+): Promise<HabitGoalConfig | null> {
+  const { data, error } = await supabase
+    .from("user_goals")
+    .select("target_value, goal_type")
+    .eq("profile_id", profileId)
+    .eq("habit_id", habitId)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+  return {
+    target_value: Number(data.target_value ?? 0),
+    goal_type: data.goal_type as "daily" | "weekly" | "monthly",
+  };
+}
+
+/**
+ * Fetch habit type
+ */
+export async function fetchHabitType(
+  supabase: any,
+  profileId: string,
+  habitId: string,
+): Promise<HabitType | null> {
+  const { data, error } = await supabase
+    .from("habits")
+    .select("type")
+    .eq("profile_id", profileId)
+    .eq("id", habitId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data?.type as HabitType) ?? null;
 }
 
 /**

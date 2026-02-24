@@ -3,7 +3,7 @@ import { getCurrentProfileId } from "../../../services/profile";
 import { invokeEdgeFunction } from "../../../services/edgeFunctions";
 import { toLocalDateKey } from "../utils/dates";
 
-export type HabitType = "numeric";
+export type HabitType = "numeric" | "binary";
 export type HabitStatus = "active" | "paused" | "archived";
 export type GoalType = "daily" | "weekly" | "monthly";
 
