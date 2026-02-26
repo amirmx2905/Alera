@@ -12,6 +12,7 @@ import { useAuth } from "../state/AuthContext.tsx";
 import { View } from "react-native";
 import { getProfile } from "../services/profile.ts";
 import { AppBackground } from "../layouts/AppBackground.tsx";
+import { DotLoader } from "../components/shared/DotLoader.tsx";
 import type { AppTabParamList } from "./AppTabs";
 
 type AuthStackParamList = {
@@ -54,7 +55,7 @@ function AppTabsShell() {
 }
 
 export function RootNavigator() {
-  const { session } = useAuth();
+  const { session, isLoading: isAuthLoading } = useAuth();
   const [profileStatus, setProfileStatus] = useState<
     "loading" | "missing" | "ready"
   >("loading");
@@ -85,6 +86,16 @@ export function RootNavigator() {
 
   const handleProfileComplete = () => setProfileStatus("ready");
 
+  if (isAuthLoading || (session && profileStatus === "loading")) {
+    return (
+      <AppBackground>
+        <View className="flex-1 items-center justify-center">
+          <DotLoader />
+        </View>
+      </AppBackground>
+    );
+  }
+
   return (
     <View className="flex-1">
       <RootStack.Navigator
@@ -99,7 +110,9 @@ export function RootNavigator() {
               {() => <ProfileScreen onComplete={handleProfileComplete} />}
             </RootStack.Screen>
           ) : (
-            <RootStack.Screen name="App" component={AppTabsShell} />
+            <RootStack.Screen name="App">
+              {() => <AppTabsShell key={`tabs-${session.user.id}`} />}
+            </RootStack.Screen>
           )
         ) : (
           <RootStack.Screen name="Auth" component={AuthNavigator} />

@@ -15,6 +15,7 @@ import { TodaysHabitsList } from "../components/TodaysHabitsList";
 import { useHomeData } from "../hooks/useHomeData";
 import type { AppTabParamList } from "../../../navigation/AppTabs";
 import type { HomeGoalFilter } from "../types";
+import { useHomeStartupGate } from "../../../navigation/HomeStartupGate";
 
 type NavigationProp = BottomTabNavigationProp<AppTabParamList>;
 
@@ -22,9 +23,22 @@ export function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const [goalType, setGoalType] = useState<HomeGoalFilter>("daily");
   const { data, error, isLoading, toggleHabitComplete } = useHomeData(goalType);
+  const { isHomeReady, markHomeReady } = useHomeStartupGate();
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const filterAnim = useRef(new Animated.Value(0)).current;
+  const hasSeenLoadingRef = useRef(false);
   const hasData = Boolean(data);
+
+  useEffect(() => {
+    if (isLoading) {
+      hasSeenLoadingRef.current = true;
+      return;
+    }
+
+    if (hasSeenLoadingRef.current && !isHomeReady) {
+      markHomeReady();
+    }
+  }, [isLoading, isHomeReady, markHomeReady]);
 
   useEffect(() => {
     if (!hasData) return;
@@ -52,6 +66,7 @@ export function HomeScreen() {
         title="Home"
         headerVariant="icon"
         headerIconName="home-outline"
+        showHeader={isHomeReady}
         showBackground={false}
         contentClassName="flex-1 px-6 pt-16"
       >
@@ -70,8 +85,9 @@ export function HomeScreen() {
       title="Home"
       headerVariant="icon"
       headerIconName="home-outline"
+      showHeader={isHomeReady}
       showBackground={false}
-      isLoading={isLoading}
+      isLoading={isHomeReady ? isLoading : false}
       scrollable
       contentClassName="flex-1 px-6 pt-16"
     >

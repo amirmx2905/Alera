@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from "react";
-import { Animated } from "react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Animated, View } from "react-native";
 import type { NavigatorScreenParams } from "@react-navigation/native";
 import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
 import {
@@ -13,6 +13,8 @@ import { HabitsStack, type HabitsStackParamList } from "./HabitsStack";
 import { StatsScreen } from "../features/stats/screens/StatsScreen.tsx";
 import { ChatScreen } from "../features/chat/screens/ChatScreen.tsx";
 import { SettingsScreen } from "../features/settings/screens/SettingsScreen.tsx";
+import { HomeStartupGateProvider } from "./HomeStartupGate";
+import { DotLoader } from "../components/shared/DotLoader";
 
 export type AppTabParamList = {
   Home: undefined;
@@ -39,11 +41,15 @@ const iconMap: Record<
   Settings: { focused: "settings", unfocused: "settings-outline" },
 };
 
-function AnimatedTabBar(props: MaterialTopTabBarProps) {
+function AnimatedTabBar({
+  forceHidden = false,
+  ...props
+}: MaterialTopTabBarProps & { forceHidden?: boolean }) {
   const focusedRoute = props.state.routes[props.state.index];
   const nestedRouteName = getFocusedRouteNameFromRoute(focusedRoute);
   const isHidden =
-    focusedRoute.name === "Habits" && nestedRouteName === "HabitDetail";
+    forceHidden ||
+    (focusedRoute.name === "Habits" && nestedRouteName === "HabitDetail");
   const visibility = useRef(new Animated.Value(isHidden ? 0 : 1)).current;
 
   useEffect(() => {
@@ -148,10 +154,6 @@ const screenOptions = ({
   route: { name: keyof AppTabParamList };
 }) => ({
   headerShown: false,
-  swipeEnabled: (() => {
-    const nestedRoute = getFocusedRouteNameFromRoute(route) ?? "HabitsHome";
-    return !(route.name === "Habits" && nestedRoute === "HabitDetail");
-  })(),
   tabBarShowIcon: true,
   tabBarStyle: {
     backgroundColor: "#0b0b0b",
@@ -195,18 +197,42 @@ const screenOptions = ({
 });
 
 export function AppTabs() {
+  const [isHomeReady, setIsHomeReady] = useState(false);
+
+  const markHomeReady = useCallback(() => {
+    setIsHomeReady(true);
+  }, []);
+
   return (
-    <Tab.Navigator
-      screenOptions={screenOptions}
-      tabBar={(props) => <AnimatedTabBar {...props} />}
-      tabBarPosition="bottom"
-      initialRouteName="Home"
+    <HomeStartupGateProvider
+      isHomeReady={isHomeReady}
+      markHomeReady={markHomeReady}
     >
-      <Tab.Screen name="Habits" component={HabitsStack} />
-      <Tab.Screen name="Stats" component={StatsScreen} />
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Chat" component={ChatScreen} />
-      <Tab.Screen name="Settings" component={SettingsScreen} />
-    </Tab.Navigator>
+      <View className="flex-1">
+        <Tab.Navigator
+          screenOptions={(props) => ({
+            ...screenOptions(props),
+            swipeEnabled: isHomeReady,
+          })}
+          tabBar={(props) => (
+            <AnimatedTabBar {...props} forceHidden={!isHomeReady} />
+          )}
+          tabBarPosition="bottom"
+          initialRouteName="Home"
+        >
+          <Tab.Screen name="Habits" component={HabitsStack} />
+          <Tab.Screen name="Stats" component={StatsScreen} />
+          <Tab.Screen name="Home" component={HomeScreen} />
+          <Tab.Screen name="Chat" component={ChatScreen} />
+          <Tab.Screen name="Settings" component={SettingsScreen} />
+        </Tab.Navigator>
+
+        {!isHomeReady ? (
+          <View className="absolute inset-0 items-center justify-center">
+            <DotLoader />
+          </View>
+        ) : null}
+      </View>
+    </HomeStartupGateProvider>
   );
 }
