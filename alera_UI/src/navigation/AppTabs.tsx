@@ -10,7 +10,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { HomeScreen } from "../features/home/screens/HomeScreen.tsx";
 import { HabitsStack, type HabitsStackParamList } from "./HabitsStack";
-import { StatsScreen } from "../features/stats/screens/StatsScreen.tsx";
+import { StatsStack, type StatsStackParamList } from "./StatsStack";
 import { ChatScreen } from "../features/chat/screens/ChatScreen.tsx";
 import { SettingsScreen } from "../features/settings/screens/SettingsScreen.tsx";
 import { HomeStartupGateProvider } from "./HomeStartupGate";
@@ -19,7 +19,7 @@ import { DotLoader } from "../components/shared/DotLoader";
 export type AppTabParamList = {
   Home: undefined;
   Habits: NavigatorScreenParams<HabitsStackParamList> | undefined;
-  Stats: undefined;
+  Stats: NavigatorScreenParams<StatsStackParamList> | undefined;
   Chat: undefined;
   Settings: undefined;
 };
@@ -49,7 +49,8 @@ function AnimatedTabBar({
   const nestedRouteName = getFocusedRouteNameFromRoute(focusedRoute);
   const isHidden =
     forceHidden ||
-    (focusedRoute.name === "Habits" && nestedRouteName === "HabitDetail");
+    (focusedRoute.name === "Habits" && nestedRouteName === "HabitDetail") ||
+    (focusedRoute.name === "Stats" && nestedRouteName === "StatsDetail");
   const visibility = useRef(new Animated.Value(isHidden ? 0 : 1)).current;
 
   useEffect(() => {
@@ -221,7 +222,7 @@ export function AppTabs() {
           initialRouteName="Home"
         >
           <Tab.Screen name="Habits" component={HabitsStack} />
-          <Tab.Screen name="Stats" component={StatsScreen} />
+          <Tab.Screen name="Stats" component={StatsStack} />
           <Tab.Screen name="Home" component={HomeScreen} />
           <Tab.Screen name="Chat" component={ChatScreen} />
           <Tab.Screen name="Settings" component={SettingsScreen} />
