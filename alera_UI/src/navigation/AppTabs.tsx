@@ -27,6 +27,17 @@ export type AppTabParamList = {
 const Tab = createMaterialTopTabNavigator<AppTabParamList>();
 const TAB_BAR_HEIGHT = 60;
 const TAB_BAR_BOTTOM_GAP = 20;
+
+const isTabInteractionLocked = (
+  routeName: string,
+  nestedRouteName?: string,
+) => {
+  return (
+    (routeName === "Habits" && nestedRouteName === "HabitDetail") ||
+    (routeName === "Stats" && nestedRouteName === "StatsDetail")
+  );
+};
+
 const iconMap: Record<
   keyof AppTabParamList,
   {
@@ -48,9 +59,7 @@ function AnimatedTabBar({
   const focusedRoute = props.state.routes[props.state.index];
   const nestedRouteName = getFocusedRouteNameFromRoute(focusedRoute);
   const isHidden =
-    forceHidden ||
-    (focusedRoute.name === "Habits" && nestedRouteName === "HabitDetail") ||
-    (focusedRoute.name === "Stats" && nestedRouteName === "StatsDetail");
+    forceHidden || isTabInteractionLocked(focusedRoute.name, nestedRouteName);
   const visibility = useRef(new Animated.Value(isHidden ? 0 : 1)).current;
 
   useEffect(() => {
@@ -226,7 +235,10 @@ export function AppTabs() {
           <Tab.Navigator
             screenOptions={(props) => ({
               ...screenOptions(props),
-              swipeEnabled: true,
+              swipeEnabled: !isTabInteractionLocked(
+                props.route.name,
+                getFocusedRouteNameFromRoute(props.route),
+              ),
             })}
             tabBar={(props) => (
               <AnimatedTabBar {...props} forceHidden={false} />
