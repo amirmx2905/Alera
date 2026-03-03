@@ -80,23 +80,33 @@ export const calculateLocalStreak = (
       ? getMondayStartKey(todayKey)
       : getMonthStartKey(todayKey);
 
-  if ((totalsByPeriod[currentPeriodKey] ?? 0) < goalAmount) return 0;
+  const getPreviousPeriodKey = (periodKey: string) => {
+    const cursorDate = parseDateKey(periodKey);
+    if (goalType === "weekly") {
+      cursorDate.setDate(cursorDate.getDate() - 7);
+      return getMondayStartKey(toLocalDateKey(cursorDate));
+    }
+
+    cursorDate.setMonth(cursorDate.getMonth() - 1);
+    return getMonthStartKey(toLocalDateKey(cursorDate));
+  };
+
+  const currentPeriodTotal = totalsByPeriod[currentPeriodKey] ?? 0;
+  const initialPeriodKey =
+    currentPeriodTotal >= goalAmount
+      ? currentPeriodKey
+      : getPreviousPeriodKey(currentPeriodKey);
+
+  if ((totalsByPeriod[initialPeriodKey] ?? 0) < goalAmount) return 0;
 
   let streak = 0;
-  let cursorKey = currentPeriodKey;
+  let cursorKey = initialPeriodKey;
   while (true) {
     const total = totalsByPeriod[cursorKey] ?? 0;
     if (total < goalAmount) break;
     streak += 1;
 
-    const cursorDate = parseDateKey(cursorKey);
-    if (goalType === "weekly") {
-      cursorDate.setDate(cursorDate.getDate() - 7);
-      cursorKey = getMondayStartKey(toLocalDateKey(cursorDate));
-    } else {
-      cursorDate.setMonth(cursorDate.getMonth() - 1);
-      cursorKey = getMonthStartKey(toLocalDateKey(cursorDate));
-    }
+    cursorKey = getPreviousPeriodKey(cursorKey);
   }
 
   return streak;
