@@ -209,31 +209,39 @@ export function AppTabs() {
       isHomeReady={isHomeReady}
       markHomeReady={markHomeReady}
     >
-      <View className="flex-1">
-        <Tab.Navigator
-          screenOptions={(props) => ({
-            ...screenOptions(props),
-            swipeEnabled: isHomeReady,
-          })}
-          tabBar={(props) => (
-            <AnimatedTabBar {...props} forceHidden={!isHomeReady} />
-          )}
-          tabBarPosition="bottom"
-          initialRouteName="Home"
-        >
-          <Tab.Screen name="Habits" component={HabitsStack} />
-          <Tab.Screen name="Stats" component={StatsStack} />
-          <Tab.Screen name="Home" component={HomeScreen} />
-          <Tab.Screen name="Chat" component={ChatScreen} />
-          <Tab.Screen name="Settings" component={SettingsScreen} />
-        </Tab.Navigator>
-
-        {!isHomeReady ? (
-          <View className="absolute inset-0 items-center justify-center">
+      {!isHomeReady ? (
+        <View className="flex-1">
+          <HomeScreen />
+          <View
+            className="absolute inset-0 items-center justify-center"
+            pointerEvents="auto"
+            onStartShouldSetResponder={() => true}
+            onMoveShouldSetResponder={() => true}
+          >
             <DotLoader />
           </View>
-        ) : null}
-      </View>
+        </View>
+      ) : (
+        <View className="flex-1">
+          <Tab.Navigator
+            screenOptions={(props) => ({
+              ...screenOptions(props),
+              swipeEnabled: true,
+            })}
+            tabBar={(props) => (
+              <AnimatedTabBar {...props} forceHidden={false} />
+            )}
+            tabBarPosition="bottom"
+            initialRouteName="Home"
+          >
+            <Tab.Screen name="Habits" component={HabitsStack} />
+            <Tab.Screen name="Stats" component={StatsStack} />
+            <Tab.Screen name="Home" component={HomeScreen} />
+            <Tab.Screen name="Chat" component={ChatScreen} />
+            <Tab.Screen name="Settings" component={SettingsScreen} />
+          </Tab.Navigator>
+        </View>
+      )}
     </HomeStartupGateProvider>
   );
 }
