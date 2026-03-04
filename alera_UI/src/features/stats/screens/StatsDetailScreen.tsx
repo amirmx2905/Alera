@@ -26,6 +26,7 @@ import {
   parseEntryDate,
   toLocalDateKey,
 } from "../../habits/utils/dates";
+import { formatPeriodUnit } from "../utils/formatters";
 
 type DetailRoute = RouteProp<StatsStackParamList, "StatsDetail">;
 
@@ -34,15 +35,27 @@ function buildHabitTrend(
   habitEntries: { date: string }[],
   granularity: StatsGranularity,
 ) {
+  const countsByBucket: Record<string, number> = {};
+
+  habitEntries.forEach((entry) => {
+    const key = toLocalDateKey(parseEntryDate(entry.date));
+    if (granularity === "weekly") {
+      const weeklyKey = getMondayStartKey(key);
+      countsByBucket[weeklyKey] = (countsByBucket[weeklyKey] || 0) + 1;
+      return;
+    }
+
+    const bucketKey = granularity === "daily" ? key : getMonthEndKey(key);
+
+    countsByBucket[bucketKey] = (countsByBucket[bucketKey] || 0) + 1;
+  });
+
   return dateLabels.map((point) => {
-    const count = habitEntries.filter((entry) => {
-      const key = toLocalDateKey(parseEntryDate(entry.date));
-      if (granularity === "daily") return key === point.dateKey;
-      if (granularity === "weekly") {
-        return getMondayStartKey(key) === getMondayStartKey(point.dateKey);
-      }
-      return getMonthEndKey(key) === point.dateKey;
-    }).length;
+    const pointBucketKey =
+      granularity === "weekly"
+        ? getMondayStartKey(point.dateKey)
+        : point.dateKey;
+    const count = countsByBucket[pointBucketKey] ?? 0;
 
     return {
       ...point,
@@ -122,7 +135,11 @@ export function StatsDetailScreen() {
               {detail.completionCountWindow}
             </Text>
             <Text className="text-xs text-slate-500">
-              Out of {detail.completionWindowTotal} {detail.completionUnit}
+              Out of {detail.completionWindowTotal}{" "}
+              {formatPeriodUnit(
+                detail.completionWindowTotal,
+                detail.completionUnit,
+              )}
             </Text>
           </View>
           <View className="w-[48.5%] rounded-2xl border border-white/10 bg-white/5 p-4">

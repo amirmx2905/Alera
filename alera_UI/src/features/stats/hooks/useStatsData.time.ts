@@ -135,6 +135,29 @@ export function countEntriesForBucket(
   }, 0);
 }
 
+export function buildEntryCountMapByGranularity(
+  habits: Habit[],
+  granularity: StatsGranularity,
+) {
+  const countsByBucket: Record<string, number> = {};
+
+  habits.forEach((habit) => {
+    habit.entries.forEach((entry) => {
+      const entryKey = toLocalDateKey(parseEntryDate(entry.date));
+      const bucketKey =
+        granularity === "daily"
+          ? entryKey
+          : granularity === "weekly"
+            ? getSundayDateKey(entryKey)
+            : getMonthEndKey(entryKey);
+
+      countsByBucket[bucketKey] = (countsByBucket[bucketKey] || 0) + 1;
+    });
+  });
+
+  return countsByBucket;
+}
+
 export function getLatestValueByDate(rows: { date: string; value: number }[]) {
   if (!rows.length) return undefined;
   let latest = rows[0];

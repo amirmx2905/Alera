@@ -2,6 +2,7 @@ import React from "react";
 import { Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import type { StatsHabitListItem } from "../types";
+import { formatCompletionWindow } from "../utils/formatters";
 
 type StatsHabitsListProps = {
   habits: StatsHabitListItem[];
@@ -30,8 +31,12 @@ export function StatsHabitsList({
                 {habit.name}
               </Text>
               <Text className="mt-0.5 text-xs text-slate-400">
-                {habit.category} • {habit.completionCount}/
-                {habit.completionWindowTotal} {habit.completionUnit}
+                {habit.category} •{" "}
+                {formatCompletionWindow(
+                  habit.completionCount,
+                  habit.completionWindowTotal,
+                  habit.completionUnit,
+                )}
               </Text>
             </View>
 

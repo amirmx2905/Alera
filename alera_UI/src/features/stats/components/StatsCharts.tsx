@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Text, View } from "react-native";
+import { Text, View, useWindowDimensions } from "react-native";
 import { BarChart, LineChart } from "react-native-gifted-charts";
 import type { StatsTrendPoint } from "../types";
 
@@ -21,16 +21,21 @@ export function StatsTrendChart({
   points,
   showArea = false,
 }: ChartProps) {
+  const { width: viewportWidth } = useWindowDimensions();
   const data = useMemo(() => buildChartData(points), [points]);
   const maxValue = Math.max(4, ...data.map((item) => item.value));
+  const chartWidth = Math.max(220, viewportWidth - 104);
+  const pointCount = Math.max(1, data.length);
+  const spacing = Math.max(20, Math.floor(chartWidth / (pointCount + 1)));
 
   return (
     <View className="mb-5 rounded-3xl border border-white/10 bg-white/5 p-5">
       <Text className="mb-4 text-lg font-semibold text-white">{title}</Text>
       <LineChart
         data={data}
+        isAnimated={false}
         thickness={2}
-        spacing={38}
+        spacing={spacing}
         hideDataPoints={false}
         color="#a78bfa"
         dataPointsColor="#c4b5fd"
@@ -46,7 +51,7 @@ export function StatsTrendChart({
         noOfSections={4}
         rulesColor="#334155"
         rulesType="dashed"
-        width={260}
+        width={chartWidth}
       />
     </View>
   );
@@ -57,6 +62,7 @@ type StatsActivityBarChartProps = {
 };
 
 export function StatsActivityBarChart({ points }: StatsActivityBarChartProps) {
+  const { width: viewportWidth } = useWindowDimensions();
   const data = useMemo(
     () =>
       points.map((point) => ({
@@ -68,6 +74,10 @@ export function StatsActivityBarChart({ points }: StatsActivityBarChartProps) {
   );
 
   const maxValue = Math.max(4, ...data.map((item) => item.value));
+  const chartWidth = Math.max(220, viewportWidth - 104);
+  const pointCount = Math.max(1, data.length);
+  const barWidth = Math.max(12, Math.floor((chartWidth * 0.5) / pointCount));
+  const spacing = Math.max(10, Math.floor((chartWidth * 0.5) / pointCount));
 
   return (
     <View className="mb-5 rounded-3xl border border-white/10 bg-white/5 p-5">
@@ -76,8 +86,9 @@ export function StatsActivityBarChart({ points }: StatsActivityBarChartProps) {
       </Text>
       <BarChart
         data={data}
-        barWidth={20}
-        spacing={20}
+        isAnimated={false}
+        barWidth={barWidth}
+        spacing={spacing}
         roundedTop
         yAxisTextStyle={{ color: "#94a3b8", fontSize: 11 }}
         xAxisLabelTextStyle={{ color: "#94a3b8", fontSize: 11 }}
@@ -87,7 +98,7 @@ export function StatsActivityBarChart({ points }: StatsActivityBarChartProps) {
         maxValue={maxValue}
         rulesColor="#334155"
         rulesType="dashed"
-        width={250}
+        width={chartWidth}
       />
     </View>
   );

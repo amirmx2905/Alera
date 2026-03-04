@@ -7,9 +7,9 @@ import type {
   StatsOverviewData,
 } from "../types";
 import {
+  buildEntryCountMapByGranularity,
   buildBuckets,
   buildLatestHabitMetricMap,
-  countEntriesForBucket,
   getDateRangeForGranularity,
   getLatestValueByDate,
   type HabitMetricSnapshot,
@@ -24,7 +24,11 @@ import {
 type UseStatsDataReturn = {
   overview: StatsOverviewData;
   isLoading: boolean;
-  error: string | null;
+  isSnapshotsLoading: boolean;
+  warnings: {
+    trend: string | null;
+    snapshots: string | null;
+  };
   getHabitDetail: (habitId: string) => StatsHabitDetail | null;
 };
 
@@ -32,12 +36,19 @@ export function useStatsData(
   granularity: StatsGranularity,
 ): UseStatsDataReturn {
   const { habits, streaksByHabitId, isLoading } = useHabits();
-  const [metricPoints, setMetricPoints] = useState<Record<string, number>>({});
+  const [metricPointsByGranularity, setMetricPointsByGranularity] = useState<
+    Record<StatsGranularity, Record<string, number>>
+  >({
+    daily: {},
+    weekly: {},
+    monthly: {},
+  });
   const [profileMetricSnapshot, setProfileMetricSnapshot] =
     useState<ProfileMetricSnapshot>({});
   const [habitMetricSnapshotById, setHabitMetricSnapshotById] = useState<
     Record<string, HabitMetricSnapshot>
   >({});
+  const [isSnapshotsLoading, setIsSnapshotsLoading] = useState(true);
   const [snapshotMetricError, setSnapshotMetricError] = useState<string | null>(
     null,
   );
@@ -50,36 +61,56 @@ export function useStatsData(
 
   useEffect(() => {
     let isMounted = true;
-    const { from, to } = getDateRangeForGranularity(granularity);
 
-    listMetrics(undefined, {
-      metricType: "total_entries",
-      granularity,
-      from,
-      to,
-    })
-      .then((rows) => {
-        if (!isMounted) return;
-        const next: Record<string, number> = {};
-        rows.forEach((row) => {
-          next[row.date] = Number(row.value);
+    const granularities: StatsGranularity[] = ["daily", "weekly", "monthly"];
+
+    Promise.all(
+      granularities.map(async (targetGranularity) => {
+        const { from, to } = getDateRangeForGranularity(targetGranularity);
+        const rows = await listMetrics(undefined, {
+          metricType: "total_entries",
+          granularity: targetGranularity,
+          from,
+          to,
         });
-        setMetricPoints(next);
+
+        const points: Record<string, number> = {};
+        rows.forEach((row) => {
+          points[row.date] = Number(row.value);
+        });
+
+        return {
+          granularity: targetGranularity,
+          points,
+        };
+      }),
+    )
+      .then((results) => {
+        if (!isMounted) return;
+
+        setMetricPointsByGranularity((previous) => {
+          const next = { ...previous };
+          results.forEach(({ granularity: targetGranularity, points }) => {
+            next[targetGranularity] = points;
+          });
+          return next;
+        });
+
         setMetricError(null);
       })
       .catch(() => {
         if (!isMounted) return;
-        setMetricPoints({});
         setMetricError("Using local trend estimates while metrics sync.");
       });
 
     return () => {
       isMounted = false;
     };
-  }, [granularity]);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
+    setIsSnapshotsLoading(true);
 
     Promise.all([
       listMetrics(null, {
@@ -153,6 +184,7 @@ export function useStatsData(
 
           setHabitMetricSnapshotById(nextByHabitId);
           setSnapshotMetricError(null);
+          setIsSnapshotsLoading(false);
         },
       )
       .catch(() => {
@@ -162,6 +194,7 @@ export function useStatsData(
         setSnapshotMetricError(
           "Using local KPI/detail estimates while metrics snapshots sync.",
         );
+        setIsSnapshotsLoading(false);
       });
 
     return () => {
@@ -171,13 +204,15 @@ export function useStatsData(
 
   const trend = useMemo(() => {
     const buckets = buildBuckets(granularity);
+    const metricPoints = metricPointsByGranularity[granularity] ?? {};
+    const localCountsByBucket = buildEntryCountMapByGranularity(
+      activeHabits,
+      granularity,
+    );
+
     return buckets.map((bucket) => {
       const metricValue = metricPoints[bucket.dateKey];
-      const localValue = countEntriesForBucket(
-        activeHabits,
-        granularity,
-        bucket.dateKey,
-      );
+      const localValue = localCountsByBucket[bucket.dateKey] ?? 0;
       return {
         ...bucket,
         totalEntries:
@@ -186,11 +221,11 @@ export function useStatsData(
             : localValue,
       };
     });
-  }, [activeHabits, granularity, metricPoints]);
+  }, [activeHabits, granularity, metricPointsByGranularity]);
 
   const kpis = useMemo(() => {
-    return buildKpis(activeHabits, streaksByHabitId, profileMetricSnapshot);
-  }, [activeHabits, profileMetricSnapshot, streaksByHabitId]);
+    return buildKpis(activeHabits, profileMetricSnapshot);
+  }, [activeHabits, profileMetricSnapshot]);
 
   const habitsList = useMemo(() => {
     return buildHabitsList(
@@ -220,7 +255,11 @@ export function useStatsData(
   return {
     overview,
     isLoading,
-    error: metricError ?? snapshotMetricError,
+    isSnapshotsLoading,
+    warnings: {
+      trend: metricError,
+      snapshots: snapshotMetricError,
+    },
     getHabitDetail: (habitId: string) => detailByHabitId.get(habitId) ?? null,
   };
 }

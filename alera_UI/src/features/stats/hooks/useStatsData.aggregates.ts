@@ -152,7 +152,6 @@ function getCompletionSummaryForLookback(habit: Habit, lookbackDays: number) {
 
 export function buildKpis(
   activeHabits: Habit[],
-  streaksByHabitId: Record<string, number>,
   profileMetricSnapshot: ProfileMetricSnapshot,
 ): StatsKpi {
   let completedCount = 0;
@@ -175,16 +174,6 @@ export function buildKpis(
     });
   });
 
-  let bestStreak = 0;
-  let bestStreakHabit = "N/A";
-  activeHabits.forEach((habit) => {
-    const streak = streaksByHabitId[habit.id] ?? getCurrentStreak(habit);
-    if (streak > bestStreak) {
-      bestStreak = streak;
-      bestStreakHabit = habit.name;
-    }
-  });
-
   const bestStreakFromMetrics = profileMetricSnapshot.bestStreakOverall;
   const bestStreakHabitIdFromMetrics = profileMetricSnapshot.bestStreakHabitId;
   const bestStreakHabitNameFromMetrics = bestStreakHabitIdFromMetrics
@@ -204,12 +193,8 @@ export function buildKpis(
       profileMetricSnapshot.activeDays30 !== undefined
         ? profileMetricSnapshot.activeDays30
         : uniqueActiveDays.size,
-    bestStreak:
-      bestStreakFromMetrics !== undefined ? bestStreakFromMetrics : bestStreak,
-    bestStreakHabit:
-      bestStreakFromMetrics !== undefined
-        ? (bestStreakHabitNameFromMetrics ?? "N/A")
-        : bestStreakHabit,
+    bestStreak: bestStreakFromMetrics !== undefined ? bestStreakFromMetrics : 0,
+    bestStreakHabit: bestStreakHabitNameFromMetrics ?? "N/A",
   };
 }
 

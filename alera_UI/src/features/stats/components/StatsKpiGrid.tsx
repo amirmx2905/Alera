@@ -2,32 +2,45 @@ import React from "react";
 import { Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import type { StatsKpi } from "../types";
+import { DotLoader } from "../../../components/shared/DotLoader";
 
 type KpiCardProps = {
   title: string;
-  value: string;
-  subtitle: string;
+  value: React.ReactNode;
+  subtitle: React.ReactNode;
   icon: React.ComponentProps<typeof Ionicons>["name"];
 };
 
 function KpiCard({ title, value, subtitle, icon }: KpiCardProps) {
+  const isPlainValue = typeof value === "string" || typeof value === "number";
+
   return (
     <View className="w-[48.5%] rounded-2xl border border-white/10 bg-white/5 p-4">
       <View className="mb-2 flex-row items-center gap-2">
         <Ionicons name={icon} size={15} color="#c4b5fd" />
         <Text className="text-xs text-slate-400">{title}</Text>
       </View>
-      <Text className="text-2xl font-bold text-white">{value}</Text>
-      <Text className="mt-1 text-xs text-slate-500">{subtitle}</Text>
+      {isPlainValue ? (
+        <Text className="text-2xl font-bold text-white">{value}</Text>
+      ) : (
+        <View className="min-h-8 items-center justify-center pt-4">{value}</View>
+      )}
+      {subtitle ? (
+        <Text className="mt-1 text-xs text-slate-500">{subtitle}</Text>
+      ) : null}
     </View>
   );
 }
 
 type StatsKpiGridProps = {
   kpis: StatsKpi;
+  isBestStreakLoading?: boolean;
 };
 
-export function StatsKpiGrid({ kpis }: StatsKpiGridProps) {
+export function StatsKpiGrid({
+  kpis,
+  isBestStreakLoading = false,
+}: StatsKpiGridProps) {
   return (
     <View className="mb-6 flex-row flex-wrap justify-between gap-y-3">
       <KpiCard
@@ -39,7 +52,7 @@ export function StatsKpiGrid({ kpis }: StatsKpiGridProps) {
       <KpiCard
         title="Completion rate"
         value={`${kpis.completionRate}%`}
-        subtitle={`${kpis.completedCount}/${kpis.totalPossible} last 7d`}
+        subtitle={`${kpis.completedCount}/${kpis.totalPossible} goal periods`}
         icon="trending-up-outline"
       />
       <KpiCard
@@ -50,8 +63,17 @@ export function StatsKpiGrid({ kpis }: StatsKpiGridProps) {
       />
       <KpiCard
         title="Best streak"
-        value={`${kpis.bestStreak}`}
-        subtitle={kpis.bestStreakHabit}
+        value={
+          isBestStreakLoading ? (
+            <DotLoader
+              dotClassName="h-2.5 w-2.5 bg-purple-300"
+              containerClassName="w-full"
+            />
+          ) : (
+            `${kpis.bestStreak}`
+          )
+        }
+        subtitle={isBestStreakLoading ? "" : kpis.bestStreakHabit}
         icon="flame-outline"
       />
     </View>

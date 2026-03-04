@@ -23,7 +23,8 @@ export function StatsScreen() {
       NativeStackNavigationProp<StatsStackParamList, "StatsHome">
     >();
 
-  const { overview, isLoading, error } = useStatsData(granularity);
+  const { overview, isLoading, isSnapshotsLoading, warnings } =
+    useStatsData(granularity);
 
   const hasHabits = overview.kpis.totalHabits > 0;
   const trendTitle = useMemo(() => {
@@ -53,15 +54,32 @@ export function StatsScreen() {
           />
         ) : (
           <>
-            <StatsKpiGrid kpis={overview.kpis} />
+            <StatsKpiGrid
+              kpis={overview.kpis}
+              isBestStreakLoading={isSnapshotsLoading}
+            />
             <StatsPeriodSelector
               value={granularity}
               onChange={setGranularity}
             />
-            <StatsTrendChart title={trendTitle} points={overview.trend} />
-            <StatsActivityBarChart points={overview.trend} />
-            {error ? (
-              <Text className="mb-3 text-xs text-slate-400">{error}</Text>
+            <StatsTrendChart
+              key={`trend-${granularity}`}
+              title={trendTitle}
+              points={overview.trend}
+            />
+            <StatsActivityBarChart
+              key={`activity-${granularity}`}
+              points={overview.trend}
+            />
+            {warnings.trend ? (
+              <Text className="mb-1 text-xs text-slate-400">
+                Trend fallback: {warnings.trend}
+              </Text>
+            ) : null}
+            {warnings.snapshots ? (
+              <Text className="mb-3 text-xs text-slate-400">
+                KPI fallback: {warnings.snapshots}
+              </Text>
             ) : null}
             <StatsHabitsList
               habits={overview.habits}
