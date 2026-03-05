@@ -1,10 +1,43 @@
 import type { Habit } from "../features/habits/types";
-import { buildEntryCountMapByGranularity } from "../features/stats/hooks/useStatsData.time";
-import { buildHabitsList } from "../features/stats/hooks/useStatsData.aggregates";
+import {
+  buildBuckets,
+  buildEntryCountMapByGranularity,
+} from "../features/stats/hooks/useStatsData.time";
+import {
+  buildHabitsList,
+  buildKpis,
+} from "../features/stats/hooks/useStatsData.aggregates";
 import {
   formatCompletionWindow,
   formatPeriodUnit,
 } from "../features/stats/utils/formatters";
+
+describe("buildBuckets rolling window", () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-03-04T12:00:00"));
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it("returns progressive daily buckets when history is shorter than 7 days", () => {
+    const buckets = buildBuckets("daily", "2026-03-03");
+
+    expect(buckets).toHaveLength(2);
+    expect(buckets[0].dateKey).toBe("2026-03-03");
+    expect(buckets[1].dateKey).toBe("2026-03-04");
+  });
+
+  it("keeps full daily window when history is older than 7 days", () => {
+    const buckets = buildBuckets("daily", "2026-02-20");
+
+    expect(buckets).toHaveLength(7);
+    expect(buckets[0].dateKey).toBe("2026-02-26");
+    expect(buckets[6].dateKey).toBe("2026-03-04");
+  });
+});
 
 describe("stats formatters", () => {
   it("formats singular period units", () => {
@@ -96,5 +129,68 @@ describe("buildHabitsList", () => {
     expect(result).toHaveLength(1);
     expect(result[0].entriesInSelectedPeriod).toBe(1);
     expect(result[0].totalEntries).toBe(2);
+  });
+});
+
+describe("buildKpis best streak", () => {
+  const activeHabits: Habit[] = [
+    {
+      id: "habit-a",
+      name: "Read",
+      category: "Learning",
+      unit: "pages",
+      goalAmount: 10,
+      goalType: "daily",
+      type: "numeric",
+      entries: [{ id: "a1", date: "2026-03-04", amount: 10 }],
+    },
+  ];
+
+  it("falls back to active local best streak when metric best habit is not active", () => {
+    const kpis = buildKpis(
+      activeHabits,
+      {
+        bestStreakOverall: 12,
+        bestStreakHabitId: "archived-habit-id",
+      },
+      {
+        "habit-a": 3,
+      },
+    );
+
+    expect(kpis.bestStreak).toBe(3);
+    expect(kpis.bestStreakHabit).toBe("Read");
+  });
+
+  it("uses metric best streak when metric best habit is active", () => {
+    const kpis = buildKpis(
+      activeHabits,
+      {
+        bestStreakOverall: 7,
+        bestStreakHabitId: "habit-a",
+      },
+      {
+        "habit-a": 3,
+      },
+    );
+
+    expect(kpis.bestStreak).toBe(7);
+    expect(kpis.bestStreakHabit).toBe("Read");
+  });
+
+  it("computes activeDays30 from active habits even when snapshot has stale value", () => {
+    const kpis = buildKpis(
+      activeHabits,
+      {
+        activeDays30: 8,
+        bestStreakOverall: 7,
+        bestStreakHabitId: "habit-a",
+      },
+      {
+        "habit-a": 3,
+      },
+    );
+
+    expect(kpis.activeDays30).toBe(1);
   });
 });

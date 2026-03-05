@@ -153,6 +153,7 @@ function getCompletionSummaryForLookback(habit: Habit, lookbackDays: number) {
 export function buildKpis(
   activeHabits: Habit[],
   profileMetricSnapshot: ProfileMetricSnapshot,
+  streaksByHabitId: Record<string, number>,
 ): StatsKpi {
   let completedCount = 0;
   let totalPossible = 0;
@@ -176,10 +177,28 @@ export function buildKpis(
 
   const bestStreakFromMetrics = profileMetricSnapshot.bestStreakOverall;
   const bestStreakHabitIdFromMetrics = profileMetricSnapshot.bestStreakHabitId;
-  const bestStreakHabitNameFromMetrics = bestStreakHabitIdFromMetrics
+  const bestStreakHabitFromMetrics = bestStreakHabitIdFromMetrics
     ? activeHabits.find((habit) => habit.id === bestStreakHabitIdFromMetrics)
-        ?.name
     : undefined;
+
+  const bestLocal = activeHabits.reduce<{
+    streak: number;
+    habitName: string;
+  }>(
+    (currentBest, habit) => {
+      const streak = streaksByHabitId[habit.id] ?? getCurrentStreak(habit);
+      if (streak > currentBest.streak) {
+        return { streak, habitName: habit.name };
+      }
+      return currentBest;
+    },
+    { streak: 0, habitName: "N/A" },
+  );
+
+  const hasUsableMetricBest =
+    bestStreakFromMetrics !== undefined &&
+    Number.isFinite(bestStreakFromMetrics) &&
+    Boolean(bestStreakHabitFromMetrics);
 
   return {
     totalHabits: activeHabits.length,
@@ -189,12 +208,13 @@ export function buildKpis(
         : 0,
     completedCount,
     totalPossible,
-    activeDays30:
-      profileMetricSnapshot.activeDays30 !== undefined
-        ? profileMetricSnapshot.activeDays30
-        : uniqueActiveDays.size,
-    bestStreak: bestStreakFromMetrics !== undefined ? bestStreakFromMetrics : 0,
-    bestStreakHabit: bestStreakHabitNameFromMetrics ?? "N/A",
+    activeDays30: uniqueActiveDays.size,
+    bestStreak: hasUsableMetricBest
+      ? Number(bestStreakFromMetrics)
+      : bestLocal.streak,
+    bestStreakHabit: hasUsableMetricBest
+      ? bestStreakHabitFromMetrics?.name ?? "N/A"
+      : bestLocal.habitName,
   };
 }
 

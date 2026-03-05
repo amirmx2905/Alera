@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { listMetrics } from "../../habits/services/metrics";
 import { useHabits } from "../../../state/HabitsContext";
+import { parseEntryDate, toLocalDateKey } from "../../habits/utils/dates";
 import type {
   StatsGranularity,
   StatsHabitDetail,
@@ -49,6 +50,21 @@ export function useStatsData(
     () => habits.filter((habit) => !habit.archived),
     [habits],
   );
+
+  const firstEntryDateKey = useMemo(() => {
+    let earliest: string | null = null;
+
+    activeHabits.forEach((habit) => {
+      habit.entries.forEach((entry) => {
+        const key = toLocalDateKey(parseEntryDate(entry.date));
+        if (!earliest || key < earliest) {
+          earliest = key;
+        }
+      });
+    });
+
+    return earliest ?? undefined;
+  }, [activeHabits]);
 
   useEffect(() => {
     let isMounted = true;
@@ -145,7 +161,7 @@ export function useStatsData(
   }, [activeHabits]);
 
   const trend = useMemo(() => {
-    const buckets = buildBuckets(granularity);
+    const buckets = buildBuckets(granularity, firstEntryDateKey);
     const localCountsByBucket = buildEntryCountMapByGranularity(
       activeHabits,
       granularity,
@@ -157,10 +173,13 @@ export function useStatsData(
         totalEntries: localCountsByBucket[bucket.dateKey] ?? 0,
       };
     });
-  }, [activeHabits, granularity]);
+  }, [activeHabits, firstEntryDateKey, granularity]);
 
   const periodEntriesByHabitId = useMemo(() => {
-    const { from, to } = getDateRangeForGranularity(granularity);
+    const { from, to } = getDateRangeForGranularity(
+      granularity,
+      firstEntryDateKey,
+    );
 
     const next: Record<string, number> = {};
     activeHabits.forEach((habit) => {
@@ -172,11 +191,11 @@ export function useStatsData(
     });
 
     return next;
-  }, [activeHabits, granularity]);
+  }, [activeHabits, firstEntryDateKey, granularity]);
 
   const kpis = useMemo(() => {
-    return buildKpis(activeHabits, profileMetricSnapshot);
-  }, [activeHabits, profileMetricSnapshot]);
+    return buildKpis(activeHabits, profileMetricSnapshot, streaksByHabitId);
+  }, [activeHabits, profileMetricSnapshot, streaksByHabitId]);
 
   const habitsList = useMemo(() => {
     return buildHabitsList(

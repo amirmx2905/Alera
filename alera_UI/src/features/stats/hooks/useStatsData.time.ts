@@ -4,8 +4,8 @@ import {
   getMonthEndKey,
   getMondayStartKey,
   getSundayDateKey,
-  parseEntryDate,
   toLocalDateKey,
+  parseEntryDate,
 } from "../../habits/utils/dates";
 
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -22,83 +22,134 @@ export type ProfileMetricSnapshot = {
   bestStreakHabitId?: string | null;
 };
 
-function getLastNDates(days: number) {
-  const now = new Date();
-  return Array.from({ length: days }, (_, index) => {
-    const date = new Date(now);
-    date.setDate(now.getDate() - (days - 1 - index));
-    return date;
-  });
+function maxDateKey(left: string, right: string) {
+  return left > right ? left : right;
 }
 
-export function getDateRangeForGranularity(granularity: StatsGranularity) {
-  const now = new Date();
+function addDays(dateKey: string, days: number) {
+  const date = new Date(`${dateKey}T12:00:00`);
+  date.setDate(date.getDate() + days);
+  return toLocalDateKey(date);
+}
+
+function getMonthStartKey(dateKey: string) {
+  const date = new Date(`${dateKey}T12:00:00`);
+  return toLocalDateKey(new Date(date.getFullYear(), date.getMonth(), 1));
+}
+
+function addMonths(monthStartKey: string, months: number) {
+  const date = new Date(`${monthStartKey}T12:00:00`);
+  date.setMonth(date.getMonth() + months);
+  date.setDate(1);
+  return toLocalDateKey(date);
+}
+
+export function getDateRangeForGranularity(
+  granularity: StatsGranularity,
+  firstEntryDateKey?: string,
+) {
+  const todayKey = toLocalDateKey(new Date());
 
   if (granularity === "daily") {
-    const from = new Date(now);
-    from.setDate(now.getDate() - 6);
+    const trailingFrom = addDays(todayKey, -6);
+    const from = firstEntryDateKey
+      ? maxDateKey(trailingFrom, firstEntryDateKey)
+      : trailingFrom;
     return {
-      from: toLocalDateKey(from),
-      to: toLocalDateKey(now),
+      from,
+      to: todayKey,
     };
   }
 
   if (granularity === "weekly") {
-    const weekStart = getMondayStartKey(toLocalDateKey(now));
-    const weekStartDate = new Date(`${weekStart}T12:00:00`);
-    weekStartDate.setDate(weekStartDate.getDate() - 21);
+    const currentWeekStart = getMondayStartKey(todayKey);
+    const trailingFrom = addDays(currentWeekStart, -21);
+    const firstWeekStart = firstEntryDateKey
+      ? getMondayStartKey(firstEntryDateKey)
+      : undefined;
+    const from = firstWeekStart
+      ? maxDateKey(trailingFrom, firstWeekStart)
+      : trailingFrom;
+
     return {
-      from: toLocalDateKey(weekStartDate),
-      to: getSundayDateKey(toLocalDateKey(now)),
+      from,
+      to: getSundayDateKey(todayKey),
     };
   }
 
-  const monthEnd = getMonthEndKey(toLocalDateKey(now));
-  const monthStartDate = new Date(`${monthEnd}T12:00:00`);
-  monthStartDate.setMonth(monthStartDate.getMonth() - 5);
-  monthStartDate.setDate(1);
+  const currentMonthStart = getMonthStartKey(todayKey);
+  const trailingFrom = addMonths(currentMonthStart, -5);
+  const firstMonthStart = firstEntryDateKey
+    ? getMonthStartKey(firstEntryDateKey)
+    : undefined;
+  const from = firstMonthStart
+    ? maxDateKey(trailingFrom, firstMonthStart)
+    : trailingFrom;
+
   return {
-    from: toLocalDateKey(monthStartDate),
-    to: monthEnd,
+    from,
+    to: getMonthEndKey(todayKey),
   };
 }
 
-export function buildBuckets(granularity: StatsGranularity): StatsTrendPoint[] {
-  const now = new Date();
-
+export function buildBuckets(
+  granularity: StatsGranularity,
+  firstEntryDateKey?: string,
+): StatsTrendPoint[] {
   if (granularity === "daily") {
-    return getLastNDates(7).map((date) => {
-      const dateKey = toLocalDateKey(date);
-      return {
+    const { from, to } = getDateRangeForGranularity("daily", firstEntryDateKey);
+    const buckets: StatsTrendPoint[] = [];
+    let dateKey = from;
+
+    while (dateKey <= to) {
+      const date = new Date(`${dateKey}T12:00:00`);
+      buckets.push({
         dateKey,
         label: WEEKDAY_LABELS[date.getDay()],
         totalEntries: 0,
-      };
-    });
+      });
+      dateKey = addDays(dateKey, 1);
+    }
+
+    return buckets;
   }
 
   if (granularity === "weekly") {
-    return Array.from({ length: 4 }, (_, index) => {
-      const date = new Date(now);
-      date.setDate(now.getDate() - (3 - index) * 7);
-      const endDateKey = getSundayDateKey(toLocalDateKey(date));
-      return {
+    const { from, to } = getDateRangeForGranularity("weekly", firstEntryDateKey);
+    const buckets: StatsTrendPoint[] = [];
+    let weekStartKey = from;
+    let weekIndex = 1;
+
+    while (weekStartKey <= to) {
+      const endDateKey = getSundayDateKey(weekStartKey);
+      buckets.push({
         dateKey: endDateKey,
-        label: `W${index + 1}`,
+        label: `W${weekIndex}`,
         totalEntries: 0,
-      };
-    });
+      });
+      weekStartKey = addDays(weekStartKey, 7);
+      weekIndex += 1;
+    }
+
+    return buckets;
   }
 
-  return Array.from({ length: 6 }, (_, index) => {
-    const date = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
+  const { from, to } = getDateRangeForGranularity("monthly", firstEntryDateKey);
+  const buckets: StatsTrendPoint[] = [];
+  let monthStartKey = from;
+
+  while (monthStartKey <= to) {
+    const date = new Date(`${monthStartKey}T12:00:00`);
     const monthLabel = date.toLocaleString("en-US", { month: "short" });
-    return {
-      dateKey: getMonthEndKey(toLocalDateKey(date)),
+    buckets.push({
+      dateKey: getMonthEndKey(monthStartKey),
       label: monthLabel,
       totalEntries: 0,
-    };
-  });
+    });
+    monthStartKey = addMonths(monthStartKey, 1);
+  }
+
+  return buckets;
 }
 
 export function countEntriesForBucket(
