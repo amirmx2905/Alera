@@ -202,6 +202,7 @@ export function buildHabitsList(
   activeHabits: Habit[],
   streaksByHabitId: Record<string, number>,
   habitMetricSnapshotById: Record<string, HabitMetricSnapshot>,
+  periodEntriesByHabitId: Record<string, number>,
 ): StatsHabitListItem[] {
   return activeHabits
     .map((habit) => {
@@ -218,6 +219,7 @@ export function buildHabitsList(
         totalEntries:
           habitMetricSnapshotById[habit.id]?.totalEntriesAllTime ??
           habit.entries.length,
+        entriesInSelectedPeriod: periodEntriesByHabitId[habit.id] ?? 0,
       };
     })
     .sort((a, b) => b.completionCount - a.completionCount);

@@ -39,7 +39,7 @@ export function ConfirmEmailScreen({ navigation, route }: Props) {
       navigation.navigate("Login");
     } catch (error) {
       Alert.alert(
-        "Error",
+        "Verification failed",
         error instanceof Error ? error.message : "Unable to verify code.",
       );
     } finally {
@@ -53,7 +53,7 @@ export function ConfirmEmailScreen({ navigation, route }: Props) {
       Alert.alert("Code sent", "Check your inbox to confirm.");
     } catch (error) {
       Alert.alert(
-        "Error",
+        "Resend failed",
         error instanceof Error ? error.message : "Unable to resend code.",
       );
     }

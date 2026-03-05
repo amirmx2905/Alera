@@ -1,5 +1,6 @@
 import type { Habit } from "../features/habits/types";
 import { buildEntryCountMapByGranularity } from "../features/stats/hooks/useStatsData.time";
+import { buildHabitsList } from "../features/stats/hooks/useStatsData.aggregates";
 import {
   formatCompletionWindow,
   formatPeriodUnit,
@@ -64,5 +65,36 @@ describe("buildEntryCountMapByGranularity", () => {
     const map = buildEntryCountMapByGranularity(habits, "monthly");
 
     expect(map["2026-03-31"]).toBe(4);
+  });
+});
+
+describe("buildHabitsList", () => {
+  const habits: Habit[] = [
+    {
+      id: "habit-1",
+      name: "Read",
+      category: "Learning",
+      unit: "pages",
+      goalAmount: 10,
+      goalType: "daily",
+      type: "numeric",
+      entries: [
+        { id: "e1", date: "2026-03-03", amount: 10 },
+        { id: "e2", date: "2026-03-04", amount: 5 },
+      ],
+    },
+  ];
+
+  it("includes entriesInSelectedPeriod from provided period map", () => {
+    const result = buildHabitsList(
+      habits,
+      { "habit-1": 2 },
+      {},
+      { "habit-1": 1 },
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].entriesInSelectedPeriod).toBe(1);
+    expect(result[0].totalEntries).toBe(2);
   });
 });

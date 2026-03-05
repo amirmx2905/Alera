@@ -27,13 +27,16 @@ export function LoginScreen({ navigation }: Props) {
 
   const handleLogin = useCallback(async () => {
     if (!email || !password)
-      return Alert.alert("Missing info", "Enter your email and password.");
+      return Alert.alert(
+        "Missing information",
+        "Enter your email and password.",
+      );
     try {
       setIsLoading(true);
       await signIn(email.trim(), password);
     } catch (error) {
       Alert.alert(
-        "Error",
+        "Sign in failed",
         error instanceof Error ? error.message : "Unable to sign in.",
       );
     } finally {

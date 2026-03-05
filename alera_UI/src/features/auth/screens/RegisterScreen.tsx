@@ -30,12 +30,12 @@ export function RegisterScreen({ navigation }: Props) {
 
   const handleRegister = async () => {
     if (!email || !password) {
-      Alert.alert("Missing info", "Enter your email and password.");
+      Alert.alert("Missing information", "Enter your email and password.");
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert("Passwords don't match", "Please check your password.");
+      Alert.alert("Password mismatch", "Please check your password.");
       return;
     }
 
@@ -45,7 +45,7 @@ export function RegisterScreen({ navigation }: Props) {
       navigation.navigate("ConfirmEmail", { email: email.trim() });
     } catch (error) {
       Alert.alert(
-        "Error",
+        "Sign up failed",
         error instanceof Error ? error.message : "Unable to sign up.",
       );
     } finally {

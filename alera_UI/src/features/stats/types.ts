@@ -27,6 +27,7 @@ export type StatsHabitListItem = {
   completionUnit: "days" | "weeks" | "months";
   streak: number;
   totalEntries: number;
+  entriesInSelectedPeriod: number;
 };
 
 export type StatsCalendarDay = {

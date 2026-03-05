@@ -38,15 +38,22 @@ const secureStore = {
     try {
       const parsed = JSON.parse(meta) as { parts?: number };
       const parts = parsed.parts ?? 0;
-      if (!parts) return null;
+      if (!parts) {
+        await removeChunks(key);
+        return null;
+      }
       const chunks = await Promise.all(
         Array.from({ length: parts }, (_, index) =>
           SecureStore.getItemAsync(chunkKey(key, index)),
         ),
       );
-      if (chunks.some((part) => part === null)) return null;
+      if (chunks.some((part) => part === null)) {
+        await removeChunks(key);
+        return null;
+      }
       return chunks.join("");
     } catch {
+      await removeChunks(key);
       return null;
     }
   },

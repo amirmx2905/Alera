@@ -8,7 +8,7 @@ import type { StatsStackParamList } from "../../../navigation/StatsStack";
 import { StatsKpiGrid } from "../components/StatsKpiGrid";
 import { StatsPeriodSelector } from "../components/StatsPeriodSelector";
 import {
-  StatsActivityBarChart,
+  StatsHabitShareDonutChart,
   StatsTrendChart,
 } from "../components/StatsCharts";
 import { StatsHabitsList } from "../components/StatsHabitsList";
@@ -27,10 +27,10 @@ export function StatsScreen() {
     useStatsData(granularity);
 
   const hasHabits = overview.kpis.totalHabits > 0;
-  const trendTitle = useMemo(() => {
-    if (granularity === "daily") return "Activity trend (last 7 days)";
-    if (granularity === "weekly") return "Activity trend (last 4 weeks)";
-    return "Activity trend (last 6 months)";
+  const trendPeriodLabel = useMemo(() => {
+    if (granularity === "daily") return "Last 7 days";
+    if (granularity === "weekly") return "Last 4 weeks";
+    return "Last 6 months";
   }, [granularity]);
 
   return (
@@ -64,18 +64,14 @@ export function StatsScreen() {
             />
             <StatsTrendChart
               key={`trend-${granularity}`}
-              title={trendTitle}
+              title="Total Entries"
+              headerRightLabel={trendPeriodLabel}
               points={overview.trend}
             />
-            <StatsActivityBarChart
-              key={`activity-${granularity}`}
-              points={overview.trend}
+            <StatsHabitShareDonutChart
+              key={`period-share-${granularity}`}
+              habits={overview.habits}
             />
-            {warnings.trend ? (
-              <Text className="mb-1 text-xs text-slate-400">
-                Trend fallback: {warnings.trend}
-              </Text>
-            ) : null}
             {warnings.snapshots ? (
               <Text className="mb-3 text-xs text-slate-400">
                 KPI fallback: {warnings.snapshots}
