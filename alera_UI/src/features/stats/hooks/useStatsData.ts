@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { InteractionManager } from "react-native";
 import { listMetrics } from "../../habits/services/metrics";
 import { useHabits } from "../../../state/HabitsContext";
 import { parseEntryDate, toLocalDateKey } from "../../habits/utils/dates";
@@ -34,6 +35,7 @@ type UseStatsDataReturn = {
 
 export function useStatsData(
   granularity: StatsGranularity,
+  isFocused = true,
 ): UseStatsDataReturn {
   const { habits, streaksByHabitId, isLoading } = useHabits();
   const [profileMetricSnapshot, setProfileMetricSnapshot] =
@@ -45,6 +47,7 @@ export function useStatsData(
   const [snapshotMetricError, setSnapshotMetricError] = useState<string | null>(
     null,
   );
+  const lastFetchedSnapshotKeyRef = useRef<string | null>(null);
 
   const activeHabits = useMemo(
     () => habits.filter((habit) => !habit.archived),
@@ -66,99 +69,123 @@ export function useStatsData(
     return earliest ?? undefined;
   }, [activeHabits]);
 
+  const activeHabitsSnapshotKey = useMemo(
+    () =>
+      activeHabits
+        .map((habit) => `${habit.id}:${habit.entries.length}`)
+        .sort()
+        .join("|"),
+    [activeHabits],
+  );
+
   useEffect(() => {
+    if (!isFocused) return;
+    if (lastFetchedSnapshotKeyRef.current === activeHabitsSnapshotKey) {
+      return;
+    }
+
     let isMounted = true;
-    setIsSnapshotsLoading(true);
+    const hasLoadedBefore = lastFetchedSnapshotKeyRef.current !== null;
+    if (!hasLoadedBefore) {
+      setIsSnapshotsLoading(true);
+    }
 
-    Promise.all([
-      listMetrics(null, {
-        metricType: "active_days",
-        granularity: "monthly",
-      }),
-      listMetrics(null, {
-        metricType: "best_streak_overall",
-        granularity: "all_time",
-      }),
-      listMetrics(undefined, {
-        metricType: "days_completed_30d",
-        granularity: "monthly",
-      }),
-      listMetrics(undefined, {
-        metricType: "avg_value_30d",
-        granularity: "monthly",
-      }),
-      listMetrics(undefined, {
-        metricType: "total_entries_all_time",
-        granularity: "all_time",
-      }),
-    ])
-      .then(
-        ([
-          activeDaysRows,
-          bestStreakRows,
-          daysCompletedRows,
-          averageRows,
-          totalEntriesRows,
-        ]) => {
+    const task = InteractionManager.runAfterInteractions(() => {
+      Promise.all([
+        listMetrics(null, {
+          metricType: "active_days",
+          granularity: "monthly",
+        }),
+        listMetrics(null, {
+          metricType: "best_streak_overall",
+          granularity: "all_time",
+        }),
+        listMetrics(undefined, {
+          metricType: "days_completed_30d",
+          granularity: "monthly",
+        }),
+        listMetrics(undefined, {
+          metricType: "avg_value_30d",
+          granularity: "monthly",
+        }),
+        listMetrics(undefined, {
+          metricType: "total_entries_all_time",
+          granularity: "all_time",
+        }),
+      ])
+        .then(
+          ([
+            activeDaysRows,
+            bestStreakRows,
+            daysCompletedRows,
+            averageRows,
+            totalEntriesRows,
+          ]) => {
+            if (!isMounted) return;
+
+            const activeDays30 = getLatestValueByDate(
+              activeDaysRows.map((row) => ({
+                date: row.date,
+                value: row.value,
+              })),
+            );
+
+            const bestStreakLatest = bestStreakRows.reduce<
+              (typeof bestStreakRows)[number] | null
+            >((latest, row) => {
+              if (!latest || row.date > latest.date) return row;
+              return latest;
+            }, null);
+
+            setProfileMetricSnapshot({
+              activeDays30,
+              bestStreakOverall:
+                bestStreakLatest && Number.isFinite(bestStreakLatest.value)
+                  ? Number(bestStreakLatest.value)
+                  : undefined,
+              bestStreakHabitId:
+                typeof bestStreakLatest?.metadata?.best_habit_id === "string"
+                  ? bestStreakLatest.metadata.best_habit_id
+                  : null,
+            });
+
+            const latestDaysCompleted =
+              buildLatestHabitMetricMap(daysCompletedRows);
+            const latestAverage = buildLatestHabitMetricMap(averageRows);
+            const latestTotalEntries =
+              buildLatestHabitMetricMap(totalEntriesRows);
+
+            const nextByHabitId: Record<string, HabitMetricSnapshot> = {};
+            activeHabits.forEach((habit) => {
+              nextByHabitId[habit.id] = {
+                daysCompleted30d: latestDaysCompleted[habit.id]?.value,
+                avgValue30d: latestAverage[habit.id]?.value,
+                totalEntriesAllTime: latestTotalEntries[habit.id]?.value,
+              };
+            });
+
+            setHabitMetricSnapshotById(nextByHabitId);
+            lastFetchedSnapshotKeyRef.current = activeHabitsSnapshotKey;
+            setSnapshotMetricError(null);
+            setIsSnapshotsLoading(false);
+          },
+        )
+        .catch(() => {
           if (!isMounted) return;
-
-          const activeDays30 = getLatestValueByDate(
-            activeDaysRows.map((row) => ({ date: row.date, value: row.value })),
+          setProfileMetricSnapshot({});
+          setHabitMetricSnapshotById({});
+          setSnapshotMetricError(
+            "Using local KPI/detail estimates while metrics snapshots sync.",
           );
-
-          const bestStreakLatest = bestStreakRows.reduce<
-            (typeof bestStreakRows)[number] | null
-          >((latest, row) => {
-            if (!latest || row.date > latest.date) return row;
-            return latest;
-          }, null);
-
-          setProfileMetricSnapshot({
-            activeDays30,
-            bestStreakOverall:
-              bestStreakLatest && Number.isFinite(bestStreakLatest.value)
-                ? Number(bestStreakLatest.value)
-                : undefined,
-            bestStreakHabitId:
-              typeof bestStreakLatest?.metadata?.best_habit_id === "string"
-                ? bestStreakLatest.metadata.best_habit_id
-                : null,
-          });
-
-          const latestDaysCompleted =
-            buildLatestHabitMetricMap(daysCompletedRows);
-          const latestAverage = buildLatestHabitMetricMap(averageRows);
-          const latestTotalEntries =
-            buildLatestHabitMetricMap(totalEntriesRows);
-
-          const nextByHabitId: Record<string, HabitMetricSnapshot> = {};
-          activeHabits.forEach((habit) => {
-            nextByHabitId[habit.id] = {
-              daysCompleted30d: latestDaysCompleted[habit.id]?.value,
-              avgValue30d: latestAverage[habit.id]?.value,
-              totalEntriesAllTime: latestTotalEntries[habit.id]?.value,
-            };
-          });
-
-          setHabitMetricSnapshotById(nextByHabitId);
-          setSnapshotMetricError(null);
           setIsSnapshotsLoading(false);
-        },
-      )
-      .catch(() => {
-        if (!isMounted) return;
-        setProfileMetricSnapshot({});
-        setHabitMetricSnapshotById({});
-        setSnapshotMetricError(
-          "Using local KPI/detail estimates while metrics snapshots sync.",
-        );
-        setIsSnapshotsLoading(false);
-      });
+        });
+    });
 
     return () => {
       isMounted = false;
+      task.cancel();
     };
-  }, [activeHabits]);
+  }, [activeHabits, activeHabitsSnapshotKey, isFocused]);
 
   const trend = useMemo(() => {
     const buckets = buildBuckets(granularity, firstEntryDateKey);

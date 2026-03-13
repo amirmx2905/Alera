@@ -26,9 +26,13 @@ export function StatsTrendChart({
   const { width: viewportWidth } = useWindowDimensions();
   const data = useMemo(() => buildChartData(points), [points]);
   const maxValue = Math.max(4, ...data.map((item) => item.value));
-  const chartWidth = Math.max(220, viewportWidth - 104);
+  const chartWidth = Math.max(viewportWidth - 140);
   const pointCount = Math.max(1, data.length);
-  const spacing = Math.max(20, Math.floor(chartWidth / (pointCount + 1)));
+  const edgeSpacing = 9;
+  const spacing =
+    pointCount > 1
+      ? Math.floor((chartWidth - edgeSpacing * 2) / (pointCount - 1))
+      : chartWidth - edgeSpacing * 2;
 
   return (
     <View className="mb-5 rounded-3xl border border-white/10 bg-white/5 p-5">
@@ -42,7 +46,10 @@ export function StatsTrendChart({
       </View>
       <LineChart
         data={data}
-        isAnimated={false}
+        isAnimated={true}
+        disableScroll
+        initialSpacing={edgeSpacing}
+        endSpacing={edgeSpacing}
         thickness={2}
         spacing={spacing}
         hideDataPoints={false}
@@ -60,7 +67,6 @@ export function StatsTrendChart({
         yAxisColor="#475569"
         noOfSections={4}
         rulesColor="#334155"
-        rulesType="dashed"
         width={chartWidth}
       />
     </View>
@@ -128,9 +134,8 @@ export function StatsHabitShareDonutChart({
                 : [{ value: 1, color: "#334155", label: "No data" }]
             }
             donut
-            isAnimated={false}
             radius={64}
-            innerRadius={42}
+            innerRadius={45}
             innerCircleColor="#111827"
             centerLabelComponent={() => (
               <View className="items-center">

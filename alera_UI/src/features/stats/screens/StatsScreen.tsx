@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from "react";
 import { View, Animated, Text } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { MainLayout } from "../../../layouts/MainLayout";
 import { EmptyState } from "../../../components/shared/EmptyState";
@@ -18,13 +18,16 @@ import type { StatsGranularity } from "../types";
 export function StatsScreen() {
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const [granularity, setGranularity] = useState<StatsGranularity>("daily");
+  const isFocused = useIsFocused();
   const navigation =
     useNavigation<
       NativeStackNavigationProp<StatsStackParamList, "StatsHome">
     >();
 
-  const { overview, isLoading, isSnapshotsLoading, warnings } =
-    useStatsData(granularity);
+  const { overview, isLoading, isSnapshotsLoading, warnings } = useStatsData(
+    granularity,
+    isFocused,
+  );
 
   const hasHabits = overview.kpis.totalHabits > 0;
   const trendPeriodLabel = useMemo(() => {

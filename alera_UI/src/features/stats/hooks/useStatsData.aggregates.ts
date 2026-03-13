@@ -213,7 +213,7 @@ export function buildKpis(
       ? Number(bestStreakFromMetrics)
       : bestLocal.streak,
     bestStreakHabit: hasUsableMetricBest
-      ? bestStreakHabitFromMetrics?.name ?? "N/A"
+      ? (bestStreakHabitFromMetrics?.name ?? "N/A")
       : bestLocal.habitName,
   };
 }

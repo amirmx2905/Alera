@@ -1,5 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ScrollView, Keyboard, Animated, View, Platform } from "react-native";
+import {
+  ScrollView,
+  Keyboard,
+  Animated,
+  View,
+  Platform,
+  InteractionManager,
+} from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { supabase } from "../../../services/supabase";
 import { getChatHistory, sendChatMessage } from "../services/ai";
 import { ChatMessages } from "../components/ChatMessages";
@@ -23,40 +31,55 @@ export function ChatScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const sendButtonScale = useRef(new Animated.Value(1)).current;
   const animatedMessagesRef = useRef(new Set<string>());
+  const hasLoadedHistoryRef = useRef(false);
 
-  useEffect(() => {
-    let isMounted = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (!isMounted) return;
-      if (!data.session) {
-        setMessages([]);
-        setIsLoadingHistory(false);
-        return;
+  useFocusEffect(
+    React.useCallback(() => {
+      if (hasLoadedHistoryRef.current) {
+        return undefined;
       }
 
-      getChatHistory()
-        .then((result) => {
+      let isMounted = true;
+      const task = InteractionManager.runAfterInteractions(() => {
+        supabase.auth.getSession().then(({ data }) => {
           if (!isMounted) return;
-          const history = (result?.messages || [])
-            .map((item, index) => ({
-              id: item.id ?? `history-${index}`,
-              role: item.role,
-              content: item.message,
-              createdAt: item.created_at ?? new Date(0).toISOString(),
-            }))
-            .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-          setMessages(history);
-          setIsLoadingHistory(false);
-        })
-        .catch(
-          () => isMounted && (setMessages([]), setIsLoadingHistory(false)),
-        );
-    });
+          if (!data.session) {
+            setMessages([]);
+            setIsLoadingHistory(false);
+            hasLoadedHistoryRef.current = true;
+            return;
+          }
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+          getChatHistory()
+            .then((result) => {
+              if (!isMounted) return;
+              const history = (result?.messages || [])
+                .map((item, index) => ({
+                  id: item.id ?? `history-${index}`,
+                  role: item.role,
+                  content: item.message,
+                  createdAt: item.created_at ?? new Date(0).toISOString(),
+                }))
+                .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+              setMessages(history);
+              setIsLoadingHistory(false);
+              hasLoadedHistoryRef.current = true;
+            })
+            .catch(() => {
+              if (!isMounted) return;
+              setMessages([]);
+              setIsLoadingHistory(false);
+              hasLoadedHistoryRef.current = true;
+            });
+        });
+      });
+
+      return () => {
+        isMounted = false;
+        task.cancel();
+      };
+    }, []),
+  );
 
   useEffect(() => {
     if (!isLoadingHistory) {

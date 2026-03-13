@@ -115,7 +115,10 @@ export function buildBuckets(
   }
 
   if (granularity === "weekly") {
-    const { from, to } = getDateRangeForGranularity("weekly", firstEntryDateKey);
+    const { from, to } = getDateRangeForGranularity(
+      "weekly",
+      firstEntryDateKey,
+    );
     const buckets: StatsTrendPoint[] = [];
     let weekStartKey = from;
     let weekIndex = 1;
