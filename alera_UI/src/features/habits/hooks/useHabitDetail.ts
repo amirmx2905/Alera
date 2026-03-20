@@ -105,7 +105,9 @@ export const useHabitDetail = ({
 
     if (habitCreatedAt) {
       setMinDate(habitCreatedAt);
-      setSelectedDate((prev) => (prev < habitCreatedAt ? habitCreatedAt : prev));
+      setSelectedDate((prev) =>
+        prev < habitCreatedAt ? habitCreatedAt : prev,
+      );
     }
 
     getProfile()
@@ -121,7 +123,7 @@ export const useHabitDetail = ({
             ? profileCreatedAt > habitCreatedAt
               ? profileCreatedAt
               : habitCreatedAt
-            : profileCreatedAt ?? habitCreatedAt;
+            : (profileCreatedAt ?? habitCreatedAt);
 
         if (!nextMinDate) return;
 
@@ -131,7 +133,9 @@ export const useHabitDetail = ({
       .catch(() => {
         if (!isMounted || !habitCreatedAt) return;
         setMinDate(habitCreatedAt);
-        setSelectedDate((prev) => (prev < habitCreatedAt ? habitCreatedAt : prev));
+        setSelectedDate((prev) =>
+          prev < habitCreatedAt ? habitCreatedAt : prev,
+        );
       });
 
     return () => {

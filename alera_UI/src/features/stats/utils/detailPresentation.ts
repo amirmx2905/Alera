@@ -49,7 +49,10 @@ export function buildHabitBucketSummaries(
     });
 
     const entryCount = bucketEntries.length;
-    const totalAmount = bucketEntries.reduce((sum, entry) => sum + entry.amount, 0);
+    const totalAmount = bucketEntries.reduce(
+      (sum, entry) => sum + entry.amount,
+      0,
+    );
     const goalMet =
       granularity === habit.goalType ? totalAmount >= habit.goalAmount : null;
 
@@ -104,7 +107,10 @@ function getGoalPeriodLabel(goalType: Habit["goalType"]) {
   return "month";
 }
 
-function formatBinaryTargetLabel(goalAmount: number, goalType: Habit["goalType"]) {
+function formatBinaryTargetLabel(
+  goalAmount: number,
+  goalType: Habit["goalType"],
+) {
   const periodLabel = getGoalPeriodLabel(goalType);
 
   if (goalAmount === 1) {
