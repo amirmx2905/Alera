@@ -1,64 +1,26 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { View, Text, Pressable, Animated } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../../state/AuthContext";
-import { getProfile } from "../../../services/profile";
 import { DotLoader } from "../../../components/shared/DotLoader";
 import { MainLayout } from "../../../layouts/MainLayout";
+import { useCurrentProfile } from "../../profile/hooks/useCurrentProfile";
+import { usePressScale } from "../../../hooks/usePressScale";
 
 export function SettingsScreen() {
   const { signOut, session } = useAuth();
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const logoutScaleAnim = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    if (!session?.user?.id) {
-      setFirstName("");
-      setLastName("");
-      setIsLoading(false);
-      return;
-    }
-
-    let isMounted = true;
-    setIsLoading(true);
-
-    getProfile()
-      .then((profile) => {
-        if (!isMounted) return;
-        setFirstName(profile?.first_name ?? "");
-        setLastName(profile?.last_name ?? "");
-      })
-      .catch(() => {
-        if (!isMounted) return;
-        setFirstName("");
-        setLastName("");
-      })
-      .finally(() => {
-        if (!isMounted) return;
-        setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [session?.user?.id]);
+  const { profile, isLoading } = useCurrentProfile(session?.user?.id);
+  const { scale, onPressIn, onPressOut } = usePressScale();
 
   const email = session?.user?.email ?? "";
   const displayName = useMemo(() => {
-    const fullName = `${firstName} ${lastName}`.trim();
+    const fullName =
+      `${profile?.first_name ?? ""} ${profile?.last_name ?? ""}`.trim();
     if (fullName) return fullName;
     if (email) return email.split("@")[0];
     return "User";
-  }, [email, firstName, lastName]);
+  }, [email, profile?.first_name, profile?.last_name]);
 
   const handleSignOut = useCallback(async () => {
     if (isSigningOut) return;
@@ -69,17 +31,6 @@ export function SettingsScreen() {
       setIsSigningOut(false);
     }
   }, [isSigningOut, signOut]);
-
-  const animateLogout = useCallback(
-    (toValue: number) =>
-      Animated.spring(logoutScaleAnim, {
-        toValue,
-        useNativeDriver: true,
-        speed: 50,
-        bounciness: 4,
-      }).start(),
-    [logoutScaleAnim],
-  );
 
   return (
     <MainLayout
@@ -120,13 +71,13 @@ export function SettingsScreen() {
         <Text className="text-white text-base font-semibold mb-4">Account</Text>
         <Pressable
           onPress={handleSignOut}
-          onPressIn={() => animateLogout(0.96)}
-          onPressOut={() => animateLogout(1)}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
           disabled={isSigningOut}
         >
           <Animated.View
             className="bg-white/10 rounded-2xl py-4 items-center"
-            style={{ transform: [{ scale: logoutScaleAnim }] }}
+            style={{ transform: [{ scale }] }}
           >
             <View className="h-6 justify-center">
               {isSigningOut ? (

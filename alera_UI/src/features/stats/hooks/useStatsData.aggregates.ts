@@ -51,6 +51,33 @@ function getAverageValue30(habit: Habit) {
   return Number((total / recent.length).toFixed(1));
 }
 
+function getTotalAmountInLastDays(habit: Habit, days: number) {
+  const now = new Date();
+  const threshold = new Date(now);
+  threshold.setDate(now.getDate() - (days - 1));
+
+  return habit.entries.reduce((sum, entry) => {
+    const entryDate = parseEntryDate(entry.date);
+    if (entryDate.getTime() < threshold.getTime()) return sum;
+    return sum + entry.amount;
+  }, 0);
+}
+
+function getActiveDaysInLastDays(habit: Habit, days: number) {
+  const now = new Date();
+  const threshold = new Date(now);
+  threshold.setDate(now.getDate() - (days - 1));
+  const activeDays = new Set<string>();
+
+  habit.entries.forEach((entry) => {
+    const entryDate = parseEntryDate(entry.date);
+    if (entryDate.getTime() < threshold.getTime()) return;
+    activeDays.add(toLocalDateKey(entryDate));
+  });
+
+  return activeDays.size;
+}
+
 function toDateAtNoon(dateKey: string) {
   return new Date(`${dateKey}T12:00:00`);
 }
@@ -294,10 +321,16 @@ export function buildHabitDetailMap(
       completionCountWindow,
       completionWindowTotal: completionSummary.completionWindowTotal,
       completionUnit: completionSummary.completionUnit,
+      activeDays30: getActiveDaysInLastDays(habit, 30),
       averageValue30:
         habit.type === "binary"
           ? null
           : (metricsSnapshot?.avgValue30d ?? getAverageValue30(habit)),
+      totalAmount30: getTotalAmountInLastDays(habit, 30),
+      totalAmountAllTime: habit.entries.reduce(
+        (sum, entry) => sum + entry.amount,
+        0,
+      ),
       totalEntries:
         metricsSnapshot?.totalEntriesAllTime ?? habit.entries.length,
       calendar30Days,

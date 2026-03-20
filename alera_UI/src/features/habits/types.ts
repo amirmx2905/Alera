@@ -11,6 +11,7 @@ export type Habit = {
   name: string;
   description?: string;
   category: string;
+  createdAt?: string;
   unit: string;
   goalAmount: number;
   goalType: "daily" | "weekly" | "monthly";

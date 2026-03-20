@@ -218,6 +218,7 @@ export function HabitDetailScreen() {
             goalAmount={habit.goalAmount}
             unit={progressUnitLabel}
             goalType={habit.goalType}
+            habitType={habit.type}
           />
 
           {!isArchived ? (
@@ -274,6 +275,7 @@ export function HabitDetailScreen() {
             minDate={minDate}
             entries={entriesForSelectedDate}
             unit={entryUnitLabel}
+            habitType={habit.type}
             isLogsLoading={isLogsLoading}
             showActions={!isArchived && !isLocked}
             deletingEntryId={deletingEntryId}

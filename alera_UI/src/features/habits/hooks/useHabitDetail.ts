@@ -17,6 +17,12 @@ type Params = {
   deleteEntry: (habitId: string, entryId: string) => void;
 };
 
+function normalizeDateStart(value: Date) {
+  const next = new Date(value);
+  next.setHours(0, 0, 0, 0);
+  return next;
+}
+
 function getErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message) return error.message;
   if (
@@ -93,22 +99,45 @@ export const useHabitDetail = ({
 
   useEffect(() => {
     let isMounted = true;
+    const habitCreatedAt = habit?.createdAt
+      ? normalizeDateStart(new Date(habit.createdAt))
+      : null;
+
+    if (habitCreatedAt) {
+      setMinDate(habitCreatedAt);
+      setSelectedDate((prev) => (prev < habitCreatedAt ? habitCreatedAt : prev));
+    }
+
     getProfile()
       .then((profile) => {
-        if (!isMounted || !profile?.created_at) return;
-        const created = new Date(profile.created_at);
-        created.setHours(0, 0, 0, 0);
-        setMinDate(created);
-        setSelectedDate((prev) => (prev < created ? created : prev));
+        if (!isMounted) return;
+
+        const profileCreatedAt = profile?.created_at
+          ? normalizeDateStart(new Date(profile.created_at))
+          : null;
+
+        const nextMinDate =
+          profileCreatedAt && habitCreatedAt
+            ? profileCreatedAt > habitCreatedAt
+              ? profileCreatedAt
+              : habitCreatedAt
+            : profileCreatedAt ?? habitCreatedAt;
+
+        if (!nextMinDate) return;
+
+        setMinDate(nextMinDate);
+        setSelectedDate((prev) => (prev < nextMinDate ? nextMinDate : prev));
       })
       .catch(() => {
-        // ignore profile lookup errors; date range stays unrestricted
+        if (!isMounted || !habitCreatedAt) return;
+        setMinDate(habitCreatedAt);
+        setSelectedDate((prev) => (prev < habitCreatedAt ? habitCreatedAt : prev));
       });
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [habit?.createdAt]);
 
   const entriesForSelectedDate = useMemo(() => {
     return entries.filter(

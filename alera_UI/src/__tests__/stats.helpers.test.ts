@@ -11,6 +11,12 @@ import {
   formatCompletionWindow,
   formatPeriodUnit,
 } from "../features/stats/utils/formatters";
+import {
+  buildHabitTrend,
+  buildHabitBucketSummaries,
+  buildNumericHabitTrend,
+  formatHabitGoalSummary,
+} from "../features/stats/utils/detailPresentation";
 
 describe("buildBuckets rolling window", () => {
   beforeEach(() => {
@@ -192,5 +198,78 @@ describe("buildKpis best streak", () => {
     );
 
     expect(kpis.activeDays30).toBe(1);
+  });
+});
+
+describe("detail presentation helpers", () => {
+  const binaryHabit: Habit = {
+    id: "habit-binary",
+    name: "Meditate",
+    category: "Mind",
+    unit: "session",
+    goalAmount: 1,
+    goalType: "daily",
+    type: "binary",
+    entries: [{ id: "b1", date: "2026-03-03", amount: 1 }],
+  };
+
+  const numericHabit: Habit = {
+    id: "habit-numeric",
+    name: "Read",
+    category: "Learning",
+    unit: "page",
+    goalAmount: 20,
+    goalType: "weekly",
+    type: "numeric",
+    entries: [
+      { id: "n1", date: "2026-03-03", amount: 5 },
+      { id: "n2", date: "2026-03-05", amount: 7 },
+    ],
+  };
+
+  it("marks binary daily buckets as goal-met only when the bucket matches the goal cadence", () => {
+    const buckets = buildHabitBucketSummaries(
+      [
+        { dateKey: "2026-03-03", label: "Tue", totalEntries: 0 },
+        { dateKey: "2026-03-04", label: "Wed", totalEntries: 0 },
+      ],
+      binaryHabit,
+      "daily",
+    );
+
+    expect(buckets[0].goalMet).toBe(true);
+    expect(buckets[1].goalMet).toBe(false);
+  });
+
+  it("uses total logged amount instead of entry count for numeric trends", () => {
+    const trend = buildNumericHabitTrend(
+      [{ dateKey: "2026-03-08", label: "W1", totalEntries: 0 }],
+      numericHabit,
+      "weekly",
+    );
+
+    expect(trend[0].totalEntries).toBe(12);
+  });
+
+  it("uses entry counts for binary habit trends", () => {
+    const trend = buildHabitTrend(
+      [
+        { dateKey: "2026-03-03", label: "Tue", totalEntries: 0 },
+        { dateKey: "2026-03-04", label: "Wed", totalEntries: 0 },
+      ],
+      binaryHabit,
+      "daily",
+    );
+
+    expect(trend[0].totalEntries).toBe(1);
+    expect(trend[1].totalEntries).toBe(0);
+  });
+
+  it("formats the goal summary copy for habit cards", () => {
+    expect(formatHabitGoalSummary(binaryHabit)).toEqual({
+      habitTypeLabel: "Binary",
+      cadenceLabel: "Daily",
+      targetLabel: "Once per day",
+    });
   });
 });

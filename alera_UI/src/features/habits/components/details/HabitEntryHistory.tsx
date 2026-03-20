@@ -14,6 +14,7 @@ type Props = {
   minDate: Date | null;
   entries: Entry[];
   unit: string;
+  habitType?: "numeric" | "binary";
   isLogsLoading: boolean;
   showActions?: boolean;
   deletingEntryId?: string | null;
@@ -35,6 +36,7 @@ export function HabitEntryHistory({
   minDate,
   entries,
   unit,
+  habitType = "numeric",
   isLogsLoading,
   showActions = true,
   deletingEntryId = null,
@@ -49,6 +51,7 @@ export function HabitEntryHistory({
 }: Props) {
   const popAnimations = useRef(new Map<string, Animated.Value>()).current;
   const lastPopNonce = useRef<number | null>(null);
+  const isBinaryHabit = habitType === "binary";
   const formatUnit = (value: number) => {
     if (value === 1 && unit === "Times") return "time";
     if (value === 1 && unit === "days") return "day";
@@ -189,7 +192,9 @@ export function HabitEntryHistory({
                 <View className="flex-row items-center justify-between">
                   <View>
                     <Text className="text-white text-base font-semibold">
-                      {entry.amount} {formatUnit(entry.amount)}
+                      {isBinaryHabit
+                        ? "Completed"
+                        : `${entry.amount} ${formatUnit(entry.amount)}`}
                     </Text>
                     <Text className="text-slate-400 text-xs mt-1">
                       {parseEntryDate(entry.date).toLocaleString(undefined, {

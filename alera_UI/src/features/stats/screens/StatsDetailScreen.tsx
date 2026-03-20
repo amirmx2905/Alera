@@ -21,47 +21,75 @@ import {
 import { useStatsData } from "../hooks/useStatsData";
 import { useHabitPredictions } from "../hooks/useHabitPredictions";
 import {
-  getMonthEndKey,
-  getMondayStartKey,
-  parseEntryDate,
-  toLocalDateKey,
-} from "../../habits/utils/dates";
+  buildHabitTrend,
+  formatHabitGoalSummary,
+} from "../utils/detailPresentation";
 import { formatPeriodUnit } from "../utils/formatters";
 
 type DetailRoute = RouteProp<StatsStackParamList, "StatsDetail">;
 
-function buildHabitTrend(
-  dateLabels: StatsTrendPoint[],
-  habitEntries: { date: string }[],
-  granularity: StatsGranularity,
-) {
-  const countsByBucket: Record<string, number> = {};
+function MetricCard({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string | number;
+  hint: string;
+}) {
+  return (
+    <View className="w-[48.5%] rounded-2xl border border-white/10 bg-white/5 p-4">
+      <Text className="text-xs text-slate-400">{label}</Text>
+      <Text className="mt-1 text-2xl font-bold text-white">{value}</Text>
+      <Text className="text-xs text-slate-500">{hint}</Text>
+    </View>
+  );
+}
 
-  habitEntries.forEach((entry) => {
-    const key = toLocalDateKey(parseEntryDate(entry.date));
-    if (granularity === "weekly") {
-      const weeklyKey = getMondayStartKey(key);
-      countsByBucket[weeklyKey] = (countsByBucket[weeklyKey] || 0) + 1;
-      return;
-    }
+function GoalTargetTile({
+  value,
+  habitTypeLabel,
+  cadenceLabel,
+}: {
+  value: string;
+  habitTypeLabel: string;
+  cadenceLabel: string;
+}) {
+  return (
+    <View className="mb-5 rounded-2xl border border-white/10 bg-white/5 p-4">
+      <View className="flex-row items-start justify-between gap-4">
+        <View className="min-w-0 flex-1 pr-3">
+          <View className="flex-row items-center gap-2">
+            <Ionicons name="flag-outline" size={15} color="#c4b5fd" />
+            <Text className="text-xs text-slate-400">Goal target</Text>
+          </View>
+          <Text
+            className="mt-1 text-2xl font-bold text-white"
+            numberOfLines={1}
+          >
+            {value}
+          </Text>
+        </View>
 
-    const bucketKey = granularity === "daily" ? key : getMonthEndKey(key);
+        <View className="max-w-[58%] flex-row flex-wrap justify-end gap-2">
+          <View className="rounded-full border border-purple-400/40 bg-purple-500/10 px-3 py-1">
+            <Text className="text-xs font-medium text-purple-200">
+              {habitTypeLabel}
+            </Text>
+          </View>
+          <View className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+            <Text className="text-xs font-medium text-slate-300">
+              {cadenceLabel}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+}
 
-    countsByBucket[bucketKey] = (countsByBucket[bucketKey] || 0) + 1;
-  });
-
-  return dateLabels.map((point) => {
-    const pointBucketKey =
-      granularity === "weekly"
-        ? getMondayStartKey(point.dateKey)
-        : point.dateKey;
-    const count = countsByBucket[pointBucketKey] ?? 0;
-
-    return {
-      ...point,
-      totalEntries: count,
-    };
-  });
+function formatStatNumber(value: number) {
+  return Number.isInteger(value) ? `${value}` : value.toFixed(1);
 }
 
 export function StatsDetailScreen() {
@@ -79,8 +107,13 @@ export function StatsDetailScreen() {
 
   const habitTrend = useMemo(() => {
     if (!detail) return [] as StatsTrendPoint[];
-    return buildHabitTrend(overview.trend, detail.habit.entries, granularity);
+    return buildHabitTrend(overview.trend, detail.habit, granularity);
   }, [detail, granularity, overview.trend]);
+
+  const goalSummary = useMemo(() => {
+    if (!detail) return null;
+    return formatHabitGoalSummary(detail.habit);
+  }, [detail]);
 
   if (!detail) {
     return (
@@ -102,6 +135,18 @@ export function StatsDetailScreen() {
     );
   }
 
+  const isBinaryHabit = detail.habit.type === "binary";
+  const selectedPeriodLabel =
+    granularity === "daily"
+      ? "Last 7 days"
+      : granularity === "weekly"
+        ? "Last 4 weeks"
+        : "Last 6 months";
+  const goalProgressHint = `Out of ${detail.completionWindowTotal} ${formatPeriodUnit(
+    detail.completionWindowTotal,
+    detail.completionUnit,
+  )}`;
+
   return (
     <MainLayout
       title={detail.habit.name}
@@ -121,54 +166,75 @@ export function StatsDetailScreen() {
       }
     >
       <View className="pb-20">
+        {goalSummary ? (
+          <GoalTargetTile
+            value={goalSummary.targetLabel}
+            habitTypeLabel={goalSummary.habitTypeLabel}
+            cadenceLabel={goalSummary.cadenceLabel}
+          />
+        ) : null}
+
         <View className="mb-5 flex-row flex-wrap justify-between gap-y-3">
-          <View className="w-[48.5%] rounded-2xl border border-white/10 bg-white/5 p-4">
-            <Text className="text-xs text-slate-400">Current streak</Text>
-            <Text className="mt-1 text-2xl font-bold text-white">
-              {detail.streak}
-            </Text>
-            <Text className="text-xs text-slate-500">Days in a row</Text>
-          </View>
-          <View className="w-[48.5%] rounded-2xl border border-white/10 bg-white/5 p-4">
-            <Text className="text-xs text-slate-400">Periods completed</Text>
-            <Text className="mt-1 text-2xl font-bold text-white">
-              {detail.completionCountWindow}
-            </Text>
-            <Text className="text-xs text-slate-500">
-              Out of {detail.completionWindowTotal}{" "}
-              {formatPeriodUnit(
-                detail.completionWindowTotal,
-                detail.completionUnit,
-              )}
-            </Text>
-          </View>
-          <View className="w-[48.5%] rounded-2xl border border-white/10 bg-white/5 p-4">
-            <Text className="text-xs text-slate-400">Average value (30d)</Text>
-            <Text className="mt-1 text-2xl font-bold text-white">
-              {detail.averageValue30 === null ? "--" : detail.averageValue30}
-            </Text>
-            <Text className="text-xs text-slate-500">
-              {detail.averageValue30 === null
-                ? "Not applicable for binary habits"
-                : `${detail.habit.unit} per entry`}
-            </Text>
-          </View>
-          <View className="w-[48.5%] rounded-2xl border border-white/10 bg-white/5 p-4">
-            <Text className="text-xs text-slate-400">Total entries</Text>
-            <Text className="mt-1 text-2xl font-bold text-white">
-              {detail.totalEntries}
-            </Text>
-            <Text className="text-xs text-slate-500">All time</Text>
-          </View>
+          <MetricCard
+            label="Current streak"
+            value={detail.streak}
+            hint="Active days in a row"
+          />
+          <MetricCard
+            label={isBinaryHabit ? "Goal periods hit" : "Goal periods hit"}
+            value={detail.completionCountWindow}
+            hint={goalProgressHint}
+          />
+          {isBinaryHabit ? (
+            <>
+              <MetricCard
+                label="Active days (30d)"
+                value={detail.activeDays30}
+                hint="Logged at least once"
+              />
+              <MetricCard
+                label="Total check-ins"
+                value={detail.totalEntries}
+                hint="All time"
+              />
+            </>
+          ) : (
+            <>
+              <MetricCard
+                label="Average value (30d)"
+                value={
+                  detail.averageValue30 === null
+                    ? "--"
+                    : formatStatNumber(detail.averageValue30)
+                }
+                hint={`${detail.habit.unit} per entry`}
+              />
+              <MetricCard
+                label="Total logged"
+                value={`${formatStatNumber(detail.totalAmountAllTime)} ${detail.habit.unit}`}
+                hint={`${detail.totalEntries} entries recorded`}
+              />
+            </>
+          )}
         </View>
 
-        <StatsPeriodSelector value={granularity} onChange={setGranularity} />
-        <StatsTrendChart
-          title="Activity over time"
-          points={habitTrend}
-          showArea
+        {isBinaryHabit ? null : (
+          <StatsPeriodSelector value={granularity} onChange={setGranularity} />
+        )}
+        {isBinaryHabit ? null : (
+          <StatsTrendChart
+            title="Logged amount"
+            headerRightLabel={selectedPeriodLabel}
+            points={habitTrend}
+          />
+        )}
+        <StatsCalendarStrip
+          days={detail.calendar30Days}
+          title={
+            isBinaryHabit ? "Last 30 days check-ins" : "Last 30 days logging"
+          }
+          legendLabel={isBinaryHabit ? "Completed" : "Logged"}
         />
-        <StatsCalendarStrip days={detail.calendar30Days} />
         {predictionsState.isEligible && predictionsState.predictions ? (
           <StatsInsightCards predictions={predictionsState.predictions} />
         ) : (

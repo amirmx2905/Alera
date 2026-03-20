@@ -45,7 +45,10 @@ export type StatsHabitDetail = {
   completionCountWindow: number;
   completionWindowTotal: number;
   completionUnit: "days" | "weeks" | "months";
+  activeDays30: number;
   averageValue30: number | null;
+  totalAmount30: number;
+  totalAmountAllTime: number;
   totalEntries: number;
   calendar30Days: StatsCalendarDay[];
 };

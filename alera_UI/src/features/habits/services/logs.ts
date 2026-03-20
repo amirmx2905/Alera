@@ -42,7 +42,7 @@ async function triggerMetricsCalculation(
   logicalDate?: string,
 ) {
   try {
-    const { data, errorMessage } = await invokeEdgeFunction(
+    const { errorMessage } = await invokeEdgeFunction(
       METRICS_FUNCTION,
       {
         habit_id: habitId,
@@ -56,8 +56,6 @@ async function triggerMetricsCalculation(
       console.error("Error calculating metrics:", errorMessage);
       return;
     }
-
-    console.log("Metrics updated:", data);
   } catch (err) {
     console.error("Failed to trigger metrics calculation:", err);
   }

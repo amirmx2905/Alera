@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import type { HabitPredictions, StatsCalendarDay } from "../types";
@@ -6,20 +6,29 @@ import type { PredictionUnlockStatus } from "../hooks/useHabitPredictions";
 
 type StatsCalendarStripProps = {
   days: StatsCalendarDay[];
+  title?: string;
+  legendLabel?: string;
 };
 
-export function StatsCalendarStrip({ days }: StatsCalendarStripProps) {
+export function StatsCalendarStrip({
+  days,
+  title = "Last 30 days activity",
+  legendLabel = "Completed",
+}: StatsCalendarStripProps) {
+  const scrollViewRef = useRef<ScrollView>(null);
   const completedCount = days.filter((day) => day.completed).length;
 
   return (
     <View className="mb-5 rounded-3xl border border-white/10 bg-white/5 p-5">
-      <Text className="mb-4 text-lg font-semibold text-white">
-        Last 30 days activity
-      </Text>
+      <Text className="mb-4 text-lg font-semibold text-white">{title}</Text>
       <ScrollView
+        ref={scrollViewRef}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ gap: 8 }}
+        onContentSizeChange={() =>
+          scrollViewRef.current?.scrollToEnd({ animated: false })
+        }
       >
         {days.map((day) => (
           <View
@@ -48,13 +57,46 @@ export function StatsCalendarStrip({ days }: StatsCalendarStripProps) {
       <View className="mt-4 flex-row items-center justify-between border-t border-white/10 pt-3">
         <View className="flex-row items-center gap-2">
           <View className="h-3 w-3 rounded bg-purple-500" />
-          <Text className="text-xs text-slate-400">Completed</Text>
+          <Text className="text-xs text-slate-400">{legendLabel}</Text>
         </View>
         <Text className="text-xs text-slate-400">
           <Text className="font-semibold text-white">{completedCount}</Text>/30
           days
         </Text>
       </View>
+    </View>
+  );
+}
+
+type StatsHabitGoalCardProps = {
+  habitTypeLabel: string;
+  cadenceLabel: string;
+  targetLabel: string;
+};
+
+export function StatsHabitGoalCard({
+  habitTypeLabel,
+  cadenceLabel,
+  targetLabel,
+}: StatsHabitGoalCardProps) {
+  return (
+    <View className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+      <Text className="text-xs text-slate-400">Goal target</Text>
+
+      <View className="mt-2 flex-row flex-wrap gap-2">
+        <View className="rounded-full border border-purple-400/40 bg-purple-500/10 px-3 py-1">
+          <Text className="text-xs font-medium text-purple-200">
+            {habitTypeLabel}
+          </Text>
+        </View>
+        <View className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+          <Text className="text-xs font-medium text-slate-300">
+            {cadenceLabel}
+          </Text>
+        </View>
+      </View>
+
+      <Text className="mt-3 text-xl font-bold text-white">{targetLabel}</Text>
     </View>
   );
 }
