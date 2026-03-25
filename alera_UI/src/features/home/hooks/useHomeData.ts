@@ -1,20 +1,38 @@
-/**
- * Custom hook for managing home screen data
- * Derives all data from the existing HabitsContext — no extra network calls
- */
-
 import { useMemo } from "react";
 import { useHabits } from "../../../state/HabitsContext";
-import { TodaysHabitSummary, HomeGoalFilter, HomeScreenData } from "../types";
+import {
+  type TodaysHabitSummary,
+  type HomeGoalFilter,
+  type HomeScreenData,
+  type TodaysProgress,
+  type GreetingType,
+} from "../types";
 import { getCdmxDateKey } from "../../habits/utils/dates";
 import { inferHabitCompletionFromEntries } from "../../habits/utils/goalProgress";
-import { calculateTodaysProgress, getGreeting } from "../services/homeData";
 
 interface UseHomeDataReturn {
   data: HomeScreenData | null;
   isLoading: boolean;
-  error: string | null;
-  toggleHabitComplete: (habitId: string) => void;
+}
+
+function calculateTodaysProgress(habits: TodaysHabitSummary[]): TodaysProgress {
+  const completedCount = habits.filter((habit) => habit.completed).length;
+  const totalCount = habits.length;
+  const completionPercentage =
+    totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+  return {
+    completedCount,
+    totalCount,
+    completionPercentage,
+  };
+}
+
+function getGreeting(): GreetingType {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
 }
 
 /**
@@ -53,16 +71,8 @@ export function useHomeData(goalType: HomeGoalFilter): UseHomeDataReturn {
     };
   }, [goalType, habits, isLoading, streaksByHabitId]);
 
-  /**
-   * No-op — completion on the home screen is read-only.
-   * Actual entry logging happens in the HabitDetail screen.
-   */
-  const toggleHabitComplete = (_habitId: string) => {};
-
   return {
     data,
     isLoading,
-    error: null,
-    toggleHabitComplete,
   };
 }

@@ -6,14 +6,13 @@
 import React from "react";
 import { View, Text, Animated, Pressable } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { HomeGoalFilter, TodaysHabitSummary } from "../types";
+import { type HomeGoalFilter, type TodaysHabitSummary } from "../types";
 import { Ionicons } from "@expo/vector-icons";
 import { EmptyState } from "../../../components/shared/EmptyState";
 
 interface TodaysHabitsListProps {
   habits: TodaysHabitSummary[];
   goalType: HomeGoalFilter;
-  onToggleComplete: (habitId: string) => void;
   onHabitPress: (habitId: string) => void;
   fadeAnim: Animated.Value;
 }
@@ -23,7 +22,6 @@ const CHECK_GRADIENT_COLORS: [string, string] = ["#5b21b6", "#2e1065"];
 export function TodaysHabitsList({
   habits,
   goalType,
-  onToggleComplete,
   onHabitPress,
   fadeAnim,
 }: TodaysHabitsListProps) {
@@ -51,10 +49,7 @@ export function TodaysHabitsList({
         >
           <View className="flex-row items-center gap-4">
             <Pressable
-              onPress={() => {
-                onToggleComplete(habit.id);
-                onHabitPress(habit.id);
-              }}
+              onPress={() => onHabitPress(habit.id)}
               className="flex-shrink-0"
             >
               {habit.completed ? (

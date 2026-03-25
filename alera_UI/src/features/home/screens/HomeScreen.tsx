@@ -8,7 +8,6 @@ import { View, Animated } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { MainLayout } from "../../../layouts/MainLayout";
-import { EmptyState } from "../../../components/shared/EmptyState";
 import { HomeHeader } from "../components/HomeHeader";
 import { TodaysProgressCard } from "../components/TodaysProgressCard";
 import { TodaysHabitsList } from "../components/TodaysHabitsList";
@@ -22,13 +21,13 @@ type NavigationProp = BottomTabNavigationProp<AppTabParamList>;
 export function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const [goalType, setGoalType] = useState<HomeGoalFilter>("daily");
-  const { data, error, isLoading, toggleHabitComplete } = useHomeData(goalType);
+  const { data, isLoading } = useHomeData(goalType);
   const { isHomeReady, markHomeReady } = useHomeStartupGate();
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const filterAnim = useRef(new Animated.Value(0)).current;
   const hasSeenLoadingRef = useRef(false);
   const hasData = Boolean(data);
-  const canRenderHome = !isLoading && (data !== null || error !== null);
+  const canRenderHome = !isLoading && data !== null;
 
   useEffect(() => {
     if (isHomeReady) {
@@ -61,29 +60,6 @@ export function HomeScreen() {
   const handleHabitPress = (habitId: string) => {
     navigation.getParent()?.navigate("HabitDetail", { habitId });
   };
-
-  /**
-   * Renders error state
-   */
-  if (error && !data) {
-    return (
-      <MainLayout
-        title="Home"
-        headerVariant="icon"
-        headerIconName="home-outline"
-        showHeader={isHomeReady}
-        showBackground={false}
-        contentClassName="flex-1 px-6 pt-16"
-      >
-        <EmptyState
-          opacity={fadeAnim}
-          title="Unable to load"
-          message={error}
-          iconName="alert-circle-outline"
-        />
-      </MainLayout>
-    );
-  }
 
   return (
     <MainLayout
@@ -128,7 +104,6 @@ export function HomeScreen() {
               <TodaysHabitsList
                 habits={data.todaysHabits}
                 goalType={goalType}
-                onToggleComplete={toggleHabitComplete}
                 onHabitPress={handleHabitPress}
                 fadeAnim={fadeAnim}
               />
