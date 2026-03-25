@@ -40,15 +40,17 @@ export function getCurrentStreak(habit: Habit) {
 
 function getAverageValue30(habit: Habit) {
   if (habit.type === "binary") return null;
+  const windowDays = 30;
   const now = new Date();
   const threshold = new Date(now);
-  threshold.setDate(now.getDate() - 29);
-  const recent = habit.entries.filter(
-    (entry) => parseEntryDate(entry.date).getTime() >= threshold.getTime(),
-  );
-  if (!recent.length) return 0;
-  const total = recent.reduce((sum, entry) => sum + entry.amount, 0);
-  return Number((total / recent.length).toFixed(1));
+  threshold.setDate(now.getDate() - (windowDays - 1));
+
+  const total = habit.entries.reduce((sum, entry) => {
+    if (parseEntryDate(entry.date).getTime() < threshold.getTime()) return sum;
+    return sum + entry.amount;
+  }, 0);
+
+  return Number((total / windowDays).toFixed(1));
 }
 
 function getTotalAmountInLastDays(habit: Habit, days: number) {

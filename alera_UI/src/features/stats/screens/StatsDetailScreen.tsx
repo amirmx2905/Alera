@@ -207,7 +207,7 @@ export function StatsDetailScreen() {
                     ? "--"
                     : formatStatNumber(detail.averageValue30)
                 }
-                hint={`${detail.habit.unit} per entry`}
+                hint={`${detail.habit.unit} per day (30d window)`}
               />
               <MetricCard
                 label="Total logged"

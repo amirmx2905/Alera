@@ -692,15 +692,10 @@ export async function calculateAverageValue30d(
     logicalDate,
   );
 
-  if (historicalData.length === 0) return null;
-
   const dailyTotals = groupDailyTotals(historicalData);
   const daysWithData = Object.keys(dailyTotals).length;
-  if (daysWithData === 0) return null;
-
-  const average =
-    Object.values(dailyTotals).reduce((sum, val) => sum + val, 0) /
-    daysWithData;
+  const total = sumValues(historicalData);
+  const average = total / MONTHLY_WINDOW_DAYS;
 
   return {
     profile_id: profileId,
@@ -712,6 +707,8 @@ export async function calculateAverageValue30d(
     metadata: {
       window_days: MONTHLY_WINDOW_DAYS,
       days_with_data: daysWithData,
+      denominator_days: MONTHLY_WINDOW_DAYS,
+      denominator_type: "calendar_days",
     },
   };
 }

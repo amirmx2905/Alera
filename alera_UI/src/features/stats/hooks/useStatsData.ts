@@ -151,7 +151,17 @@ export function useStatsData(
 
             const latestDaysCompleted =
               buildLatestHabitMetricMap(daysCompletedRows);
-            const latestAverage = buildLatestHabitMetricMap(averageRows);
+            const latestAverage = buildLatestHabitMetricMap(
+              averageRows.filter((row) => {
+                if (!row.metadata || typeof row.metadata !== "object") {
+                  return false;
+                }
+                const denominatorType = (
+                  row.metadata as Record<string, unknown>
+                ).denominator_type;
+                return denominatorType === "calendar_days";
+              }),
+            );
             const latestTotalEntries =
               buildLatestHabitMetricMap(totalEntriesRows);
 

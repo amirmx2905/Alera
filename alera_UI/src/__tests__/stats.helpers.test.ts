@@ -4,6 +4,7 @@ import {
   buildEntryCountMapByGranularity,
 } from "../features/stats/hooks/useStatsData.time";
 import {
+  buildHabitDetailMap,
   buildHabitsList,
   buildKpis,
 } from "../features/stats/hooks/useStatsData.aggregates";
@@ -271,5 +272,62 @@ describe("detail presentation helpers", () => {
       cadenceLabel: "Daily",
       targetLabel: "Once per day",
     });
+  });
+});
+
+describe("buildHabitDetailMap average value semantics", () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-03-30T12:00:00"));
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  function buildNumericHabit(entries: Habit["entries"]): Habit {
+    return {
+      id: "habit-numeric-avg",
+      name: "Reading",
+      category: "Learning",
+      unit: "pages",
+      goalAmount: 10,
+      goalType: "daily",
+      type: "numeric",
+      entries,
+    };
+  }
+
+  it("averages over full 30-day window including days with no logs", () => {
+    const habit = buildNumericHabit([
+      { id: "e1", date: "2026-03-30", amount: 30 },
+    ]);
+    const details = buildHabitDetailMap([habit], {}, {});
+
+    expect(details.get(habit.id)?.averageValue30).toBe(1);
+  });
+
+  it("returns zero average when no entries exist in the last 30 days", () => {
+    const habit = buildNumericHabit([]);
+    const details = buildHabitDetailMap([habit], {}, {});
+
+    expect(details.get(habit.id)?.averageValue30).toBe(0);
+  });
+
+  it("prefers snapshot average when available", () => {
+    const habit = buildNumericHabit([
+      { id: "e1", date: "2026-03-30", amount: 30 },
+    ]);
+    const details = buildHabitDetailMap(
+      [habit],
+      {},
+      {
+        [habit.id]: {
+          avgValue30d: 2.3,
+        },
+      },
+    );
+
+    expect(details.get(habit.id)?.averageValue30).toBe(2.3);
   });
 });
