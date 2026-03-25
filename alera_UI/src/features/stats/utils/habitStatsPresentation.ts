@@ -67,19 +67,6 @@ export function buildHabitBucketSummaries(
   });
 }
 
-export function buildNumericHabitTrend(
-  points: StatsTrendPoint[],
-  habit: Habit,
-  granularity: StatsGranularity,
-): StatsTrendPoint[] {
-  const buckets = buildHabitBucketSummaries(points, habit, granularity);
-
-  return points.map((point, index) => ({
-    ...point,
-    totalEntries: buckets[index]?.totalAmount ?? 0,
-  }));
-}
-
 export function buildHabitTrend(
   points: StatsTrendPoint[],
   habit: Habit,
@@ -93,6 +80,19 @@ export function buildHabitTrend(
       habit.type === "binary"
         ? (buckets[index]?.entryCount ?? 0)
         : (buckets[index]?.totalAmount ?? 0),
+  }));
+}
+
+export function buildNumericHabitTrend(
+  points: StatsTrendPoint[],
+  habit: Habit,
+  granularity: StatsGranularity,
+): StatsTrendPoint[] {
+  const buckets = buildHabitBucketSummaries(points, habit, granularity);
+
+  return points.map((point, index) => ({
+    ...point,
+    totalEntries: buckets[index]?.totalAmount ?? 0,
   }));
 }
 
@@ -139,4 +139,25 @@ export function formatHabitGoalSummary(habit: Habit) {
     cadenceLabel,
     targetLabel,
   };
+}
+
+export function formatPeriodUnit(
+  value: number,
+  unit: "days" | "weeks" | "months",
+) {
+  if (value === 1) {
+    if (unit === "days") return "day";
+    if (unit === "weeks") return "week";
+    return "month";
+  }
+
+  return unit;
+}
+
+export function formatCompletionWindow(
+  completed: number,
+  total: number,
+  unit: "days" | "weeks" | "months",
+) {
+  return `${completed}/${total} ${formatPeriodUnit(total, unit)}`;
 }

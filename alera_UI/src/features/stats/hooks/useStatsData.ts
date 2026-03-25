@@ -16,12 +16,12 @@ import {
   getLatestValueByDate,
   type HabitMetricSnapshot,
   type ProfileMetricSnapshot,
-} from "./useStatsData.time";
+} from "./statsDateBuckets";
 import {
   buildHabitDetailMap,
   buildHabitsList,
   buildKpis,
-} from "./useStatsData.aggregates";
+} from "./statsOverviewBuilders";
 
 type UseStatsDataReturn = {
   overview: StatsOverviewData;

@@ -2,7 +2,7 @@ import React from "react";
 import { Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import type { StatsHabitListItem } from "../types";
-import { formatCompletionWindow } from "../utils/formatters";
+import { formatCompletionWindow } from "../utils/habitStatsPresentation";
 
 type StatsHabitsListProps = {
   habits: StatsHabitListItem[];

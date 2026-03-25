@@ -15,16 +15,14 @@ import { StatsPeriodSelector } from "../components/StatsPeriodSelector";
 import { StatsTrendChart } from "../components/StatsCharts";
 import {
   StatsCalendarStrip,
-  StatsInsightCards,
-  StatsInsightsDisabledCard,
+  StatsInsightsPlaceholder,
 } from "../components/StatsDetailBlocks";
 import { useStatsData } from "../hooks/useStatsData";
-import { useHabitPredictions } from "../hooks/useHabitPredictions";
 import {
   buildHabitTrend,
   formatHabitGoalSummary,
-} from "../utils/detailPresentation";
-import { formatPeriodUnit } from "../utils/formatters";
+  formatPeriodUnit,
+} from "../utils/habitStatsPresentation";
 
 type DetailRoute = RouteProp<StatsStackParamList, "StatsDetail">;
 
@@ -103,7 +101,6 @@ export function StatsDetailScreen() {
 
   const { getHabitDetail, overview } = useStatsData(granularity);
   const detail = getHabitDetail(route.params.habitId);
-  const predictionsState = useHabitPredictions(detail?.habit ?? null);
 
   const habitTrend = useMemo(() => {
     if (!detail) return [] as StatsTrendPoint[];
@@ -181,7 +178,7 @@ export function StatsDetailScreen() {
             hint="Active days in a row"
           />
           <MetricCard
-            label={isBinaryHabit ? "Goal periods hit" : "Goal periods hit"}
+            label="Goal periods hit"
             value={detail.completionCountWindow}
             hint={goalProgressHint}
           />
@@ -235,18 +232,7 @@ export function StatsDetailScreen() {
           }
           legendLabel={isBinaryHabit ? "Completed" : "Logged"}
         />
-        {predictionsState.isEligible && predictionsState.predictions ? (
-          <StatsInsightCards predictions={predictionsState.predictions} />
-        ) : (
-          <StatsInsightsDisabledCard
-            isLoading={predictionsState.isLoading}
-            unlockStatus={predictionsState.unlockStatus}
-            dataDays={predictionsState.dataDays}
-            hasPredictionRows={predictionsState.hasPredictionRows}
-            updatedAt={predictionsState.updatedAt}
-            reason={predictionsState.reason}
-          />
-        )}
+        <StatsInsightsPlaceholder />
       </View>
     </MainLayout>
   );

@@ -58,30 +58,3 @@ export type StatsOverviewData = {
   trend: StatsTrendPoint[];
   habits: StatsHabitListItem[];
 };
-
-export type HabitPredictionRisk = "low" | "medium" | "high";
-export type HabitTrajectory = "excellent" | "good" | "declining" | "poor";
-
-export type StreakRiskPrediction = {
-  risk: HabitPredictionRisk;
-  confidence: number;
-  reason: string;
-};
-
-export type TrajectoryPrediction = {
-  trajectory: HabitTrajectory;
-  confidence: number;
-  prediction: string;
-};
-
-export type GoalEtaPrediction = {
-  eta: string;
-  confidence: number;
-  onTrack: boolean;
-};
-
-export type HabitPredictions = {
-  streakRisk: StreakRiskPrediction;
-  trajectory: TrajectoryPrediction;
-  goalEta: GoalEtaPrediction;
-};

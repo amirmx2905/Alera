@@ -2,22 +2,20 @@ import type { Habit } from "../features/habits/types";
 import {
   buildBuckets,
   buildEntryCountMapByGranularity,
-} from "../features/stats/hooks/useStatsData.time";
+} from "../features/stats/hooks/statsDateBuckets";
 import {
   buildHabitDetailMap,
   buildHabitsList,
   buildKpis,
-} from "../features/stats/hooks/useStatsData.aggregates";
+} from "../features/stats/hooks/statsOverviewBuilders";
 import {
-  formatCompletionWindow,
-  formatPeriodUnit,
-} from "../features/stats/utils/formatters";
-import {
-  buildHabitTrend,
   buildHabitBucketSummaries,
+  buildHabitTrend,
   buildNumericHabitTrend,
+  formatCompletionWindow,
   formatHabitGoalSummary,
-} from "../features/stats/utils/detailPresentation";
+  formatPeriodUnit,
+} from "../features/stats/utils/habitStatsPresentation";
 
 describe("buildBuckets rolling window", () => {
   beforeEach(() => {

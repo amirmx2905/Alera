@@ -1,8 +1,7 @@
 import React, { useRef } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import type { HabitPredictions, StatsCalendarDay } from "../types";
-import type { PredictionUnlockStatus } from "../hooks/useHabitPredictions";
+import type { StatsCalendarDay } from "../types";
 
 type StatsCalendarStripProps = {
   days: StatsCalendarDay[];
@@ -37,7 +36,7 @@ export function StatsCalendarStrip({
           >
             <Text className="text-[10px] text-slate-500">{day.dayLabel}</Text>
             <View
-              className={`mt-1 h-9 w-9 items-center justify-center rounded-lg border ${day.completed ? "border-transparent bg-purple-500" : "border-white/10 bg-white/5"}`}
+              className={`mt-1 h-9 w-9 items-center justify-center rounded-lg border ${day.completed ? "border-transparent bg-purple-700" : "border-white/10 bg-white/5"}`}
             >
               <Text
                 className={`${day.completed ? "text-white" : "text-slate-400"}`}
@@ -68,130 +67,7 @@ export function StatsCalendarStrip({
   );
 }
 
-type StatsHabitGoalCardProps = {
-  habitTypeLabel: string;
-  cadenceLabel: string;
-  targetLabel: string;
-};
-
-export function StatsHabitGoalCard({
-  habitTypeLabel,
-  cadenceLabel,
-  targetLabel,
-}: StatsHabitGoalCardProps) {
-  return (
-    <View className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4">
-      <Text className="text-xs text-slate-400">Goal target</Text>
-
-      <View className="mt-2 flex-row flex-wrap gap-2">
-        <View className="rounded-full border border-purple-400/40 bg-purple-500/10 px-3 py-1">
-          <Text className="text-xs font-medium text-purple-200">
-            {habitTypeLabel}
-          </Text>
-        </View>
-        <View className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
-          <Text className="text-xs font-medium text-slate-300">
-            {cadenceLabel}
-          </Text>
-        </View>
-      </View>
-
-      <Text className="mt-3 text-xl font-bold text-white">{targetLabel}</Text>
-    </View>
-  );
-}
-
-type StatsInsightCardsProps = {
-  predictions: HabitPredictions;
-};
-
-export function StatsInsightCards({ predictions }: StatsInsightCardsProps) {
-  const { streakRisk, trajectory, goalEta } = predictions;
-
-  return (
-    <View className="rounded-3xl border border-white/10 bg-white/5 p-5">
-      <View className="mb-4 flex-row items-center gap-2">
-        <Ionicons name="sparkles-outline" size={18} color="#c4b5fd" />
-        <Text className="text-lg font-semibold text-white">AI insights</Text>
-      </View>
-
-      <View className="gap-3">
-        <View className="rounded-2xl border border-white/10 bg-white/5 p-4">
-          <Text className="text-xs uppercase tracking-wider text-slate-400">
-            Streak risk
-          </Text>
-          <Text className="mt-1 text-sm font-semibold text-white">
-            {streakRisk.risk.toUpperCase()}
-          </Text>
-          <Text className="mt-1 text-xs text-slate-300">
-            {streakRisk.reason}
-          </Text>
-          <Text className="mt-2 text-[11px] text-slate-500">
-            Confidence: {Math.round(streakRisk.confidence * 100)}%
-          </Text>
-        </View>
-
-        <View className="rounded-2xl border border-white/10 bg-white/5 p-4">
-          <Text className="text-xs uppercase tracking-wider text-slate-400">
-            Trajectory
-          </Text>
-          <Text className="mt-1 text-sm font-semibold text-white">
-            {trajectory.trajectory.toUpperCase()}
-          </Text>
-          <Text className="mt-1 text-xs text-slate-300">
-            {trajectory.prediction}
-          </Text>
-          <Text className="mt-2 text-[11px] text-slate-500">
-            Confidence: {Math.round(trajectory.confidence * 100)}%
-          </Text>
-        </View>
-
-        <View className="rounded-2xl border border-white/10 bg-white/5 p-4">
-          <Text className="text-xs uppercase tracking-wider text-slate-400">
-            Goal ETA
-          </Text>
-          <Text className="mt-1 text-sm font-semibold text-white">
-            {goalEta.eta}
-          </Text>
-          <Text className="mt-1 text-xs text-slate-300">
-            {goalEta.onTrack
-              ? "You are on track with current pace."
-              : "Current pace is behind target."}
-          </Text>
-          <Text className="mt-2 text-[11px] text-slate-500">
-            Confidence: {Math.round(goalEta.confidence * 100)}%
-          </Text>
-        </View>
-      </View>
-    </View>
-  );
-}
-
-type StatsInsightsDisabledCardProps = {
-  isLoading?: boolean;
-  unlockStatus?: PredictionUnlockStatus;
-  dataDays?: number;
-  hasPredictionRows?: boolean;
-  updatedAt?: string | null;
-  reason?: string;
-};
-
-export function StatsInsightsDisabledCard({
-  isLoading = false,
-  unlockStatus = "locked",
-  dataDays = 0,
-  hasPredictionRows = false,
-  updatedAt = null,
-  reason,
-}: StatsInsightsDisabledCardProps) {
-  const title = unlockStatus === "full" ? "Insights pending" : "Coming soon";
-  const stateLabel =
-    unlockStatus === "full"
-      ? "Eligible"
-      : unlockStatus === "basic"
-        ? "Basic"
-        : "Locked";
-
+export function StatsInsightsPlaceholder() {
   return (
     <View className="rounded-3xl border border-white/10 bg-white/5 p-5">
       <View className="mb-3 flex-row items-center gap-2">
@@ -199,22 +75,11 @@ export function StatsInsightsDisabledCard({
         <Text className="text-lg font-semibold text-white">AI insights</Text>
       </View>
       <View className="rounded-2xl border border-white/10 bg-white/5 p-4">
-        <Text className="text-sm font-semibold text-white">{title}</Text>
+        <Text className="text-sm font-semibold text-white">Coming soon</Text>
         <Text className="mt-1 text-xs text-slate-300">
-          {isLoading
-            ? "Checking prediction readiness..."
-            : (reason ??
-              "Insights are disabled until the predictions pipeline is active.")}
+          AI-based predictions are not implemented yet. This area is reserved
+          for future insights.
         </Text>
-        <Text className="mt-2 text-xs text-slate-400">
-          State: {stateLabel} • Data days: {dataDays} • Rows:{" "}
-          {hasPredictionRows ? "available" : "pending"}
-        </Text>
-        {updatedAt ? (
-          <Text className="mt-1 text-xs text-slate-500">
-            Latest prediction date: {updatedAt}
-          </Text>
-        ) : null}
       </View>
     </View>
   );

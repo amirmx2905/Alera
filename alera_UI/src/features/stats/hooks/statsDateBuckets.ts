@@ -155,40 +155,6 @@ export function buildBuckets(
   return buckets;
 }
 
-export function countEntriesForBucket(
-  habits: Habit[],
-  granularity: StatsGranularity,
-  bucketDateKey: string,
-) {
-  if (granularity === "daily") {
-    return habits.reduce((sum, habit) => {
-      const count = habit.entries.filter(
-        (entry) => toLocalDateKey(parseEntryDate(entry.date)) === bucketDateKey,
-      ).length;
-      return sum + count;
-    }, 0);
-  }
-
-  if (granularity === "weekly") {
-    const weekStart = getMondayStartKey(bucketDateKey);
-    return habits.reduce((sum, habit) => {
-      const count = habit.entries.filter((entry) => {
-        const entryKey = toLocalDateKey(parseEntryDate(entry.date));
-        return getMondayStartKey(entryKey) === weekStart;
-      }).length;
-      return sum + count;
-    }, 0);
-  }
-
-  return habits.reduce((sum, habit) => {
-    const count = habit.entries.filter((entry) => {
-      const entryKey = toLocalDateKey(parseEntryDate(entry.date));
-      return getMonthEndKey(entryKey) === bucketDateKey;
-    }).length;
-    return sum + count;
-  }, 0);
-}
-
 export function buildEntryCountMapByGranularity(
   habits: Habit[],
   granularity: StatsGranularity,

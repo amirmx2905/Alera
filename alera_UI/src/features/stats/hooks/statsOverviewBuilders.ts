@@ -11,7 +11,7 @@ import {
 import type {
   HabitMetricSnapshot,
   ProfileMetricSnapshot,
-} from "./useStatsData.time";
+} from "./statsDateBuckets";
 
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
