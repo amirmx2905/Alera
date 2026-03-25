@@ -7,7 +7,7 @@ import type { NavigationProp } from "@react-navigation/native";
 import { MainLayout } from "../../../layouts/MainLayout";
 import { EmptyState } from "../../../components/shared/EmptyState";
 import { HabitCard } from "../components/HabitCard";
-import { getProgressData } from "../hooks/useHabitProgress";
+import { getProgressData } from "../utils/habitProgress";
 import type { HabitsStackParamList } from "../../../navigation/HabitsStack";
 import type { RootStackParamList } from "../../../navigation/RootNavigator";
 import { useHabits } from "../../../state/HabitsContext";

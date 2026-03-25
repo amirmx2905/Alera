@@ -3,7 +3,7 @@ import { Platform } from "react-native";
 import type { Entry, Habit } from "../types";
 import { createLog, deleteLog, listLogs, updateLog } from "../services/logs";
 import { getProfile } from "../../../services/profile";
-import { parseEntryDate, toLocalDateKey } from "../utils/dates";
+import { parseEntryDate, toLocalDateKey, toLoggedAtIso } from "../utils/dates";
 
 type PendingEntry = {
   amount: string;
@@ -23,19 +23,36 @@ function normalizeDateStart(value: Date) {
   return next;
 }
 
+function toEntry(log: {
+  id: string;
+  logged_at: string | null;
+  created_at: string;
+  value: number;
+}): Entry {
+  return {
+    id: log.id,
+    date: log.logged_at ?? log.created_at,
+    amount: log.value,
+  };
+}
+
 function getErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message) return error.message;
-  if (
-    error &&
-    typeof error === "object" &&
-    "message" in error &&
-    typeof (error as { message?: unknown }).message === "string"
-  ) {
-    return (error as { message: string }).message;
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string") return message;
   }
   return fallback;
 }
 
+function getLaterDate(left: Date | null, right: Date | null) {
+  if (left && right) return left > right ? left : right;
+  return left ?? right;
+}
+
+function clampDate(current: Date, minDate: Date) {
+  return current < minDate ? minDate : current;
+}
 export const useHabitDetail = ({
   habit,
   addEntry,
@@ -53,10 +70,7 @@ export const useHabitDetail = ({
   const [minDate, setMinDate] = useState<Date | null>(null);
   const [isEntrySaving, setIsEntrySaving] = useState(false);
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
-  const [lastTouchedEntry, setLastTouchedEntry] = useState<{
-    id: string;
-    nonce: number;
-  } | null>(null);
+  const [lastTouchedEntry, setLastTouchedEntry] = useState<{ id: string; nonce: number } | null>(null);
 
   const selectedDateStr = toLocalDateKey(selectedDate);
   const todayStr = toLocalDateKey(new Date());
@@ -70,27 +84,16 @@ export const useHabitDetail = ({
     let isMounted = true;
     setEntries(habit.entries);
 
-    if (habit.entries.length > 0)
-      return () => {
-        isMounted = false;
-      };
-
-    setIsLogsLoading(true);
-    listLogs(habit.id)
-      .then((logs) => {
-        if (!isMounted) return;
-        setEntries(
-          logs.map((log) => ({
-            id: log.id,
-            date: log.logged_at ?? log.created_at,
-            amount: log.value,
-          })),
-        );
-      })
-      .finally(() => {
-        if (!isMounted) return;
-        setIsLogsLoading(false);
-      });
+    if (habit.entries.length === 0) {
+      setIsLogsLoading(true);
+      listLogs(habit.id)
+        .then((logs) => {
+          if (isMounted) setEntries(logs.map(toEntry));
+        })
+        .finally(() => {
+          if (isMounted) setIsLogsLoading(false);
+        });
+    }
 
     return () => {
       isMounted = false;
@@ -105,37 +108,24 @@ export const useHabitDetail = ({
 
     if (habitCreatedAt) {
       setMinDate(habitCreatedAt);
-      setSelectedDate((prev) =>
-        prev < habitCreatedAt ? habitCreatedAt : prev,
-      );
+      setSelectedDate((prev) => clampDate(prev, habitCreatedAt));
     }
 
     getProfile()
       .then((profile) => {
         if (!isMounted) return;
-
         const profileCreatedAt = profile?.created_at
           ? normalizeDateStart(new Date(profile.created_at))
           : null;
-
-        const nextMinDate =
-          profileCreatedAt && habitCreatedAt
-            ? profileCreatedAt > habitCreatedAt
-              ? profileCreatedAt
-              : habitCreatedAt
-            : (profileCreatedAt ?? habitCreatedAt);
-
+        const nextMinDate = getLaterDate(profileCreatedAt, habitCreatedAt);
         if (!nextMinDate) return;
-
         setMinDate(nextMinDate);
-        setSelectedDate((prev) => (prev < nextMinDate ? nextMinDate : prev));
+        setSelectedDate((prev) => clampDate(prev, nextMinDate));
       })
       .catch(() => {
         if (!isMounted || !habitCreatedAt) return;
         setMinDate(habitCreatedAt);
-        setSelectedDate((prev) =>
-          prev < habitCreatedAt ? habitCreatedAt : prev,
-        );
+        setSelectedDate((prev) => clampDate(prev, habitCreatedAt));
       });
 
     return () => {
@@ -156,9 +146,7 @@ export const useHabitDetail = ({
     if (!entryState.amount && habit.type !== "binary") return;
     const amountValue = habit.type === "binary" ? 1 : Number(entryState.amount);
     if (Number.isNaN(amountValue)) return;
-    const selectedDateIso = new Date(
-      `${selectedDateStr}T12:00:00`,
-    ).toISOString();
+    const selectedDateIso = toLoggedAtIso(selectedDateStr);
     setIsEntrySaving(true);
     try {
       const created = await createLog(habit.id, {
@@ -205,9 +193,11 @@ export const useHabitDetail = ({
       return;
     const amountValue = Number(entryState.amount);
     if (Number.isNaN(amountValue)) return;
-    const editingDateIso = new Date(
-      `${toLocalDateKey(parseEntryDate(entryState.editingEntry.date))}T12:00:00`,
-    ).toISOString();
+    const editingDate = entryState.editingEntry.date;
+    const editingDateIso =
+      editingDate.length > 10
+        ? new Date(editingDate).toISOString()
+        : toLoggedAtIso(toLocalDateKey(parseEntryDate(editingDate)));
     setIsEntrySaving(true);
     try {
       const updated = await updateLog(habit.id, entryState.editingEntry.id, {
@@ -232,8 +222,6 @@ export const useHabitDetail = ({
     entryState.editingEntry,
     habit,
     isEntrySaving,
-    parseEntryDate,
-    toLocalDateKey,
     updateEntry,
   ]);
 
@@ -275,17 +263,11 @@ export const useHabitDetail = ({
     setSelectedDate(newDate);
   }, [selectedDate]);
 
-  const goToToday = useCallback(() => {
-    setSelectedDate(new Date());
-  }, []);
+  const goToToday = useCallback(() => setSelectedDate(new Date()), []);
 
   const handleDateChange = useCallback((_event: unknown, value?: Date) => {
-    if (Platform.OS === "android") {
-      setShowDatePicker(false);
-    }
-    if (value) {
-      setSelectedDate(value);
-    }
+    if (Platform.OS === "android") setShowDatePicker(false);
+    if (value) setSelectedDate(value);
   }, []);
 
   return {

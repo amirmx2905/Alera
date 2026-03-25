@@ -63,3 +63,16 @@ export const parseEntryDate = (value: string) => {
   }
   return new Date(value);
 };
+
+export const toLoggedAtIso = (dateKey: string, timeSource = new Date()) => {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return new Date(
+    year,
+    month - 1,
+    day,
+    timeSource.getHours(),
+    timeSource.getMinutes(),
+    timeSource.getSeconds(),
+    timeSource.getMilliseconds(),
+  ).toISOString();
+};

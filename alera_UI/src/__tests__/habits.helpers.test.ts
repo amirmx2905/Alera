@@ -1,5 +1,6 @@
 import type { Entry } from "../features/habits/types";
 import { calculateLocalStreak } from "../state/habits/habits.helpers";
+import { toLocalDateKey, toLoggedAtIso } from "../features/habits/utils/dates";
 
 describe("calculateLocalStreak for weekly/monthly habits", () => {
   afterEach(() => {
@@ -64,5 +65,18 @@ describe("calculateLocalStreak for weekly/monthly habits", () => {
     const streak = calculateLocalStreak(entries, "monthly", 5);
 
     expect(streak).toBe(0);
+  });
+});
+
+describe("toLoggedAtIso", () => {
+  it("keeps the selected local day while using the real time of day", () => {
+    const timeSource = new Date(2026, 2, 24, 18, 45, 30, 0);
+
+    const loggedAt = toLoggedAtIso("2026-03-01", timeSource);
+    const parsed = new Date(loggedAt);
+
+    expect(toLocalDateKey(parsed)).toBe("2026-03-01");
+    expect(parsed.getHours()).toBe(18);
+    expect(parsed.getMinutes()).toBe(45);
   });
 });

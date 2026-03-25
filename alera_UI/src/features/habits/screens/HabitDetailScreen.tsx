@@ -1,5 +1,5 @@
-import React, { useRef, useCallback, useEffect, useState } from "react";
-import { View, Text, Pressable, Alert, Animated } from "react-native";
+import React, { useRef, useEffect, useState } from "react";
+import { View, Text, Pressable, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import {
   useNavigation,
@@ -15,9 +15,10 @@ import { HabitEntryHistory } from "../components/details/HabitEntryHistory";
 import { HabitProgressCard } from "../components/details/HabitProgressCard";
 import type { HabitsStackParamList } from "../../../navigation/HabitsStack";
 import type { RootStackParamList } from "../../../navigation/RootNavigator";
+import { usePressScale } from "../../../hooks/usePressScale";
 import { useHabits } from "../../../state/HabitsContext";
 import { useHabitDetail } from "../hooks/useHabitDetail";
-import { getProgressData } from "../hooks/useHabitProgress";
+import { getProgressData } from "../utils/habitProgress";
 
 type HabitDetailRoute = RouteProp<
   HabitsStackParamList & RootStackParamList,
@@ -41,10 +42,14 @@ export function HabitDetailScreen() {
     removeHabit,
   } = useHabits();
   const habit = habits.find((item) => item.id === habitId);
-  const primaryScale = useRef(new Animated.Value(1)).current;
   const isMounted = useRef(true);
   const [isArchiveLoading, setIsArchiveLoading] = useState(false);
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
+  const {
+    scale: primaryScale,
+    onPressIn: onPrimaryPressIn,
+    onPressOut: onPrimaryPressOut,
+  } = usePressScale();
 
   useEffect(() => {
     return () => {
@@ -52,17 +57,9 @@ export function HabitDetailScreen() {
     };
   }, []);
 
-  const animatePrimaryButton = useCallback(
-    (toValue: number) => {
-      Animated.spring(primaryScale, {
-        toValue,
-        useNativeDriver: true,
-        speed: 50,
-        bounciness: 4,
-      }).start();
-    },
-    [primaryScale],
-  );
+  const showActionError = (fallback: string, error: unknown) => {
+    Alert.alert("Error", error instanceof Error ? error.message : fallback);
+  };
 
   const {
     entryState,
@@ -101,14 +98,9 @@ export function HabitDetailScreen() {
     setIsArchiveLoading(true);
     toggleArchive(habit.id)
       .then(() => navigation.goBack())
-      .catch((error) => {
-        Alert.alert(
-          "Error",
-          error instanceof Error
-            ? error.message
-            : "Unable to update habit status.",
-        );
-      })
+      .catch((error) =>
+        showActionError("Unable to update habit status.", error),
+      )
       .finally(() => {
         if (isMounted.current) {
           setIsArchiveLoading(false);
@@ -130,14 +122,9 @@ export function HabitDetailScreen() {
             setIsDeleteLoading(true);
             removeHabit(habit.id)
               .then(() => navigation.goBack())
-              .catch((error) => {
-                Alert.alert(
-                  "Error",
-                  error instanceof Error
-                    ? error.message
-                    : "Unable to delete habit.",
-                );
-              })
+              .catch((error) =>
+                showActionError("Unable to delete habit.", error),
+              )
               .finally(() => {
                 if (isMounted.current) {
                   setIsDeleteLoading(false);
@@ -166,8 +153,8 @@ export function HabitDetailScreen() {
             label="Back to habits"
             isLoading={false}
             onPress={() => navigation.goBack()}
-            onPressIn={() => animatePrimaryButton(0.96)}
-            onPressOut={() => animatePrimaryButton(1)}
+            onPressIn={onPrimaryPressIn}
+            onPressOut={onPrimaryPressOut}
             scaleAnim={primaryScale}
             containerClassName="w-full"
           />
@@ -242,28 +229,18 @@ export function HabitDetailScreen() {
                 try {
                   await handleAddEntry();
                 } catch (error) {
-                  Alert.alert(
-                    "Error",
-                    error instanceof Error
-                      ? error.message
-                      : "Unable to add entry.",
-                  );
+                  showActionError("Unable to add entry.", error);
                 }
               }}
               onUpdateEntry={async () => {
                 try {
                   await handleUpdateEntry();
                 } catch (error) {
-                  Alert.alert(
-                    "Error",
-                    error instanceof Error
-                      ? error.message
-                      : "Unable to update entry.",
-                  );
+                  showActionError("Unable to update entry.", error);
                 }
               }}
-              onPressIn={() => animatePrimaryButton(0.96)}
-              onPressOut={() => animatePrimaryButton(1)}
+              onPressIn={onPrimaryPressIn}
+              onPressOut={onPrimaryPressOut}
             />
           ) : null}
 
@@ -299,12 +276,7 @@ export function HabitDetailScreen() {
                       try {
                         await handleDeleteEntry(entryId);
                       } catch (error) {
-                        Alert.alert(
-                          "Error",
-                          error instanceof Error
-                            ? error.message
-                            : "Unable to delete entry.",
-                        );
+                        showActionError("Unable to delete entry.", error);
                       }
                     },
                   },
