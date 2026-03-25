@@ -1,16 +1,16 @@
-import React, { useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
   TextInput,
   Alert,
-  Animated,
   Modal,
   Pressable,
   Platform,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
+import { usePressScale } from "../../../hooks/usePressScale";
 import { createProfile } from "../../../services/profile";
 import { AuthCard } from "../../auth/components/AuthCard";
 import { AuthInputField } from "../../auth/components/AuthInputField";
@@ -21,6 +21,23 @@ type Props = {
   onComplete: () => void;
 };
 
+const SEX_OPTIONS = ["male", "female", "other"] as const;
+
+function formatDate(dateValue: Date) {
+  return dateValue.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function formatDateForApi(dateValue: Date) {
+  const year = dateValue.getFullYear();
+  const month = `${dateValue.getMonth() + 1}`.padStart(2, "0");
+  const day = `${dateValue.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function ProfileScreen({ onComplete }: Props) {
   const firstNameInputRef = useRef<TextInput | null>(null);
   const lastNameInputRef = useRef<TextInput | null>(null);
@@ -30,22 +47,12 @@ export function ProfileScreen({ onComplete }: Props) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [sex, setSex] = useState<"" | "male" | "female" | "other">("");
   const [isLoading, setIsLoading] = useState(false);
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const { scale, onPressIn, onPressOut } = usePressScale();
 
-  const formatDate = (dateValue: Date) => {
-    return dateValue.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  const formatDateForApi = (dateValue: Date) => {
-    const year = dateValue.getFullYear();
-    const month = `${dateValue.getMonth() + 1}`.padStart(2, "0");
-    const day = `${dateValue.getDate()}`.padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
+  const birthDateLabel = useMemo(
+    () => (birthDate ? formatDate(birthDate) : "Birth date (Optional)"),
+    [birthDate],
+  );
 
   const handleSave = async () => {
     const trimmedFirst = firstName.trim();
@@ -74,24 +81,6 @@ export function ProfileScreen({ onComplete }: Props) {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handlePressIn = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 0.96,
-      useNativeDriver: true,
-      speed: 50,
-      bounciness: 4,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-      speed: 50,
-      bounciness: 4,
-    }).start();
   };
 
   return (
@@ -128,14 +117,14 @@ export function ProfileScreen({ onComplete }: Props) {
                   birthDate ? "flex-1 text-white" : "flex-1 text-slate-400"
                 }
               >
-                {birthDate ? formatDate(birthDate) : "Birth date (Optional)"}
+                {birthDateLabel}
               </Text>
             </View>
           </Pressable>
           <View className="gap-4 mb-5">
             <Text className="text-slate-400 text-xs">Sex (Optional)</Text>
             <View className="flex-row gap-5">
-              {(["male", "female", "other"] as const).map((option) => {
+              {SEX_OPTIONS.map((option) => {
                 const isActive = sex === option;
                 return (
                   <Pressable
@@ -170,9 +159,9 @@ export function ProfileScreen({ onComplete }: Props) {
             label="Continue"
             isLoading={isLoading}
             onPress={handleSave}
-            onPressIn={handlePressIn}
-            onPressOut={handlePressOut}
-            scaleAnim={scaleAnim}
+            onPressIn={onPressIn}
+            onPressOut={onPressOut}
+            scaleAnim={scale}
           />
         </View>
       </AuthCard>
