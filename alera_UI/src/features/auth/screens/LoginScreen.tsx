@@ -1,19 +1,14 @@
 import React, { useRef, useState, useCallback } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  Alert,
-  Animated,
-} from "react-native";
+import { View, Text, TextInput, Pressable, Alert } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useAuth } from "../../../state/AuthContext";
 import { AuthCard } from "../components/AuthCard";
 import { AuthInputField } from "../components/AuthInputField";
 import { PrimaryButton } from "../../../components/shared/PrimaryButton";
 import { AuthLayout } from "../../../layouts/AuthLayout";
+import { usePressScale } from "../../../hooks/usePressScale";
 import type { AuthStackParamList } from "../types";
+
 type Props = NativeStackScreenProps<AuthStackParamList, "Login">;
 
 export function LoginScreen({ navigation }: Props) {
@@ -23,7 +18,7 @@ export function LoginScreen({ navigation }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const emailInputRef = useRef<TextInput | null>(null);
   const passwordInputRef = useRef<TextInput | null>(null);
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const { scale, onPressIn, onPressOut } = usePressScale();
 
   const handleLogin = useCallback(async () => {
     if (!email || !password)
@@ -43,17 +38,6 @@ export function LoginScreen({ navigation }: Props) {
       setIsLoading(false);
     }
   }, [email, password, signIn]);
-
-  const animateButton = useCallback(
-    (toValue: number) =>
-      Animated.spring(scaleAnim, {
-        toValue,
-        useNativeDriver: true,
-        speed: 50,
-        bounciness: 4,
-      }).start(),
-    [scaleAnim],
-  );
 
   const navigateToRegister = useCallback(
     () => navigation.navigate("Register"),
@@ -87,9 +71,9 @@ export function LoginScreen({ navigation }: Props) {
             label="Sign in"
             isLoading={isLoading}
             onPress={handleLogin}
-            onPressIn={() => animateButton(0.96)}
-            onPressOut={() => animateButton(1)}
-            scaleAnim={scaleAnim}
+            onPressIn={onPressIn}
+            onPressOut={onPressOut}
+            scaleAnim={scale}
           />
 
           <View className="flex-row items-center gap-3 py-2">

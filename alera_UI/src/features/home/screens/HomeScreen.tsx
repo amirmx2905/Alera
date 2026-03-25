@@ -28,17 +28,22 @@ export function HomeScreen() {
   const filterAnim = useRef(new Animated.Value(0)).current;
   const hasSeenLoadingRef = useRef(false);
   const hasData = Boolean(data);
+  const canRenderHome = !isLoading && (data !== null || error !== null);
 
   useEffect(() => {
+    if (isHomeReady) {
+      return;
+    }
+
     if (isLoading) {
       hasSeenLoadingRef.current = true;
       return;
     }
 
-    if (hasSeenLoadingRef.current && !isHomeReady) {
+    if (hasSeenLoadingRef.current || canRenderHome) {
       markHomeReady();
     }
-  }, [isLoading, isHomeReady, markHomeReady]);
+  }, [canRenderHome, isLoading, isHomeReady, markHomeReady]);
 
   useEffect(() => {
     if (!hasData) return;
