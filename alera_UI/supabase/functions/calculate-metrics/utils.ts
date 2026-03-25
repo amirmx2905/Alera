@@ -25,6 +25,34 @@ function toDateKeyForTimezone(value: Date, timeZone: string): string {
   return `${year}-${month}-${day}`;
 }
 
+function addDaysToDateKey(dateKey: string, days: number): string {
+  const date = new Date(`${dateKey}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().split("T")[0];
+}
+
+function toIsoOffsetForDateKey(dateKey: string, timeZone: string): string {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    timeZoneName: "shortOffset",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+  const parts = formatter.formatToParts(new Date(`${dateKey}T12:00:00Z`));
+  const offsetValue = parts.find((part) => part.type === "timeZoneName")?.value;
+
+  if (!offsetValue || offsetValue === "GMT") return "+00:00";
+
+  const match = offsetValue.match(/^GMT([+-])(\d{1,2})(?::?(\d{2}))?$/);
+  if (!match) return "+00:00";
+
+  const [, sign, hour, minute] = match;
+  const paddedHour = hour.padStart(2, "0");
+  const paddedMinute = (minute ?? "00").padStart(2, "0");
+  return `${sign}${paddedHour}:${paddedMinute}`;
+}
+
 // ===========================================================================
 // AUTHENTICATION UTILITIES
 // ===========================================================================
@@ -89,14 +117,14 @@ export function getDateRangeForWindow(
   endDate: string,
   daysBack: number,
 ): [string, string] {
-  const end = new Date(endDate);
-  const start = new Date(end);
-  start.setDate(start.getDate() - daysBack);
+  const startDateKey = addDaysToDateKey(endDate, -daysBack);
+  const startOffset = toIsoOffsetForDateKey(startDateKey, TIMEZONE);
+  const endOffset = toIsoOffsetForDateKey(endDate, TIMEZONE);
 
   const utcStart = new Date(
-    `${start.toISOString().split("T")[0]}T00:00:00-06:00`,
+    `${startDateKey}T00:00:00.000${startOffset}`,
   ).toISOString();
-  const utcEnd = new Date(`${endDate}T23:59:59.999-06:00`).toISOString();
+  const utcEnd = new Date(`${endDate}T23:59:59.999${endOffset}`).toISOString();
 
   return [utcStart, utcEnd];
 }

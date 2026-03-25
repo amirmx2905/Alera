@@ -41,9 +41,10 @@ export function getCurrentStreak(habit: Habit) {
 function getAverageValue30(habit: Habit) {
   if (habit.type === "binary") return null;
   const windowDays = 30;
-  const now = new Date();
-  const threshold = new Date(now);
-  threshold.setDate(now.getDate() - (windowDays - 1));
+  const todayKey = getCdmxDateKey();
+  const today = new Date(`${todayKey}T12:00:00`);
+  const threshold = new Date(today);
+  threshold.setDate(today.getDate() - (windowDays - 1));
 
   const total = habit.entries.reduce((sum, entry) => {
     if (parseEntryDate(entry.date).getTime() < threshold.getTime()) return sum;
@@ -54,9 +55,10 @@ function getAverageValue30(habit: Habit) {
 }
 
 function getTotalAmountInLastDays(habit: Habit, days: number) {
-  const now = new Date();
-  const threshold = new Date(now);
-  threshold.setDate(now.getDate() - (days - 1));
+  const todayKey = getCdmxDateKey();
+  const today = new Date(`${todayKey}T12:00:00`);
+  const threshold = new Date(today);
+  threshold.setDate(today.getDate() - (days - 1));
 
   return habit.entries.reduce((sum, entry) => {
     const entryDate = parseEntryDate(entry.date);
@@ -66,9 +68,10 @@ function getTotalAmountInLastDays(habit: Habit, days: number) {
 }
 
 function getActiveDaysInLastDays(habit: Habit, days: number) {
-  const now = new Date();
-  const threshold = new Date(now);
-  threshold.setDate(now.getDate() - (days - 1));
+  const todayKey = getCdmxDateKey();
+  const today = new Date(`${todayKey}T12:00:00`);
+  const threshold = new Date(today);
+  threshold.setDate(today.getDate() - (days - 1));
   const activeDays = new Set<string>();
 
   habit.entries.forEach((entry) => {
@@ -128,10 +131,11 @@ function isHabitCompletedForDateKey(habit: Habit, dateKey: string) {
 }
 
 function getLastNDates(days: number) {
-  const now = new Date();
+  const todayKey = getCdmxDateKey();
+  const today = new Date(`${todayKey}T12:00:00`);
   return Array.from({ length: days }, (_, index) => {
-    const date = new Date(now);
-    date.setDate(now.getDate() - (days - 1 - index));
+    const date = new Date(today);
+    date.setDate(today.getDate() - (days - 1 - index));
     return date;
   });
 }
@@ -193,8 +197,10 @@ export function buildKpis(
   });
 
   const uniqueActiveDays = new Set<string>();
-  const threshold = new Date();
-  threshold.setDate(threshold.getDate() - 29);
+  const todayKey = getCdmxDateKey();
+  const today = new Date(`${todayKey}T12:00:00`);
+  const threshold = new Date(today);
+  threshold.setDate(today.getDate() - 29);
   activeHabits.forEach((habit) => {
     habit.entries.forEach((entry) => {
       const date = parseEntryDate(entry.date);

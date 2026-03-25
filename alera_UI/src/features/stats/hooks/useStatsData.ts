@@ -69,13 +69,23 @@ export function useStatsData(
     return earliest ?? undefined;
   }, [activeHabits]);
 
+  const activeHabitsContentSignature = useMemo(() => {
+    return activeHabits
+      .map((habit) => {
+        const entrySignature = habit.entries
+          .map((entry) => `${entry.id}:${entry.date}:${entry.amount}`)
+          .sort()
+          .join(";");
+
+        return `${habit.id}|${entrySignature}`;
+      })
+      .sort()
+      .join("||");
+  }, [activeHabits]);
+
   const activeHabitsSnapshotKey = useMemo(
-    () =>
-      activeHabits
-        .map((habit) => `${habit.id}:${habit.entries.length}`)
-        .sort()
-        .join("|"),
-    [activeHabits],
+    () => activeHabitsContentSignature,
+    [activeHabitsContentSignature],
   );
 
   useEffect(() => {
@@ -151,17 +161,23 @@ export function useStatsData(
 
             const latestDaysCompleted =
               buildLatestHabitMetricMap(daysCompletedRows);
-            const latestAverage = buildLatestHabitMetricMap(
-              averageRows.filter((row) => {
-                if (!row.metadata || typeof row.metadata !== "object") {
-                  return false;
-                }
-                const denominatorType = (
-                  row.metadata as Record<string, unknown>
-                ).denominator_type;
-                return denominatorType === "calendar_days";
-              }),
-            );
+            const acceptedAverageRows = averageRows.filter((row) => {
+              if (!row.metadata || typeof row.metadata !== "object") {
+                return false;
+              }
+              const denominatorType = (row.metadata as Record<string, unknown>)
+                .denominator_type;
+              return denominatorType === "calendar_days";
+            });
+            const ignoredAverageRowsCount =
+              averageRows.length - acceptedAverageRows.length;
+            if (ignoredAverageRowsCount > 0) {
+              console.warn(
+                `[stats] Ignoring ${ignoredAverageRowsCount} avg_value_30d rows without calendar_days metadata.`,
+              );
+            }
+            const latestAverage =
+              buildLatestHabitMetricMap(acceptedAverageRows);
             const latestTotalEntries =
               buildLatestHabitMetricMap(totalEntriesRows);
 
