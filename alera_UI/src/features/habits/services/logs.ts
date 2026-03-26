@@ -31,6 +31,38 @@ export type LogUpdateInput = {
 const METRICS_FUNCTION =
   process.env.EXPO_PUBLIC_METRICS_FUNCTION ?? "calculate-metrics";
 
+function getEffectiveTimestamp(
+  log: Pick<HabitLog, "logged_at" | "created_at">,
+) {
+  return log.logged_at ?? log.created_at;
+}
+
+function toBoundaryDate(value: string, isEnd: boolean) {
+  if (value.length > 10) return new Date(value);
+  const [year, month, day] = value.split("-").map(Number);
+  return isEnd
+    ? new Date(year, month - 1, day, 23, 59, 59, 999)
+    : new Date(year, month - 1, day, 0, 0, 0, 0);
+}
+
+function filterAndSortLogs(logs: HabitLog[], from?: string, to?: string) {
+  const fromDate = from ? toBoundaryDate(from, false) : null;
+  const toDate = to ? toBoundaryDate(to, true) : null;
+
+  return logs
+    .filter((log) => {
+      const effectiveDate = new Date(getEffectiveTimestamp(log));
+      if (fromDate && effectiveDate < fromDate) return false;
+      if (toDate && effectiveDate > toDate) return false;
+      return true;
+    })
+    .sort(
+      (left, right) =>
+        new Date(getEffectiveTimestamp(right)).getTime() -
+        new Date(getEffectiveTimestamp(left)).getTime(),
+    );
+}
+
 async function getProfileId(profileId?: string) {
   if (profileId) return profileId;
   return getCurrentProfileId();
@@ -68,19 +100,14 @@ export async function listLogs(
   profileId?: string,
 ) {
   const resolvedProfileId = await getProfileId(profileId);
-  let query = supabase
+  const { data, error } = await supabase
     .from("habits_log")
     .select("id, habit_id, profile_id, value, source, logged_at, created_at")
     .eq("profile_id", resolvedProfileId)
-    .eq("habit_id", habitId)
-    .order("created_at", { ascending: false });
+    .eq("habit_id", habitId);
 
-  if (from) query = query.gte("created_at", from);
-  if (to) query = query.lte("created_at", to);
-
-  const { data, error } = await query;
   if (error) throw error;
-  return data as HabitLog[];
+  return filterAndSortLogs((data as HabitLog[]) ?? [], from, to);
 }
 
 export async function listLogsForHabits(
@@ -91,19 +118,14 @@ export async function listLogsForHabits(
 ) {
   if (habitIds.length === 0) return [] as HabitLog[];
   const resolvedProfileId = await getProfileId(profileId);
-  let query = supabase
+  const { data, error } = await supabase
     .from("habits_log")
     .select("id, habit_id, profile_id, value, source, logged_at, created_at")
     .eq("profile_id", resolvedProfileId)
-    .in("habit_id", habitIds)
-    .order("created_at", { ascending: false });
+    .in("habit_id", habitIds);
 
-  if (from) query = query.gte("created_at", from);
-  if (to) query = query.lte("created_at", to);
-
-  const { data, error } = await query;
   if (error) throw error;
-  return data as HabitLog[];
+  return filterAndSortLogs((data as HabitLog[]) ?? [], from, to);
 }
 
 export async function createLog(

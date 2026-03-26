@@ -1,6 +1,10 @@
 import type { Entry } from "../features/habits/types";
 import { calculateLocalStreak } from "../state/habits/habits.helpers";
-import { toLocalDateKey, toLoggedAtIso } from "../features/habits/utils/dates";
+import {
+  getLoggedAtForDate,
+  toLocalDateKey,
+  toLoggedAtIso,
+} from "../features/habits/utils/dates";
 
 describe("calculateLocalStreak for weekly/monthly habits", () => {
   afterEach(() => {
@@ -78,5 +82,26 @@ describe("toLoggedAtIso", () => {
     expect(toLocalDateKey(parsed)).toBe("2026-03-01");
     expect(parsed.getHours()).toBe(18);
     expect(parsed.getMinutes()).toBe(45);
+  });
+
+  it("returns null for current-day logs", () => {
+    const loggedAt = getLoggedAtForDate(
+      "2026-03-24",
+      "2026-03-24",
+      new Date(2026, 2, 24, 18, 45, 30, 0),
+    );
+
+    expect(loggedAt).toBeNull();
+  });
+
+  it("keeps a timestamp for backfilled logs", () => {
+    const loggedAt = getLoggedAtForDate(
+      "2026-03-01",
+      "2026-03-24",
+      new Date(2026, 2, 24, 18, 45, 30, 0),
+    );
+
+    expect(loggedAt).not.toBeNull();
+    expect(toLocalDateKey(new Date(loggedAt ?? ""))).toBe("2026-03-01");
   });
 });

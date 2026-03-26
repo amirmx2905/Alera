@@ -76,3 +76,11 @@ export const toLoggedAtIso = (dateKey: string, timeSource = new Date()) => {
     timeSource.getMilliseconds(),
   ).toISOString();
 };
+
+export const getLoggedAtForDate = (
+  dateKey: string,
+  todayKey = toLocalDateKey(new Date()),
+  timeSource = new Date(),
+) => {
+  return dateKey === todayKey ? null : toLoggedAtIso(dateKey, timeSource);
+};

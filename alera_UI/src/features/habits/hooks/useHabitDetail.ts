@@ -3,12 +3,14 @@ import { Platform } from "react-native";
 import type { Entry, Habit } from "../types";
 import { createLog, deleteLog, listLogs, updateLog } from "../services/logs";
 import { getProfile } from "../../../services/profile";
-import { parseEntryDate, toLocalDateKey, toLoggedAtIso } from "../utils/dates";
+import {
+  getLoggedAtForDate,
+  parseEntryDate,
+  toLocalDateKey,
+  toLoggedAtIso,
+} from "../utils/dates";
 
-type PendingEntry = {
-  amount: string;
-  editingEntry: Entry | null;
-};
+type PendingEntry = { amount: string; editingEntry: Entry | null };
 
 type Params = {
   habit: Habit | undefined;
@@ -53,6 +55,7 @@ function getLaterDate(left: Date | null, right: Date | null) {
 function clampDate(current: Date, minDate: Date) {
   return current < minDate ? minDate : current;
 }
+
 export const useHabitDetail = ({
   habit,
   addEntry,
@@ -70,7 +73,10 @@ export const useHabitDetail = ({
   const [minDate, setMinDate] = useState<Date | null>(null);
   const [isEntrySaving, setIsEntrySaving] = useState(false);
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
-  const [lastTouchedEntry, setLastTouchedEntry] = useState<{ id: string; nonce: number } | null>(null);
+  const [lastTouchedEntry, setLastTouchedEntry] = useState<{
+    id: string;
+    nonce: number;
+  } | null>(null);
 
   const selectedDateStr = toLocalDateKey(selectedDate);
   const todayStr = toLocalDateKey(new Date());
@@ -133,11 +139,14 @@ export const useHabitDetail = ({
     };
   }, [habit?.createdAt]);
 
-  const entriesForSelectedDate = useMemo(() => {
-    return entries.filter(
-      (entry) => toLocalDateKey(parseEntryDate(entry.date)) === selectedDateStr,
-    );
-  }, [entries, selectedDateStr]);
+  const entriesForSelectedDate = useMemo(
+    () =>
+      entries.filter(
+        (entry) =>
+          toLocalDateKey(parseEntryDate(entry.date)) === selectedDateStr,
+      ),
+    [entries, selectedDateStr],
+  );
   const hasEntryForSelectedDate = entriesForSelectedDate.length > 0;
 
   const handleAddEntry = useCallback(async () => {
@@ -146,12 +155,11 @@ export const useHabitDetail = ({
     if (!entryState.amount && habit.type !== "binary") return;
     const amountValue = habit.type === "binary" ? 1 : Number(entryState.amount);
     if (Number.isNaN(amountValue)) return;
-    const selectedDateIso = toLoggedAtIso(selectedDateStr);
     setIsEntrySaving(true);
     try {
       const created = await createLog(habit.id, {
         value: amountValue,
-        logged_at: selectedDateIso,
+        logged_at: getLoggedAtForDate(selectedDateStr, todayStr),
       });
       setEntries((prev) => [
         {
@@ -195,9 +203,11 @@ export const useHabitDetail = ({
     if (Number.isNaN(amountValue)) return;
     const editingDate = entryState.editingEntry.date;
     const editingDateIso =
-      editingDate.length > 10
-        ? new Date(editingDate).toISOString()
-        : toLoggedAtIso(toLocalDateKey(parseEntryDate(editingDate)));
+      selectedDateStr === todayStr
+        ? null
+        : editingDate.length > 10
+          ? new Date(editingDate).toISOString()
+          : toLoggedAtIso(toLocalDateKey(parseEntryDate(editingDate)));
     setIsEntrySaving(true);
     try {
       const updated = await updateLog(habit.id, entryState.editingEntry.id, {
@@ -222,6 +232,8 @@ export const useHabitDetail = ({
     entryState.editingEntry,
     habit,
     isEntrySaving,
+    selectedDateStr,
+    todayStr,
     updateEntry,
   ]);
 
