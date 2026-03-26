@@ -1,7 +1,7 @@
 import React from "react";
 import { render } from "@testing-library/react-native";
 import { Animated } from "react-native";
-import { PrimaryButton } from "../components/shared/PrimaryButton";
+import { PrimaryButton } from "../../components/shared/PrimaryButton";
 
 describe("PrimaryButton", () => {
   it("renders with label", () => {

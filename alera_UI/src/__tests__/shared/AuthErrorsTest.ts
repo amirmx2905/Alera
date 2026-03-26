@@ -1,7 +1,7 @@
 import {
   isInvalidRefreshTokenError,
   mapAuthErrorMessage,
-} from "../services/authErrors";
+} from "../../services/authErrors";
 
 describe("authErrors", () => {
   it("detects invalid refresh token errors", () => {

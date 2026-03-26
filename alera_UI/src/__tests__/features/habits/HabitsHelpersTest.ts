@@ -1,10 +1,10 @@
-import type { Entry } from "../features/habits/types";
-import { calculateLocalStreak } from "../state/habits/habits.helpers";
+import type { Entry } from "../../../features/habits/types";
 import {
   getLoggedAtForDate,
   toLocalDateKey,
   toLoggedAtIso,
-} from "../features/habits/utils/dates";
+} from "../../../features/habits/utils/dates";
+import { calculateLocalStreak } from "../../../state/habits/habits.helpers";
 
 describe("calculateLocalStreak for weekly/monthly habits", () => {
   afterEach(() => {
