@@ -10,12 +10,16 @@ import type { RequestBody } from "./types.ts";
 import { getUserIdFromToken } from "./utils.ts";
 import { createSupabaseClient } from "./client.ts";
 import { ensureHabitAccess, ensureProfileAccess } from "./authz.ts";
-import { jsonResponse } from "./response.ts";
+import { jsonResponse, corsPreflightResponse } from "./response.ts";
 import { runMetricsPipeline } from "./pipeline.ts";
 import { getErrorMessage, getErrorStatus } from "./errors.ts";
 import { logEvent } from "./telemetry.ts";
 
 serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return corsPreflightResponse();
+  }
+
   logEvent("info", "metrics.http.start");
 
   try {
