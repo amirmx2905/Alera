@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { View, Text, Pressable, Animated } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useAuth } from "../../../state/AuthContext";
+import { useAuth } from "../../../state/AuthStore";
 import { DotLoader } from "../../../components/shared/DotLoader";
 import { MainLayout } from "../../../layouts/MainLayout";
 import { useCurrentProfile } from "../../profile/hooks/useCurrentProfile";

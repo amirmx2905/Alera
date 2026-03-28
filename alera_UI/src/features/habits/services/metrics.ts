@@ -1,6 +1,7 @@
 import { supabase } from "../../../services/supabase";
 import { getCurrentProfileId } from "../../../services/profile";
 import { invokeEdgeFunction } from "../../../services/edgeFunctions";
+import { ensureArray } from "../../../services/handleServiceError";
 
 export type MetricGranularity = "daily" | "weekly" | "monthly" | "all_time";
 
@@ -52,7 +53,7 @@ export async function listMetrics(
 
   const { data, error } = await query;
   if (error) throw error;
-  return data as Metric[];
+  return ensureArray<Metric>(data ?? [], "Unexpected response from listMetrics");
 }
 
 export async function listGoalProgressMetrics(
@@ -61,7 +62,7 @@ export async function listGoalProgressMetrics(
   date: string,
   profileId?: string,
 ) {
-  if (habitIds.length === 0) return [] as Metric[];
+  if (habitIds.length === 0) return [];
   const resolvedProfileId = await getProfileId(profileId);
   const { data, error } = await supabase
     .from("metrics")
@@ -74,7 +75,7 @@ export async function listGoalProgressMetrics(
     .order("habit_id", { ascending: true });
 
   if (error) throw error;
-  return data as Metric[];
+  return ensureArray<Metric>(data ?? [], "Unexpected response from listGoalProgressMetrics");
 }
 
 export async function listDailyMetrics(

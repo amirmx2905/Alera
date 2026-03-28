@@ -1,14 +1,11 @@
-import type { Entry, Habit } from "../../features/habits/types";
+import type { Entry, Habit } from "../types";
 import {
   getMondayStartKey,
   getMonthEndKey,
   getMonthStartKey,
   getSundayDateKey,
   toLocalDateKey,
-} from "../../features/habits/utils/dates";
-import type { HabitCategory } from "./habits.types";
-
-export const HABITS_CACHE_KEY = "habits_cache_v1:";
+} from "./dates";
 
 const parseDateKey = (value: string) => new Date(`${value}T00:00:00`);
 
@@ -105,20 +102,8 @@ export const calculateLocalStreak = (
     const total = totalsByPeriod[cursorKey] ?? 0;
     if (total < goalAmount) break;
     streak += 1;
-
     cursorKey = getPreviousPeriodKey(cursorKey);
   }
 
   return streak;
 };
-
-export const buildCategoryState = (items: HabitCategory[]) => ({
-  nextCategories: items.map((category) => ({
-    id: category.id,
-    name: category.name,
-  })),
-  nextMap: items.reduce<Record<string, string>>((acc, category) => {
-    acc[category.name] = category.id;
-    return acc;
-  }, {}),
-});

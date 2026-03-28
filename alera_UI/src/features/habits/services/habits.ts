@@ -1,6 +1,7 @@
 import { supabase } from "../../../services/supabase";
 import { getCurrentProfileId } from "../../../services/profile";
 import { invokeEdgeFunction } from "../../../services/edgeFunctions";
+import { ensureArray, ensureObject } from "../../../services/handleServiceError";
 import { toLocalDateKey } from "../utils/dates";
 
 export type HabitType = "numeric" | "binary";
@@ -67,7 +68,7 @@ export async function listHabits(profileId?: string) {
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return (data ?? []) as unknown as HabitRow[];
+  return ensureArray<HabitRow>(data ?? [], "Unexpected response from habits query");
 }
 
 export async function getHabit(habitId: string, profileId?: string) {
@@ -85,7 +86,7 @@ export async function getHabit(habitId: string, profileId?: string) {
     throw error;
   }
 
-  return (data as Habit) || null;
+  return data ? ensureObject<Habit>(data, "Unexpected response from getHabit") : null;
 }
 
 export async function findHabitByName(name: string, profileId?: string) {
@@ -103,7 +104,7 @@ export async function findHabitByName(name: string, profileId?: string) {
     throw error;
   }
 
-  return (data as Habit) || null;
+  return data ? ensureObject<Habit>(data, "Unexpected response from findHabitByName") : null;
 }
 
 export async function createHabit(
@@ -130,7 +131,7 @@ export async function createHabit(
     .single();
 
   if (error) throw error;
-  return data as Habit;
+  return ensureObject<Habit>(data, "Unexpected response from createHabit");
 }
 
 export async function updateHabit(
@@ -164,7 +165,7 @@ export async function updateHabit(
     .single();
 
   if (error) throw error;
-  return data as Habit;
+  return ensureObject<Habit>(data, "Unexpected response from updateHabit");
 }
 
 export async function archiveHabit(habitId: string, profileId?: string) {

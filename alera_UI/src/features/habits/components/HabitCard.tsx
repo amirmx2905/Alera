@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import { Pressable, Text, View } from "react-native";
 import type { Habit } from "../types";
 
@@ -16,7 +16,7 @@ type BinaryHabitCardProps = {
   onPress?: () => void;
 };
 
-export function BinaryHabitCard({
+export const BinaryHabitCard = memo(function BinaryHabitCard({
   habit,
   isCompleted,
   onPress,
@@ -64,9 +64,9 @@ export function BinaryHabitCard({
       </View>
     </Pressable>
   );
-}
+});
 
-export function HabitCard({
+export const HabitCard = memo(function HabitCard({
   habit,
   progress,
   progressValue,
@@ -129,4 +129,4 @@ export function HabitCard({
       </View>
     </Pressable>
   );
-}
+});

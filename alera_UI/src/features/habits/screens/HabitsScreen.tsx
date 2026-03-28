@@ -8,9 +8,10 @@ import { MainLayout } from "../../../layouts/MainLayout";
 import { EmptyState } from "../../../components/shared/EmptyState";
 import { HabitCard } from "../components/HabitCard";
 import { getProgressData } from "../utils/habitProgress";
+import { COLORS } from "../../../constants/theme";
 import type { HabitsStackParamList } from "../../../navigation/HabitsStack";
 import type { RootStackParamList } from "../../../navigation/RootNavigator";
-import { useHabits } from "../../../state/HabitsContext";
+import { useHabits } from "../../../state/HabitsStore";
 
 type Props = NativeStackScreenProps<HabitsStackParamList, "HabitsHome">;
 
@@ -64,7 +65,7 @@ export function HabitsScreen({ navigation }: Props) {
               <Ionicons
                 name={showArchived ? "archive" : "archive-outline"}
                 size={18}
-                color="#e2e8f0"
+                color={COLORS.slate200}
               />
             </Animated.View>
           </Pressable>
@@ -80,7 +81,7 @@ export function HabitsScreen({ navigation }: Props) {
                 style={{ transform: [{ scale: addButtonScale }] }}
               >
                 <LinearGradient
-                  colors={["#7c3aed", "#4c1d95"]}
+                  colors={COLORS.gradientHeader}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={{
@@ -130,9 +131,7 @@ export function HabitsScreen({ navigation }: Props) {
                   progress={progress}
                   progressValue={progressValue}
                   currentAmount={currentAmount}
-                  onPress={() =>
-                    navigation.navigate("HabitDetail", { habitId: habit.id })
-                  }
+                  onPress={() => navigation.navigate("HabitDetail", { habitId: habit.id })}
                 />
               );
             })}

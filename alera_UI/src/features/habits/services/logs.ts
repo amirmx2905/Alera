@@ -1,6 +1,7 @@
 import { supabase } from "../../../services/supabase";
 import { getCurrentProfileId } from "../../../services/profile";
 import { invokeEdgeFunction } from "../../../services/edgeFunctions";
+import { ensureArray, ensureObject } from "../../../services/handleServiceError";
 import { toLocalDateKey } from "../utils/dates";
 
 export type LogSource = "mobile" | "watch";
@@ -85,11 +86,10 @@ async function triggerMetricsCalculation(
     );
 
     if (errorMessage) {
-      console.error("Error calculating metrics:", errorMessage);
-      return;
+      console.warn("Metrics calculation issue:", errorMessage);
     }
   } catch (err) {
-    console.error("Failed to trigger metrics calculation:", err);
+    console.warn("Failed to trigger metrics calculation:", err);
   }
 }
 
@@ -107,7 +107,7 @@ export async function listLogs(
     .eq("habit_id", habitId);
 
   if (error) throw error;
-  return filterAndSortLogs((data as HabitLog[]) ?? [], from, to);
+  return filterAndSortLogs(ensureArray<HabitLog>(data ?? [], "Unexpected response from listLogs"), from, to);
 }
 
 export async function listLogsForHabits(
@@ -125,7 +125,7 @@ export async function listLogsForHabits(
     .in("habit_id", habitIds);
 
   if (error) throw error;
-  return filterAndSortLogs((data as HabitLog[]) ?? [], from, to);
+  return filterAndSortLogs(ensureArray<HabitLog>(data ?? [], "Unexpected response from listLogsForHabits"), from, to);
 }
 
 export async function createLog(
@@ -150,15 +150,16 @@ export async function createLog(
     .single();
 
   if (error) throw error;
+  const log = ensureObject<HabitLog>(data, "Unexpected response from createLog");
 
   // Trigger metrics recalculation (non-blocking)
   triggerMetricsCalculation(
     habitId,
     resolvedProfileId,
-    toLocalDateKey(new Date(data.logged_at ?? data.created_at)),
+    toLocalDateKey(new Date(log.logged_at ?? log.created_at)),
   );
 
-  return data as HabitLog;
+  return log;
 }
 
 export async function updateLog(
@@ -187,15 +188,16 @@ export async function updateLog(
     .single();
 
   if (error) throw error;
+  const log = ensureObject<HabitLog>(data, "Unexpected response from updateLog");
 
   // Trigger metrics recalculation (non-blocking)
   triggerMetricsCalculation(
     habitId,
     resolvedProfileId,
-    toLocalDateKey(new Date(data.logged_at ?? data.created_at)),
+    toLocalDateKey(new Date(log.logged_at ?? log.created_at)),
   );
 
-  return data as HabitLog;
+  return log;
 }
 
 export async function deleteLog(
@@ -223,5 +225,5 @@ export async function deleteLog(
     );
   }
 
-  return (data?.[0] as HabitLog) || null;
+  return data?.[0] ? ensureObject<HabitLog>(data[0], "Unexpected response from deleteLog") : null;
 }

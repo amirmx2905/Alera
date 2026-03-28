@@ -16,7 +16,7 @@ import { HabitProgressCard } from "../components/details/HabitProgressCard";
 import type { HabitsStackParamList } from "../../../navigation/HabitsStack";
 import type { RootStackParamList } from "../../../navigation/RootNavigator";
 import { usePressScale } from "../../../hooks/usePressScale";
-import { useHabits } from "../../../state/HabitsContext";
+import { useHabits } from "../../../state/HabitsStore";
 import { useHabitDetail } from "../hooks/useHabitDetail";
 import { getProgressData } from "../utils/habitProgress";
 

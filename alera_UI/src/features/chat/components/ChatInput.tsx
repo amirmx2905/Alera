@@ -3,6 +3,7 @@ import { Pressable, Animated, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { InputField } from "../../../components/shared/InputField";
+import { COLORS } from "../../../constants/theme";
 
 type Props = {
   value: string;
@@ -25,7 +26,7 @@ export function ChatInput({
   isSending,
   sendButtonScale,
 }: Props) {
-  const sendGradient: [string, string] = ["#5b21b6", "#2e1065"];
+  const sendGradient = COLORS.gradientPrimary;
   return (
     <View className="flex-row items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
       <View className="flex-1">

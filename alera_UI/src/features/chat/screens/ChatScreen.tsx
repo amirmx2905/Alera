@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ScrollView,
+  FlatList,
   Keyboard,
   Animated,
   View,
@@ -14,10 +14,8 @@ import { getChatHistory, sendChatMessage } from "../services/ai";
 import { ChatMessages } from "../components/ChatMessages";
 import { ChatInput } from "../components/ChatInput";
 import { MainLayout } from "../../../layouts/MainLayout";
+import { LAYOUT } from "../../../constants/theme";
 import type { Message } from "../types";
-
-const TAB_BAR_HEIGHT = 60;
-const TAB_BAR_BOTTOM_GAP = 20;
 
 function createMessage(
   role: Message["role"],
@@ -53,7 +51,7 @@ export function ChatScreen() {
   );
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<FlatList>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const animatedMessagesRef = useRef(new Set<string>());
   const hasLoadedHistoryRef = useRef(false);
@@ -142,7 +140,7 @@ export function ChatScreen() {
     };
   }, []);
 
-  const handleSend = async () => {
+  const handleSend = useCallback(async () => {
     if (isSending || !message.trim()) return;
     const trimmed = message.trim();
     const { data: sessionData } = await supabase.auth.getSession();
@@ -181,7 +179,7 @@ export function ChatScreen() {
     } finally {
       setIsSending(false);
     }
-  };
+  }, [isSending, message, appendMessage]);
 
   return (
     <MainLayout
@@ -210,7 +208,7 @@ export function ChatScreen() {
           marginTop: 12,
           marginBottom: isKeyboardVisible
             ? 15
-            : TAB_BAR_HEIGHT + TAB_BAR_BOTTOM_GAP + 12,
+            : LAYOUT.tabBarHeight + LAYOUT.tabBarBottomGap + 12,
         }}
       >
         <ChatInput

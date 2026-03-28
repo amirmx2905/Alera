@@ -4,7 +4,7 @@ import {
   toLocalDateKey,
   toLoggedAtIso,
 } from "../../../features/habits/utils/dates";
-import { calculateLocalStreak } from "../../../state/habits/habits.helpers";
+import { calculateLocalStreak } from "../../../features/habits/utils/habitStreaks";
 
 describe("calculateLocalStreak for weekly/monthly habits", () => {
   afterEach(() => {

@@ -2,7 +2,7 @@ import React, { useRef, useState } from "react";
 import { View, Text, TextInput, Pressable, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useAuth } from "../../../state/AuthContext";
+import { useAuth } from "../../../state/AuthStore";
 import { AuthCard } from "../components/AuthCard";
 import { PrimaryButton } from "../../../components/shared/PrimaryButton";
 import { OtpInputRow } from "../components/OtpInputRow";

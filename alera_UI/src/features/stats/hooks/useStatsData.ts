@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { InteractionManager } from "react-native";
 import { listMetrics } from "../../habits/services/metrics";
-import { useHabits } from "../../../state/HabitsContext";
+import { useHabits } from "../../../state/HabitsStore";
 import { parseEntryDate, toLocalDateKey } from "../../habits/utils/dates";
 import type {
   StatsGranularity,

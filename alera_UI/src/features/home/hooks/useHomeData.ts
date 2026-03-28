@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useHabits } from "../../../state/HabitsContext";
+import { useHabits } from "../../../state/HabitsStore";
 import {
   type TodaysHabitSummary,
   type HomeGoalFilter,

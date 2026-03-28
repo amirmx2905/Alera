@@ -11,7 +11,7 @@ import {
   UNITS,
 } from "../../../constants/habitsConstants";
 import type { RootStackParamList } from "../../../navigation/RootNavigator";
-import { useHabits } from "../../../state/HabitsContext";
+import { useHabits } from "../../../state/HabitsStore";
 import type { CreateHabitFormState } from "../types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CreateHabit">;

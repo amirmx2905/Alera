@@ -8,7 +8,7 @@ import { ConfirmEmailScreen } from "../features/auth/screens/ConfirmEmailScreen.
 import { ProfileScreen } from "../features/profile/screens/ProfileScreen.tsx";
 import { CreateHabitScreen } from "../features/habits/screens/CreateHabitScreen";
 import { HabitDetailScreen } from "../features/habits/screens/HabitDetailScreen";
-import { useAuth } from "../state/AuthContext.tsx";
+import { useAuth } from "../state/AuthStore";
 import { View } from "react-native";
 import { getProfile } from "../services/profile.ts";
 import { AppBackground } from "../layouts/AppBackground.tsx";

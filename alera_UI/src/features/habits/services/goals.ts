@@ -1,5 +1,6 @@
 import { supabase } from "../../../services/supabase";
 import { getCurrentProfileId } from "../../../services/profile";
+import { ensureObject } from "../../../services/handleServiceError";
 import { type GoalType } from "./habits";
 
 export type Goal = {
@@ -42,7 +43,7 @@ export async function upsertGoal(
     .single();
 
   if (error) throw error;
-  return data as Goal;
+  return ensureObject<Goal>(data, "Unexpected response from upsertGoal");
 }
 
 export async function getGoal(habitId: string, profileId?: string) {
@@ -60,7 +61,7 @@ export async function getGoal(habitId: string, profileId?: string) {
     throw error;
   }
 
-  return (data as Goal) || null;
+  return data ? ensureObject<Goal>(data, "Unexpected response from getGoal") : null;
 }
 
 export async function deleteGoal(habitId: string, profileId?: string) {
