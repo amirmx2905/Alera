@@ -13,7 +13,7 @@ import { HomeScreen } from "../features/home/screens/HomeScreen.tsx";
 import { HabitsStack, type HabitsStackParamList } from "./HabitsStack";
 import { StatsStack, type StatsStackParamList } from "./StatsStack";
 import { ChatScreen } from "../features/chat/screens/ChatScreen.tsx";
-import { SettingsScreen } from "../features/settings/screens/SettingsScreen.tsx";
+import { SettingsStack, type SettingsStackParamList } from "./SettingsStack";
 import { HomeStartupGateProvider } from "./HomeStartupGate";
 import { DotLoader } from "../components/shared/DotLoader";
 
@@ -24,7 +24,7 @@ export type AppTabParamList = {
   Habits: NavigatorScreenParams<HabitsStackParamList> | undefined;
   Stats: NavigatorScreenParams<StatsStackParamList> | undefined;
   Chat: undefined;
-  Settings: undefined;
+  Settings: NavigatorScreenParams<SettingsStackParamList> | undefined;
 };
 
 type TabIconEntry = {
@@ -51,6 +51,7 @@ const ICON_MAP: Record<keyof AppTabParamList, TabIconEntry> = {
 const LOCKED_ROUTES: Array<{ parent: string; child: string }> = [
   { parent: "Habits", child: "HabitDetail" },
   { parent: "Stats", child: "StatsDetail" },
+  { parent: "Settings", child: "EditProfile" },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -336,7 +337,7 @@ export function AppTabs() {
           <Tab.Screen name="Stats" component={StatsStack} />
           <Tab.Screen name="Home" component={HomeScreen} />
           <Tab.Screen name="Chat" component={ChatScreen} />
-          <Tab.Screen name="Settings" component={SettingsScreen} />
+          <Tab.Screen name="Settings" component={SettingsStack} />
         </Tab.Navigator>
 
         {!isHomeReady ? (

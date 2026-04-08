@@ -1,14 +1,18 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getProfile, type Profile } from "../../../services/profile";
 
 type UseCurrentProfileResult = {
   profile: Profile | null;
   isLoading: boolean;
+  refetch: () => void;
 };
 
 export function useCurrentProfile(userId?: string): UseCurrentProfileResult {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(Boolean(userId));
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const refetch = useCallback(() => setRefreshKey((k) => k + 1), []);
 
   useEffect(() => {
     if (!userId) {
@@ -18,7 +22,8 @@ export function useCurrentProfile(userId?: string): UseCurrentProfileResult {
     }
 
     let isMounted = true;
-    setIsLoading(true);
+    const isInitialLoad = !profile;
+    if (isInitialLoad) setIsLoading(true);
 
     getProfile()
       .then((nextProfile) => {
@@ -37,10 +42,11 @@ export function useCurrentProfile(userId?: string): UseCurrentProfileResult {
     return () => {
       isMounted = false;
     };
-  }, [userId]);
+  }, [userId, refreshKey]);
 
   return {
     profile,
     isLoading,
+    refetch,
   };
 }
