@@ -1,0 +1,16 @@
+services:
+  web:
+    build:
+      context: ./alera_UI
+      dockerfile: Dockerfile
+      args:
+        EXPO_PUBLIC_SUPABASE_URL: ${EXPO_PUBLIC_SUPABASE_URL}
+        EXPO_PUBLIC_SUPABASE_ANON_KEY: ${EXPO_PUBLIC_SUPABASE_ANON_KEY}
+        EXPO_PUBLIC_AI_FUNCTION: ${EXPO_PUBLIC_AI_FUNCTION}
+        EXPO_PUBLIC_METRICS_FUNCTION: ${EXPO_PUBLIC_METRICS_FUNCTION}
+    env_file:
+      - path: ./alera_UI/.env
+        required: false
+    ports:
+      - "3000:80"
+    restart: unless-stopped

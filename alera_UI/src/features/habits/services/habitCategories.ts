@@ -1,4 +1,6 @@
 import { supabase } from "../../../services/supabase";
+import { ensureArray } from "../../../services/handleServiceError";
+
 export type HabitCategory = {
   id: string;
   name: string;
@@ -12,5 +14,5 @@ export async function listHabitCategories() {
     .order("created_at", { ascending: true });
 
   if (error) throw error;
-  return data as HabitCategory[];
+  return ensureArray<HabitCategory>(data ?? [], "Unexpected response from listHabitCategories");
 }

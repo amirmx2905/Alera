@@ -3,12 +3,14 @@ import { Platform } from "react-native";
 import type { Entry, Habit } from "../types";
 import { createLog, deleteLog, listLogs, updateLog } from "../services/logs";
 import { getProfile } from "../../../services/profile";
-import { parseEntryDate, toLocalDateKey } from "../utils/dates";
+import {
+  getLoggedAtForDate,
+  parseEntryDate,
+  toLocalDateKey,
+  toLoggedAtIso,
+} from "../utils/dates";
 
-type PendingEntry = {
-  amount: string;
-  editingEntry: Entry | null;
-};
+type PendingEntry = { amount: string; editingEntry: Entry | null };
 
 type Params = {
   habit: Habit | undefined;
@@ -16,6 +18,43 @@ type Params = {
   updateEntry: (habitId: string, entryId: string, amount: number) => void;
   deleteEntry: (habitId: string, entryId: string) => void;
 };
+
+function normalizeDateStart(value: Date) {
+  const next = new Date(value);
+  next.setHours(0, 0, 0, 0);
+  return next;
+}
+
+function toEntry(log: {
+  id: string;
+  logged_at: string | null;
+  created_at: string;
+  value: number;
+}): Entry {
+  return {
+    id: log.id,
+    date: log.logged_at ?? log.created_at,
+    amount: log.value,
+  };
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) return error.message;
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string") return message;
+  }
+  return fallback;
+}
+
+function getLaterDate(left: Date | null, right: Date | null) {
+  if (left && right) return left > right ? left : right;
+  return left ?? right;
+}
+
+function clampDate(current: Date, minDate: Date) {
+  return current < minDate ? minDate : current;
+}
 
 export const useHabitDetail = ({
   habit,
@@ -51,27 +90,16 @@ export const useHabitDetail = ({
     let isMounted = true;
     setEntries(habit.entries);
 
-    if (habit.entries.length > 0)
-      return () => {
-        isMounted = false;
-      };
-
-    setIsLogsLoading(true);
-    listLogs(habit.id)
-      .then((logs) => {
-        if (!isMounted) return;
-        setEntries(
-          logs.map((log) => ({
-            id: log.id,
-            date: log.created_at,
-            amount: log.value,
-          })),
-        );
-      })
-      .finally(() => {
-        if (!isMounted) return;
-        setIsLogsLoading(false);
-      });
+    if (habit.entries.length === 0) {
+      setIsLogsLoading(true);
+      listLogs(habit.id)
+        .then((logs) => {
+          if (isMounted) setEntries(logs.map(toEntry));
+        })
+        .finally(() => {
+          if (isMounted) setIsLogsLoading(false);
+        });
+    }
 
     return () => {
       isMounted = false;
@@ -80,61 +108,88 @@ export const useHabitDetail = ({
 
   useEffect(() => {
     let isMounted = true;
+    const habitCreatedAt = habit?.createdAt
+      ? normalizeDateStart(new Date(habit.createdAt))
+      : null;
+
+    if (habitCreatedAt) {
+      setMinDate(habitCreatedAt);
+      setSelectedDate((prev) => clampDate(prev, habitCreatedAt));
+    }
+
     getProfile()
       .then((profile) => {
-        if (!isMounted || !profile?.created_at) return;
-        const created = new Date(profile.created_at);
-        created.setHours(0, 0, 0, 0);
-        setMinDate(created);
-        setSelectedDate((prev) => (prev < created ? created : prev));
+        if (!isMounted) return;
+        const profileCreatedAt = profile?.created_at
+          ? normalizeDateStart(new Date(profile.created_at))
+          : null;
+        const nextMinDate = getLaterDate(profileCreatedAt, habitCreatedAt);
+        if (!nextMinDate) return;
+        setMinDate(nextMinDate);
+        setSelectedDate((prev) => clampDate(prev, nextMinDate));
       })
       .catch(() => {
-        // ignore profile lookup errors; date range stays unrestricted
+        if (!isMounted || !habitCreatedAt) return;
+        setMinDate(habitCreatedAt);
+        setSelectedDate((prev) => clampDate(prev, habitCreatedAt));
       });
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [habit?.createdAt]);
 
-  const entriesForSelectedDate = useMemo(() => {
-    return entries.filter(
-      (entry) => toLocalDateKey(parseEntryDate(entry.date)) === selectedDateStr,
-    );
-  }, [entries, selectedDateStr]);
+  const entriesForSelectedDate = useMemo(
+    () =>
+      entries.filter(
+        (entry) =>
+          toLocalDateKey(parseEntryDate(entry.date)) === selectedDateStr,
+      ),
+    [entries, selectedDateStr],
+  );
+  const hasEntryForSelectedDate = entriesForSelectedDate.length > 0;
 
   const handleAddEntry = useCallback(async () => {
-    if (!habit || !entryState.amount || isFuture || isEntrySaving) return;
-    const amountValue = Number(entryState.amount);
+    if (!habit || isFuture || isEntrySaving) return;
+    if (habit.type === "binary" && hasEntryForSelectedDate) return;
+    if (!entryState.amount && habit.type !== "binary") return;
+    const amountValue = habit.type === "binary" ? 1 : Number(entryState.amount);
     if (Number.isNaN(amountValue)) return;
     setIsEntrySaving(true);
     try {
       const created = await createLog(habit.id, {
         value: amountValue,
+        logged_at: getLoggedAtForDate(selectedDateStr, todayStr),
       });
       setEntries((prev) => [
         {
           id: created.id,
-          date: created.created_at,
+          date: created.logged_at ?? created.created_at,
           amount: created.value,
         },
         ...prev,
       ]);
       addEntry(habit.id, {
         id: created.id,
-        date: created.created_at,
+        date: created.logged_at ?? created.created_at,
         amount: created.value,
       });
       setLastTouchedEntry({ id: created.id, nonce: Date.now() });
       setEntryState({ amount: "", editingEntry: null });
     } catch (error) {
-      throw new Error(
-        error instanceof Error ? error.message : "Unable to add entry.",
-      );
+      throw new Error(getErrorMessage(error, "Unable to add entry."));
     } finally {
       setIsEntrySaving(false);
     }
-  }, [addEntry, entryState.amount, habit, isEntrySaving, isFuture]);
+  }, [
+    addEntry,
+    entryState.amount,
+    habit,
+    hasEntryForSelectedDate,
+    isEntrySaving,
+    isFuture,
+    selectedDateStr,
+  ]);
 
   const handleUpdateEntry = useCallback(async () => {
     if (
@@ -146,10 +201,18 @@ export const useHabitDetail = ({
       return;
     const amountValue = Number(entryState.amount);
     if (Number.isNaN(amountValue)) return;
+    const editingDate = entryState.editingEntry.date;
+    const editingDateIso =
+      selectedDateStr === todayStr
+        ? null
+        : editingDate.length > 10
+          ? new Date(editingDate).toISOString()
+          : toLoggedAtIso(toLocalDateKey(parseEntryDate(editingDate)));
     setIsEntrySaving(true);
     try {
       const updated = await updateLog(habit.id, entryState.editingEntry.id, {
         value: amountValue,
+        logged_at: editingDateIso,
       });
       setEntries((prev) =>
         prev.map((entry) =>
@@ -160,9 +223,7 @@ export const useHabitDetail = ({
       setLastTouchedEntry({ id: updated.id, nonce: Date.now() });
       setEntryState({ amount: "", editingEntry: null });
     } catch (error) {
-      throw new Error(
-        error instanceof Error ? error.message : "Unable to update entry.",
-      );
+      throw new Error(getErrorMessage(error, "Unable to update entry."));
     } finally {
       setIsEntrySaving(false);
     }
@@ -171,6 +232,8 @@ export const useHabitDetail = ({
     entryState.editingEntry,
     habit,
     isEntrySaving,
+    selectedDateStr,
+    todayStr,
     updateEntry,
   ]);
 
@@ -187,9 +250,7 @@ export const useHabitDetail = ({
         setEntries((prev) => prev.filter((entry) => entry.id !== entryId));
         deleteEntry(habit.id, entryId);
       } catch (error) {
-        throw new Error(
-          error instanceof Error ? error.message : "Unable to delete entry.",
-        );
+        throw new Error(getErrorMessage(error, "Unable to delete entry."));
       } finally {
         setDeletingEntryId((current) => (current === entryId ? null : current));
       }
@@ -214,23 +275,18 @@ export const useHabitDetail = ({
     setSelectedDate(newDate);
   }, [selectedDate]);
 
-  const goToToday = useCallback(() => {
-    setSelectedDate(new Date());
-  }, []);
+  const goToToday = useCallback(() => setSelectedDate(new Date()), []);
 
   const handleDateChange = useCallback((_event: unknown, value?: Date) => {
-    if (Platform.OS === "android") {
-      setShowDatePicker(false);
-    }
-    if (value) {
-      setSelectedDate(value);
-    }
+    if (Platform.OS === "android") setShowDatePicker(false);
+    if (value) setSelectedDate(value);
   }, []);
 
   return {
     entryState,
     setEntryState,
     entries,
+    hasEntryForSelectedDate,
     selectedDate,
     isToday,
     isFuture,

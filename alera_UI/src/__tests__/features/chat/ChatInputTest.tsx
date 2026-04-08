@@ -1,7 +1,7 @@
 import React from "react";
 import { render } from "@testing-library/react-native";
 import { Animated } from "react-native";
-import { ChatInput } from "../features/chat/components/ChatInput";
+import { ChatInput } from "../../../features/chat/components/ChatInput";
 
 describe("ChatInput", () => {
   it("disables send when isSending", () => {

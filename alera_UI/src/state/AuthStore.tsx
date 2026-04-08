@@ -7,6 +7,10 @@ import React, {
 } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "../services/supabase";
+import {
+  isInvalidRefreshTokenError,
+  mapAuthErrorMessage,
+} from "../services/authErrors";
 
 type AuthContextValue = {
   session: Session | null;
@@ -25,16 +29,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session ?? null);
-      setIsLoading(false);
-    });
+    let isMounted = true;
+
+    const bootstrapSession = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error && isInvalidRefreshTokenError(error)) {
+          await supabase.auth.signOut();
+          if (isMounted) setSession(null);
+          return;
+        }
+
+        if (isMounted) {
+          setSession(data.session ?? null);
+        }
+      } catch {
+        if (isMounted) setSession(null);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+
+    void bootstrapSession();
 
     const { data } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
     });
 
     return () => {
+      isMounted = false;
       data.subscription.unsubscribe();
     };
   }, []);
@@ -48,11 +71,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email,
           password,
         });
-        if (error) throw error;
+        if (error)
+          throw new Error(mapAuthErrorMessage(error, "Unable to sign in."));
       },
       signUp: async (email, password) => {
         const { error } = await supabase.auth.signUp({ email, password });
-        if (error) throw error;
+        if (error)
+          throw new Error(mapAuthErrorMessage(error, "Unable to sign up."));
       },
       verifyOtp: async (email, token) => {
         const { error } = await supabase.auth.verifyOtp({
@@ -60,15 +85,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           token,
           type: "signup",
         });
-        if (error) throw error;
+        if (error) {
+          throw new Error(
+            mapAuthErrorMessage(error, "Unable to verify confirmation code."),
+          );
+        }
       },
       resendOtp: async (email) => {
         const { error } = await supabase.auth.resend({ type: "signup", email });
-        if (error) throw error;
+        if (error)
+          throw new Error(mapAuthErrorMessage(error, "Unable to resend code."));
       },
       signOut: async () => {
         const { error } = await supabase.auth.signOut();
-        if (error) throw error;
+        if (error)
+          throw new Error(mapAuthErrorMessage(error, "Unable to sign out."));
       },
     }),
     [session, isLoading],

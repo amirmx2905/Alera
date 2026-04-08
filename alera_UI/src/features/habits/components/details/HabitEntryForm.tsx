@@ -3,12 +3,14 @@ import { View, Text, Pressable, Animated, TextInput } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { InputField } from "../../../../components/shared/InputField";
 import { PrimaryButton } from "../../../../components/shared/PrimaryButton";
-import type { Entry } from "../../types";
+import type { Entry, HabitType } from "../../types";
 
 type Props = {
   amount: string;
   editingEntry: Entry | null;
   unit: string;
+  habitType: HabitType;
+  hasEntryForDate: boolean;
   isFuture: boolean;
   isSaving: boolean;
   isReadOnly?: boolean;
@@ -25,6 +27,8 @@ export function HabitEntryForm({
   amount,
   editingEntry,
   unit,
+  habitType,
+  hasEntryForDate,
   isFuture,
   isSaving,
   isReadOnly = false,
@@ -37,6 +41,7 @@ export function HabitEntryForm({
   onPressOut,
 }: Props) {
   const isLocked = isSaving || isReadOnly;
+  const isBinary = habitType === "binary";
   const amountInputRef = useRef<TextInput | null>(null);
   const hasAmountChanged = editingEntry
     ? amount.trim() !== `${editingEntry.amount}` && amount.trim().length > 0
@@ -77,50 +82,66 @@ export function HabitEntryForm({
           <Text className="text-purple-200 text-xs font-semibold">{unit}</Text>
         </View>
       </View>
-      <InputField
-        inputRef={amountInputRef}
-        value={amount}
-        onChangeText={onChangeAmount}
-        placeholder={`Enter ${unit}`}
-        keyboardType="numeric"
-        containerClassName="border border-white/10 bg-white/5 py-4"
-        editable={!isReadOnly}
-      />
-      {editingEntry ? (
-        <View className="flex-row gap-3 mt-4">
-          <Pressable
-            onPress={onCancelEdit}
-            disabled={isLocked}
-            className="flex-1 h-[50px] rounded-2xl border border-white/10 bg-white/5 items-center justify-center"
-            style={{ opacity: isLocked ? 0.6 : 1 }}
-          >
-            <Text className="text-white font-semibold">Cancel</Text>
-          </Pressable>
-          <PrimaryButton
-            label="Update Entry"
-            isLoading={isSaving}
-            onPress={onUpdateEntry}
-            onPressIn={onPressIn}
-            onPressOut={onPressOut}
-            scaleAnim={scaleAnim}
-            pressableClassName="flex-1"
-            containerClassName="w-full h-[50px]"
-            fixedHeight
-            disabled={isReadOnly || !hasAmountChanged}
-          />
-        </View>
-      ) : (
+      {isBinary ? (
         <PrimaryButton
-          label="Add Entry"
+          label={hasEntryForDate ? "Completed" : "Mark Complete"}
           isLoading={isSaving}
           onPress={onAddEntry}
           onPressIn={onPressIn}
           onPressOut={onPressOut}
           scaleAnim={scaleAnim}
           containerClassName="w-full h-[50px] mt-4"
-          disabled={!amount || isFuture || isSaving || isReadOnly}
+          disabled={hasEntryForDate || isFuture || isSaving || isReadOnly}
           fixedHeight
         />
+      ) : (
+        <>
+          <InputField
+            inputRef={amountInputRef}
+            value={amount}
+            onChangeText={onChangeAmount}
+            placeholder={`Enter ${unit}`}
+            keyboardType="numeric"
+            containerClassName="border border-white/10 bg-white/5 py-4"
+            editable={!isReadOnly}
+          />
+          {editingEntry ? (
+            <View className="flex-row gap-3 mt-4">
+              <Pressable
+                onPress={onCancelEdit}
+                disabled={isLocked}
+                className="flex-1 h-[50px] rounded-2xl border border-white/10 bg-white/5 items-center justify-center"
+                style={{ opacity: isLocked ? 0.6 : 1 }}
+              >
+                <Text className="text-white font-semibold">Cancel</Text>
+              </Pressable>
+              <PrimaryButton
+                label="Update Entry"
+                isLoading={isSaving}
+                onPress={onUpdateEntry}
+                onPressIn={onPressIn}
+                onPressOut={onPressOut}
+                scaleAnim={scaleAnim}
+                pressableClassName="flex-1"
+                containerClassName="w-full h-[50px]"
+                fixedHeight
+                disabled={isReadOnly || !hasAmountChanged}
+              />
+            </View>
+          ) : (
+            <PrimaryButton
+              label="Add Entry"
+              isLoading={isSaving}
+              onPress={onAddEntry}
+              onPressIn={onPressIn}
+              onPressOut={onPressOut}
+              scaleAnim={scaleAnim}
+              containerClassName="w-full h-[50px] mt-4"
+              disabled={!amount || isFuture || isSaving || isReadOnly}
+              fixedHeight
+            />
+          )}
+        </>
       )}
       {isFuture ? (
         <Text className="text-slate-500 text-xs mt-2">

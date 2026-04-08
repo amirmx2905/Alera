@@ -1,13 +1,45 @@
-import React, { useEffect, useRef, useState } from "react";
-import { ScrollView, Keyboard, Animated, View, Platform } from "react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import {
+  FlatList,
+  Keyboard,
+  Animated,
+  View,
+  Platform,
+  InteractionManager,
+} from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { supabase } from "../../../services/supabase";
+import { usePressScale } from "../../../hooks/usePressScale";
 import { getChatHistory, sendChatMessage } from "../services/ai";
 import { ChatMessages } from "../components/ChatMessages";
 import { ChatInput } from "../components/ChatInput";
 import { MainLayout } from "../../../layouts/MainLayout";
+import { LAYOUT } from "../../../constants/theme";
 import type { Message } from "../types";
-const TAB_BAR_HEIGHT = 60;
-const TAB_BAR_BOTTOM_GAP = 20;
+
+function createMessage(
+  role: Message["role"],
+  content: string,
+  idSuffix: string,
+): Message {
+  return {
+    id: `${Date.now()}-${idSuffix}`,
+    role,
+    content,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function mapHistoryToMessages(result: Awaited<ReturnType<typeof getChatHistory>>) {
+  return (result?.messages || [])
+    .map((item, index) => ({
+      id: item.id ?? `history-${index}`,
+      role: item.role,
+      content: item.message,
+      createdAt: item.created_at ?? new Date(0).toISOString(),
+    }))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
 
 export function ChatScreen() {
   const [message, setMessage] = useState("");
@@ -19,44 +51,62 @@ export function ChatScreen() {
   );
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<FlatList>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const sendButtonScale = useRef(new Animated.Value(1)).current;
   const animatedMessagesRef = useRef(new Set<string>());
+  const hasLoadedHistoryRef = useRef(false);
+  const { scale, onPressIn, onPressOut } = usePressScale({
+    pressedScale: 0.85,
+  });
 
-  useEffect(() => {
-    let isMounted = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (!isMounted) return;
-      if (!data.session) {
-        setMessages([]);
-        setIsLoadingHistory(false);
-        return;
+  const appendMessage = useCallback((nextMessage: Message) => {
+    setMessages((prev) => [...prev, nextMessage]);
+    setLastAddedMessageId(nextMessage.id);
+  }, []);
+
+  const scrollToBottom = useCallback(() => {
+    scrollRef.current?.scrollToEnd({ animated: true });
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (hasLoadedHistoryRef.current) {
+        return undefined;
       }
 
-      getChatHistory()
-        .then((result) => {
+      let isMounted = true;
+      const task = InteractionManager.runAfterInteractions(() => {
+        supabase.auth.getSession().then(({ data }) => {
           if (!isMounted) return;
-          const history = (result?.messages || [])
-            .map((item, index) => ({
-              id: item.id ?? `history-${index}`,
-              role: item.role,
-              content: item.message,
-              createdAt: item.created_at ?? new Date(0).toISOString(),
-            }))
-            .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-          setMessages(history);
-          setIsLoadingHistory(false);
-        })
-        .catch(
-          () => isMounted && (setMessages([]), setIsLoadingHistory(false)),
-        );
-    });
+          if (!data.session) {
+            setMessages([]);
+            setIsLoadingHistory(false);
+            hasLoadedHistoryRef.current = true;
+            return;
+          }
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+          getChatHistory()
+            .then((result) => {
+              if (!isMounted) return;
+              setMessages(mapHistoryToMessages(result));
+              setIsLoadingHistory(false);
+              hasLoadedHistoryRef.current = true;
+            })
+            .catch(() => {
+              if (!isMounted) return;
+              setMessages([]);
+              setIsLoadingHistory(false);
+              hasLoadedHistoryRef.current = true;
+            });
+        });
+      });
+
+      return () => {
+        isMounted = false;
+        task.cancel();
+      };
+    }, []),
+  );
 
   useEffect(() => {
     if (!isLoadingHistory) {
@@ -69,8 +119,8 @@ export function ChatScreen() {
   }, [isLoadingHistory, fadeAnim]);
 
   useEffect(() => {
-    scrollRef.current?.scrollToEnd({ animated: true });
-  }, [messages]);
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
 
   useEffect(() => {
     const showEvent =
@@ -79,7 +129,7 @@ export function ChatScreen() {
       Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
     const showSub = Keyboard.addListener(showEvent, () => {
       setIsKeyboardVisible(true);
-      scrollRef.current?.scrollToEnd({ animated: true });
+      scrollToBottom();
     });
     const hideSub = Keyboard.addListener(hideEvent, () => {
       setIsKeyboardVisible(false);
@@ -90,84 +140,46 @@ export function ChatScreen() {
     };
   }, []);
 
-  const animateSendButton = (toValue: number) => {
-    Animated.spring(sendButtonScale, {
-      toValue,
-      useNativeDriver: true,
-      speed: 50,
-      bounciness: 4,
-    }).start();
-  };
-
-  const handleSend = async () => {
+  const handleSend = useCallback(async () => {
     if (isSending || !message.trim()) return;
     const trimmed = message.trim();
     const { data: sessionData } = await supabase.auth.getSession();
     if (!sessionData.session) {
-      const errorMessageId = `${Date.now()}-assistant-error`;
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: errorMessageId,
-          role: "assistant",
-          content: "Please sign in to use the chat.",
-          createdAt: new Date().toISOString(),
-        },
-      ]);
-      setLastAddedMessageId(errorMessageId);
+      appendMessage(
+        createMessage(
+          "assistant",
+          "Please sign in to use the chat.",
+          "assistant-error",
+        ),
+      );
       return;
     }
 
     setMessage("");
 
-    const userMessageId = `${Date.now()}-user`;
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: userMessageId,
-        role: "user",
-        content: trimmed,
-        createdAt: new Date().toISOString(),
-      },
-    ]);
-    setLastAddedMessageId(userMessageId);
+    appendMessage(createMessage("user", trimmed, "user"));
     setIsSending(true);
 
     try {
       const result = await sendChatMessage(trimmed);
       const reply = result?.reply?.trim() || "";
       if (reply) {
-        const assistantMessageId = `${Date.now()}-assistant`;
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: assistantMessageId,
-            role: "assistant",
-            content: reply,
-            createdAt: new Date().toISOString(),
-          },
-        ]);
-        setLastAddedMessageId(assistantMessageId);
+        appendMessage(createMessage("assistant", reply, "assistant"));
       }
     } catch (error) {
-      const errorMessageId = `${Date.now()}-assistant-error`;
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: errorMessageId,
-          role: "assistant",
-          content:
-            error instanceof Error
-              ? error.message
-              : "Something went wrong. Please try again.",
-          createdAt: new Date().toISOString(),
-        },
-      ]);
-      setLastAddedMessageId(errorMessageId);
+      appendMessage(
+        createMessage(
+          "assistant",
+          error instanceof Error
+            ? error.message
+            : "Something went wrong. Please try again.",
+          "assistant-error",
+        ),
+      );
     } finally {
       setIsSending(false);
     }
-  };
+  }, [isSending, message, appendMessage]);
 
   return (
     <MainLayout
@@ -196,7 +208,7 @@ export function ChatScreen() {
           marginTop: 12,
           marginBottom: isKeyboardVisible
             ? 15
-            : TAB_BAR_HEIGHT + TAB_BAR_BOTTOM_GAP + 12,
+            : LAYOUT.tabBarHeight + LAYOUT.tabBarBottomGap + 12,
         }}
       >
         <ChatInput
@@ -204,10 +216,10 @@ export function ChatScreen() {
           onChangeText={setMessage}
           onSend={handleSend}
           onSubmitEditing={handleSend}
-          onPressIn={() => animateSendButton(0.85)}
-          onPressOut={() => animateSendButton(1)}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
           isSending={isSending}
-          sendButtonScale={sendButtonScale}
+          sendButtonScale={scale}
         />
       </View>
     </MainLayout>

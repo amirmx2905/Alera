@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? "";
@@ -31,22 +32,29 @@ async function removeChunks(key: string) {
   await SecureStore.deleteItemAsync(metaKey(key));
 }
 
-const secureStore = {
+const nativeStorage = {
   getItem: async (key: string) => {
     const meta = await SecureStore.getItemAsync(metaKey(key));
     if (!meta) return null;
     try {
       const parsed = JSON.parse(meta) as { parts?: number };
       const parts = parsed.parts ?? 0;
-      if (!parts) return null;
+      if (!parts) {
+        await removeChunks(key);
+        return null;
+      }
       const chunks = await Promise.all(
         Array.from({ length: parts }, (_, index) =>
           SecureStore.getItemAsync(chunkKey(key, index)),
         ),
       );
-      if (chunks.some((part) => part === null)) return null;
+      if (chunks.some((part) => part === null)) {
+        await removeChunks(key);
+        return null;
+      }
       return chunks.join("");
     } catch {
+      await removeChunks(key);
       return null;
     }
   },
@@ -66,9 +74,17 @@ const secureStore = {
   },
 };
 
+const webStorage = {
+  getItem: async (key: string) => localStorage.getItem(key),
+  setItem: async (key: string, value: string) => localStorage.setItem(key, value),
+  removeItem: async (key: string) => localStorage.removeItem(key),
+};
+
+const storage = Platform.OS === "web" ? webStorage : nativeStorage;
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: secureStore,
+    storage,
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: false,

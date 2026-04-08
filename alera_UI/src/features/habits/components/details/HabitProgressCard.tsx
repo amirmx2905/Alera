@@ -7,6 +7,7 @@ type Props = {
   goalAmount: number;
   unit: string;
   goalType: "daily" | "weekly" | "monthly";
+  habitType?: "numeric" | "binary";
 };
 
 export function HabitProgressCard({
@@ -15,9 +16,22 @@ export function HabitProgressCard({
   goalAmount,
   unit,
   goalType,
+  habitType = "numeric",
 }: Props) {
   const progressAnim = useRef(new Animated.Value(0)).current;
   const progressValue = Math.round(progress);
+  const displayUnit =
+    goalAmount === 1
+      ? unit === "Times"
+        ? "time"
+        : unit === "days"
+          ? "day"
+          : unit
+      : unit;
+  const progressSummaryLabel =
+    habitType === "binary" && currentAmount >= goalAmount
+      ? "Completed"
+      : `${currentAmount} / ${goalAmount} ${displayUnit}`;
   const progressWidth = progressAnim.interpolate({
     inputRange: [0, 100],
     outputRange: ["0%", "100%"],
@@ -47,7 +61,7 @@ export function HabitProgressCard({
       </View>
       <View className="flex-row items-center justify-between mt-4">
         <Text className="text-white text-base font-semibold">
-          {currentAmount} / {goalAmount} {unit}
+          {progressSummaryLabel}
         </Text>
         <View className="rounded-full border border-purple-400/40 bg-purple-500/20 px-3 py-1">
           <Text className="text-purple-300 text-xs font-semibold capitalize">

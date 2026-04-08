@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { isInvalidRefreshTokenError, mapAuthErrorMessage } from "./authErrors";
 
 type InvokeOptions = {
   throwOnError?: boolean;
@@ -59,10 +60,27 @@ export async function invokeEdgeFunction<T>(
 
   let token: string | undefined;
   if (includeAuth) {
-    const { data: sessionData } = await supabase.auth.getSession();
+    const { data: sessionData, error: sessionError } =
+      await supabase.auth.getSession();
+
+    if (sessionError && isInvalidRefreshTokenError(sessionError)) {
+      await supabase.auth.signOut();
+    }
+
+    if (sessionError) {
+      const message = mapAuthErrorMessage(
+        sessionError,
+        "Unable to validate current session.",
+      );
+      if (throwOnError) {
+        throw new Error(message);
+      }
+      return { data: null, errorMessage: message };
+    }
+
     token = sessionData.session?.access_token;
     if (!token) {
-      const message = "There's no active session";
+      const message = "Your session is not active. Please sign in again.";
       if (throwOnError) {
         throw new Error(message);
       }

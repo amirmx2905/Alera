@@ -1,19 +1,13 @@
 import React, { useRef, useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  Alert,
-  Animated,
-} from "react-native";
+import { View, Text, TextInput, Pressable, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useAuth } from "../../../state/AuthContext";
+import { useAuth } from "../../../state/AuthStore";
 import { AuthCard } from "../components/AuthCard";
 import { PrimaryButton } from "../../../components/shared/PrimaryButton";
 import { OtpInputRow } from "../components/OtpInputRow";
 import { AuthLayout } from "../../../layouts/AuthLayout";
+import { usePressScale } from "../../../hooks/usePressScale";
 import type { AuthStackParamList } from "../types";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "ConfirmEmail">;
@@ -25,7 +19,7 @@ export function ConfirmEmailScreen({ navigation, route }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const email = route.params.email;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const { scale, onPressIn, onPressOut } = usePressScale();
 
   const handleConfirm = async () => {
     if (token.trim().length < 6) {
@@ -39,7 +33,7 @@ export function ConfirmEmailScreen({ navigation, route }: Props) {
       navigation.navigate("Login");
     } catch (error) {
       Alert.alert(
-        "Error",
+        "Verification failed",
         error instanceof Error ? error.message : "Unable to verify code.",
       );
     } finally {
@@ -53,28 +47,10 @@ export function ConfirmEmailScreen({ navigation, route }: Props) {
       Alert.alert("Code sent", "Check your inbox to confirm.");
     } catch (error) {
       Alert.alert(
-        "Error",
+        "Resend failed",
         error instanceof Error ? error.message : "Unable to resend code.",
       );
     }
-  };
-
-  const handlePressIn = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 0.96,
-      useNativeDriver: true,
-      speed: 50,
-      bounciness: 4,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-      speed: 50,
-      bounciness: 4,
-    }).start();
   };
 
   return (
@@ -122,9 +98,9 @@ export function ConfirmEmailScreen({ navigation, route }: Props) {
             label="Confirm"
             isLoading={isLoading}
             onPress={handleConfirm}
-            onPressIn={handlePressIn}
-            onPressOut={handlePressOut}
-            scaleAnim={scaleAnim}
+            onPressIn={onPressIn}
+            onPressOut={onPressOut}
+            scaleAnim={scale}
           />
 
           <View className="flex-row items-center gap-3 py-2">

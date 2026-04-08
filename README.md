@@ -1,95 +1,113 @@
 # Alera
 
-Mobile platform for tracking habits, analyzing trends, and querying personal data with an AI assistant. Alera lets users log daily habits, view metrics, and get personalized insights through a conversational interface.
+Alera is a mobile habit-tracking app where users create habits, log progress, review analytics, and interact with an AI coach.
 
-## Problem
+## Tech Stack
 
-Users generate personal data continuously (health, productivity, wellbeing), but insights are often fragmented. Alera addresses this by enabling:
+<p align="center">
+  <a href="https://reactnative.dev/" style="text-decoration: none;"><img src="https://img.shields.io/badge/React_Native-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React Native"></a>&nbsp;
+  <a href="https://expo.dev/" style="text-decoration: none;"><img src="https://img.shields.io/badge/Expo-000020?style=for-the-badge&logo=expo&logoColor=white" alt="Expo"></a>&nbsp;
+  <a href="https://www.typescriptlang.org/" style="text-decoration: none;"><img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript"></a>&nbsp;
+  <a href="https://supabase.com/" style="text-decoration: none;"><img src="https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase"></a>&nbsp;
+  <a href="https://www.postgresql.org/" style="text-decoration: none;"><img src="https://img.shields.io/badge/PostgreSQL-336791?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL"></a>&nbsp;
+  <a href="https://openai.com/" style="text-decoration: none;"><img src="https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white" alt="OpenAI"></a>&nbsp;
+  <a href="https://reactnavigation.org/" style="text-decoration: none;"><img src="https://img.shields.io/badge/React_Navigation-CA4245?style=for-the-badge&logo=reactrouter&logoColor=white" alt="React Navigation"></a>&nbsp;
+  <a href="https://www.nativewind.dev/" style="text-decoration: none;"><img src="https://img.shields.io/badge/NativeWind-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="NativeWind"></a>&nbsp;
+  <a href="https://jestjs.io/" style="text-decoration: none;"><img src="https://img.shields.io/badge/Jest-C21325?style=for-the-badge&logo=jest&logoColor=white" alt="Jest"></a>&nbsp;
+</p>
 
-- Consistent habit logging.
-- Trend visualization from processed metrics.
-- Natural‑language insights via AI.
-- Clear dashboards for daily/weekly/monthly views.
+<p align="center"><strong>In Progress / Planned</strong></p>
 
-## System Architecture
+<p align="center">
+  <a href="https://www.python.org/" style="text-decoration: none;"><img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python"></a>&nbsp;
+  <a href="https://scikit-learn.org/" style="text-decoration: none;"><img src="https://img.shields.io/badge/scikit--learn-F7931E?style=for-the-badge&logo=scikitlearn&logoColor=white" alt="scikit-learn"></a>&nbsp;
+  <a href="https://developer.apple.com/watchos/" style="text-decoration: none;"><img src="https://img.shields.io/badge/Apple_Watch-watchOS-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Apple Watch"></a>&nbsp;
+</p>
 
-The system is composed of these main layers:
+## Current Project Status
 
-1. **Mobile App (Frontend)** — React Native + Expo.
-2. **Backend/API** — Node.js REST API (read‑only for metrics).
-3. **Database** — PostgreSQL via Supabase.
-4. **Auth** — Supabase Auth with JWT.
-5. **AI** — OpenAI API (or mock).
-6. **Data Pipeline** — AWS (EventBridge + Lambda + S3 + Glue + Athena) for metrics processing.
-7. **DevOps** — GitHub Actions + Docker.
+This repository contains an **in-progress** version of Alera.
 
-## Mobile App
+### Implemented
 
-### Stack
+- Mobile app (Expo React Native) for Android/iOS.
+- Auth flow with Supabase Auth (login, signup, OTP verification).
+- Profile setup and user session handling.
+- Habit creation and management:
+  - Habit types: `numeric` and `binary`.
+  - Goal frequencies: `daily`, `weekly`, `monthly`.
+- Habit logging (`habits_log`) and history per date.
+- Automated metrics calculation via Supabase Edge Function (`calculate-metrics`).
+- Stats views powered by `metrics` table (totals, streaks, activity, goal progress).
+- AI chat coach via Supabase Edge Function (`ai-chat`) using user context.
+- Supervision model (token-based linking between supervisor and monitored profiles).
+- RLS-based data security in Supabase.
 
-- React Native + Expo.
-- Single codebase for Android and iOS.
+### In Progress / Pending
 
-### Core features (MVP)
+- Apple Watch companion app.
+- Full ML training/inference pipeline for production predictions.
+- Final UI/UX refinements in Stats and general app polish.
 
-1. User authentication (login + signup).
-2. Habit logging (unlimited habits).
-3. Metrics visualization (daily/weekly/monthly from `metrics`).
-4. AI assistant (limited context).
-5. Basic habit goals management.
+## Product Overview
 
-### Data handled
+Users can create habits and define goals, then log entries over time.
 
-- User profile.
-- Raw habit logs.
-- Processed metrics (read‑only).
-- AI conversation history.
-- Per‑habit goals.
+- **Numeric habits** (e.g., drink 2L water, read 20 pages).
+- **Binary habits** (done/not done, e.g., meditate today).
 
-## Backend API
+Each entry is stored in `habits_log` and processed to generate aggregated metrics (daily totals, streaks, averages, completion indicators), which are persisted in `metrics`.
 
-### Responsibilities
+Predictions are designed to be generated after enough historical data (2–3 weeks), including:
 
-The Node.js backend:
+- Streak risk
+- Trajectory
+- Goal ETA
+- Best reminder time
 
-- Exposes REST endpoints for the mobile app.
-- Validates Supabase JWTs.
-- Implements business logic for habits, logs, goals, profiles.
-- Prepares limited context for the AI assistant.
-- **Does not** compute metrics (read‑only from `metrics`).
+These are stored in `predictions` and consumed by stats/detail screens once available.
 
-### Implemented processes (MVP)
+## Architecture (Implemented)
 
-- CRUD for habits and logs.
-- Input validation.
-- AI chat + history endpoints.
-- Basic rate limiting per user.
-- Metrics endpoints (read‑only from `metrics`).
+The current implementation is **Supabase-first**:
 
-## Database [Supabase]
+1. **Mobile Frontend**: Expo + React Native + TypeScript
+2. **Auth**: Supabase Auth (JWT sessions)
+3. **Database**: Supabase PostgreSQL
+4. **Security**: Row Level Security policies
+5. **Backend Logic**: Supabase Edge Functions
+   - `calculate-metrics`
+   - `ai-chat`
+6. **AI Provider**: OpenAI API
 
-### Security
+## Core Data Flow
 
-- Supabase Auth manages identity and JWT.
-- Row Level Security (RLS) isolates data per user.
+1. User creates habit + goal.
+2. User logs habit entries (`habits_log`).
+3. `calculate-metrics` edge function recalculates relevant metrics.
+4. Metrics are upserted into `metrics`.
+5. Stats screens read and visualize those metrics.
+6. AI coach reads profile/habit/metrics/chat context and generates personalized responses.
 
-## AI Assistant
+## Supervision Model
 
-### Usage
+Alera supports supervised usage:
 
-- Conversational assistant about recent habits.
-- Limited context prepared by the backend.
+- A user can share a unique supervision token.
+- Another user can link using that token and become supervisor.
+- Supervisor can create/manage habits for the monitored profile.
+- Monitored user keeps direct habit logging capability.
 
-### Context included
+Access is enforced by Supabase RLS policies.
 
-- Metrics for today.
-- Metrics for the last 7 days.
-- Metrics for the last 3 months.
-- Last 7 days of AI conversations.
+## Main Tech Stack
 
-## CI/CD Pipeline
+- **Frontend**: React Native, Expo, TypeScript, React Navigation, NativeWind
+- **Backend/Data**: Supabase (PostgreSQL + Auth + Edge Functions)
+- **AI**: OpenAI API
+- **Testing**: Jest + React Native Testing Library
 
-1. Trigger on push or pull request.
-2. Linting.
-3. Backend and Frontend build.
-4. Docker image build.
+## Notes
+
+- This project is under active development.
+- Some roadmap features are documented but not fully shipped yet.

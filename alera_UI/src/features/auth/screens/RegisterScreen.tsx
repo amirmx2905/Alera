@@ -1,18 +1,12 @@
 import React, { useRef, useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  Alert,
-  Animated,
-} from "react-native";
+import { View, Text, TextInput, Pressable, Alert } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useAuth } from "../../../state/AuthContext";
+import { useAuth } from "../../../state/AuthStore";
 import { AuthCard } from "../components/AuthCard";
 import { AuthInputField } from "../components/AuthInputField";
 import { PrimaryButton } from "../../../components/shared/PrimaryButton";
 import { AuthLayout } from "../../../layouts/AuthLayout";
+import { usePressScale } from "../../../hooks/usePressScale";
 import type { AuthStackParamList } from "../types";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "Register">;
@@ -26,16 +20,16 @@ export function RegisterScreen({ navigation }: Props) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const { scale, onPressIn, onPressOut } = usePressScale();
 
   const handleRegister = async () => {
     if (!email || !password) {
-      Alert.alert("Missing info", "Enter your email and password.");
+      Alert.alert("Missing information", "Enter your email and password.");
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert("Passwords don't match", "Please check your password.");
+      Alert.alert("Password mismatch", "Please check your password.");
       return;
     }
 
@@ -45,30 +39,12 @@ export function RegisterScreen({ navigation }: Props) {
       navigation.navigate("ConfirmEmail", { email: email.trim() });
     } catch (error) {
       Alert.alert(
-        "Error",
+        "Sign up failed",
         error instanceof Error ? error.message : "Unable to sign up.",
       );
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handlePressIn = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 0.96,
-      useNativeDriver: true,
-      speed: 50,
-      bounciness: 4,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-      speed: 50,
-      bounciness: 4,
-    }).start();
   };
 
   return (
@@ -110,9 +86,9 @@ export function RegisterScreen({ navigation }: Props) {
             label="Create account"
             isLoading={isLoading}
             onPress={handleRegister}
-            onPressIn={handlePressIn}
-            onPressOut={handlePressOut}
-            scaleAnim={scaleAnim}
+            onPressIn={onPressIn}
+            onPressOut={onPressOut}
+            scaleAnim={scale}
           />
 
           <View className="flex-row items-center gap-3 py-2">

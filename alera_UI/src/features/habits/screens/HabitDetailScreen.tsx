@@ -1,7 +1,12 @@
-import React, { useRef, useCallback, useEffect, useState } from "react";
-import { View, Text, Pressable, Alert, Animated } from "react-native";
+import React, { useRef, useEffect, useState } from "react";
+import { View, Text, Pressable, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import {
+  useNavigation,
+  useRoute,
+  type RouteProp,
+} from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { MainLayout } from "../../../layouts/MainLayout";
 import { PrimaryButton } from "../../../components/shared/PrimaryButton";
 import { HabitDetailActions } from "../components/details/HabitDetailActions";
@@ -9,13 +14,24 @@ import { HabitEntryForm } from "../components/details/HabitEntryForm";
 import { HabitEntryHistory } from "../components/details/HabitEntryHistory";
 import { HabitProgressCard } from "../components/details/HabitProgressCard";
 import type { HabitsStackParamList } from "../../../navigation/HabitsStack";
-import { useHabits } from "../../../state/HabitsContext";
+import type { RootStackParamList } from "../../../navigation/RootNavigator";
+import { usePressScale } from "../../../hooks/usePressScale";
+import { useHabits } from "../../../state/HabitsStore";
 import { useHabitDetail } from "../hooks/useHabitDetail";
-import { getProgressData } from "../hooks/useHabitProgress";
+import { getProgressData } from "../utils/habitProgress";
 
-type Props = NativeStackScreenProps<HabitsStackParamList, "HabitDetail">;
+type HabitDetailRoute = RouteProp<
+  HabitsStackParamList & RootStackParamList,
+  "HabitDetail"
+>;
+type HabitDetailNavigation = NativeStackNavigationProp<
+  HabitsStackParamList & RootStackParamList,
+  "HabitDetail"
+>;
 
-export function HabitDetailScreen({ navigation, route }: Props) {
+export function HabitDetailScreen() {
+  const navigation = useNavigation<HabitDetailNavigation>();
+  const route = useRoute<HabitDetailRoute>();
   const { habitId } = route.params;
   const {
     habits,
@@ -26,10 +42,14 @@ export function HabitDetailScreen({ navigation, route }: Props) {
     removeHabit,
   } = useHabits();
   const habit = habits.find((item) => item.id === habitId);
-  const primaryScale = useRef(new Animated.Value(1)).current;
   const isMounted = useRef(true);
   const [isArchiveLoading, setIsArchiveLoading] = useState(false);
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
+  const {
+    scale: primaryScale,
+    onPressIn: onPrimaryPressIn,
+    onPressOut: onPrimaryPressOut,
+  } = usePressScale();
 
   useEffect(() => {
     return () => {
@@ -37,22 +57,15 @@ export function HabitDetailScreen({ navigation, route }: Props) {
     };
   }, []);
 
-  const animatePrimaryButton = useCallback(
-    (toValue: number) => {
-      Animated.spring(primaryScale, {
-        toValue,
-        useNativeDriver: true,
-        speed: 50,
-        bounciness: 4,
-      }).start();
-    },
-    [primaryScale],
-  );
+  const showActionError = (fallback: string, error: unknown) => {
+    Alert.alert("Error", error instanceof Error ? error.message : fallback);
+  };
 
   const {
     entryState,
     setEntryState,
     entries,
+    hasEntryForSelectedDate,
     selectedDate,
     isToday,
     isFuture,
@@ -85,14 +98,9 @@ export function HabitDetailScreen({ navigation, route }: Props) {
     setIsArchiveLoading(true);
     toggleArchive(habit.id)
       .then(() => navigation.goBack())
-      .catch((error) => {
-        Alert.alert(
-          "Error",
-          error instanceof Error
-            ? error.message
-            : "Unable to update habit status.",
-        );
-      })
+      .catch((error) =>
+        showActionError("Unable to update habit status.", error),
+      )
       .finally(() => {
         if (isMounted.current) {
           setIsArchiveLoading(false);
@@ -114,14 +122,9 @@ export function HabitDetailScreen({ navigation, route }: Props) {
             setIsDeleteLoading(true);
             removeHabit(habit.id)
               .then(() => navigation.goBack())
-              .catch((error) => {
-                Alert.alert(
-                  "Error",
-                  error instanceof Error
-                    ? error.message
-                    : "Unable to delete habit.",
-                );
-              })
+              .catch((error) =>
+                showActionError("Unable to delete habit.", error),
+              )
               .finally(() => {
                 if (isMounted.current) {
                   setIsDeleteLoading(false);
@@ -150,8 +153,8 @@ export function HabitDetailScreen({ navigation, route }: Props) {
             label="Back to habits"
             isLoading={false}
             onPress={() => navigation.goBack()}
-            onPressIn={() => animatePrimaryButton(0.96)}
-            onPressOut={() => animatePrimaryButton(1)}
+            onPressIn={onPrimaryPressIn}
+            onPressOut={onPrimaryPressOut}
             scaleAnim={primaryScale}
             containerClassName="w-full"
           />
@@ -167,6 +170,9 @@ export function HabitDetailScreen({ navigation, route }: Props) {
   });
   const isArchived = habit.archived;
   const isLocked = isArchiveLoading || isDeleteLoading;
+  const isBinary = habit.type === "binary";
+  const progressUnitLabel = isBinary ? "days" : habit.unit;
+  const entryUnitLabel = habit.unit;
 
   return (
     <MainLayout
@@ -197,15 +203,18 @@ export function HabitDetailScreen({ navigation, route }: Props) {
             progress={progress}
             currentAmount={currentAmount}
             goalAmount={habit.goalAmount}
-            unit={habit.unit}
+            unit={progressUnitLabel}
             goalType={habit.goalType}
+            habitType={habit.type}
           />
 
           {!isArchived ? (
             <HabitEntryForm
               amount={entryState.amount}
               editingEntry={entryState.editingEntry}
-              unit={habit.unit}
+              unit={entryUnitLabel}
+              habitType={habit.type}
+              hasEntryForDate={hasEntryForSelectedDate}
               isFuture={isFuture}
               isSaving={isEntrySaving}
               isReadOnly={isLocked}
@@ -220,28 +229,18 @@ export function HabitDetailScreen({ navigation, route }: Props) {
                 try {
                   await handleAddEntry();
                 } catch (error) {
-                  Alert.alert(
-                    "Error",
-                    error instanceof Error
-                      ? error.message
-                      : "Unable to add entry.",
-                  );
+                  showActionError("Unable to add entry.", error);
                 }
               }}
               onUpdateEntry={async () => {
                 try {
                   await handleUpdateEntry();
                 } catch (error) {
-                  Alert.alert(
-                    "Error",
-                    error instanceof Error
-                      ? error.message
-                      : "Unable to update entry.",
-                  );
+                  showActionError("Unable to update entry.", error);
                 }
               }}
-              onPressIn={() => animatePrimaryButton(0.96)}
-              onPressOut={() => animatePrimaryButton(1)}
+              onPressIn={onPrimaryPressIn}
+              onPressOut={onPrimaryPressOut}
             />
           ) : null}
 
@@ -252,7 +251,8 @@ export function HabitDetailScreen({ navigation, route }: Props) {
             showDatePicker={showDatePicker}
             minDate={minDate}
             entries={entriesForSelectedDate}
-            unit={habit.unit}
+            unit={entryUnitLabel}
+            habitType={habit.type}
             isLogsLoading={isLogsLoading}
             showActions={!isArchived && !isLocked}
             deletingEntryId={deletingEntryId}
@@ -262,7 +262,7 @@ export function HabitDetailScreen({ navigation, route }: Props) {
             onNextDay={goToNextDay}
             onToday={goToToday}
             onDateChange={handleDateChange}
-            onEditEntry={handleEditEntry}
+            onEditEntry={isBinary ? undefined : handleEditEntry}
             onDeleteEntry={async (entryId) => {
               Alert.alert(
                 "Delete entry",
@@ -276,12 +276,7 @@ export function HabitDetailScreen({ navigation, route }: Props) {
                       try {
                         await handleDeleteEntry(entryId);
                       } catch (error) {
-                        Alert.alert(
-                          "Error",
-                          error instanceof Error
-                            ? error.message
-                            : "Unable to delete entry.",
-                        );
+                        showActionError("Unable to delete entry.", error);
                       }
                     },
                   },
