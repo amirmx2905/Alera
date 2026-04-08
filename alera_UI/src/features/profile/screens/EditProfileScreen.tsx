@@ -59,13 +59,11 @@ export function EditProfileScreen({ navigation, route }: Props) {
       await updateProfile(profileId, {
         first_name: trimmedFirst,
         last_name: trimmedLast,
-        birth_date: form.birthDate
-          ? formatDateForApi(form.birthDate)
-          : null,
+        birth_date: form.birthDate ? formatDateForApi(form.birthDate) : null,
         sex: form.sex || null,
       });
       didSave.current = true;
-      navigation.goBack();
+      handleGoBack();
     } catch (error) {
       const message =
         error instanceof Error
@@ -101,26 +99,20 @@ export function EditProfileScreen({ navigation, route }: Props) {
           <InputField
             icon="person-outline"
             value={form.firstName}
-            onChangeText={(v) =>
-              setForm((prev) => ({ ...prev, firstName: v }))
-            }
+            onChangeText={(v) => setForm((prev) => ({ ...prev, firstName: v }))}
             placeholder="First name"
             autoCapitalize="words"
           />
           <InputField
             icon="person-outline"
             value={form.lastName}
-            onChangeText={(v) =>
-              setForm((prev) => ({ ...prev, lastName: v }))
-            }
+            onChangeText={(v) => setForm((prev) => ({ ...prev, lastName: v }))}
             placeholder="Last name"
             autoCapitalize="words"
           />
           <DatePickerField
             value={form.birthDate}
-            onChange={(d) =>
-              setForm((prev) => ({ ...prev, birthDate: d }))
-            }
+            onChange={(d) => setForm((prev) => ({ ...prev, birthDate: d }))}
           />
           <SexSelector
             value={form.sex}
