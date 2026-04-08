@@ -34,13 +34,14 @@ async function getCurrentProfileId(): Promise<string> {
   return data.id as string;
 }
 
+const PROFILE_COLUMNS =
+  "id, auth_user_id, first_name, last_name, birth_date, sex, supervision_token, created_at";
+
 export async function listProfiles(): Promise<Profile[]> {
   const userId = await getCurrentUserId();
   const { data, error } = await supabase
     .from("profiles")
-    .select(
-      "id, auth_user_id, first_name, last_name, birth_date, sex, supervision_token, created_at",
-    )
+    .select(PROFILE_COLUMNS)
     .eq("auth_user_id", userId)
     .order("created_at", { ascending: true });
 
@@ -53,9 +54,7 @@ export async function getProfile(): Promise<Profile | null> {
     const userId = await getCurrentUserId();
     const { data, error } = await supabase
       .from("profiles")
-      .select(
-        "id, auth_user_id, first_name, last_name, birth_date, sex, supervision_token, created_at",
-      )
+      .select(PROFILE_COLUMNS)
       .eq("auth_user_id", userId)
       .single();
 
@@ -85,9 +84,27 @@ export async function createProfile(
       birth_date: birthDate ?? null,
       sex: sex ?? null,
     })
-    .select(
-      "id, auth_user_id, first_name, last_name, birth_date, sex, supervision_token, created_at",
-    )
+    .select(PROFILE_COLUMNS)
+    .single();
+
+  if (error) throw error;
+  return data as Profile;
+}
+
+export async function updateProfile(
+  profileId: string,
+  fields: {
+    first_name?: string;
+    last_name?: string;
+    birth_date?: string | null;
+    sex?: "male" | "female" | "other" | null;
+  },
+): Promise<Profile> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .update(fields)
+    .eq("id", profileId)
+    .select(PROFILE_COLUMNS)
     .single();
 
   if (error) throw error;

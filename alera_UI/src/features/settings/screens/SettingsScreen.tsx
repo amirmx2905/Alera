@@ -1,17 +1,27 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { View, Text, Pressable, Animated } from "react-native";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../../state/AuthStore";
 import { DotLoader } from "../../../components/shared/DotLoader";
 import { MainLayout } from "../../../layouts/MainLayout";
 import { useCurrentProfile } from "../../profile/hooks/useCurrentProfile";
 import { usePressScale } from "../../../hooks/usePressScale";
+import { SupervisionTokenCard } from "../../profile/components/SupervisionTokenCard";
+import type { SettingsStackParamList } from "../../../navigation/SettingsStack";
 
-export function SettingsScreen() {
+type Props = NativeStackScreenProps<SettingsStackParamList, "SettingsHome">;
+
+export function SettingsScreen({ navigation, route }: Props) {
   const { signOut, session } = useAuth();
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const { profile, isLoading } = useCurrentProfile(session?.user?.id);
+  const { profile, isLoading, refetch } = useCurrentProfile(session?.user?.id);
   const { scale, onPressIn, onPressOut } = usePressScale();
+
+  const profileUpdated = route.params?.profileUpdated;
+  useEffect(() => {
+    if (profileUpdated) refetch();
+  }, [profileUpdated, refetch]);
 
   const email = session?.user?.email ?? "";
   const displayName = useMemo(() => {
@@ -21,6 +31,17 @@ export function SettingsScreen() {
     if (email) return email.split("@")[0];
     return "User";
   }, [email, profile?.first_name, profile?.last_name]);
+
+  const handleEditProfile = useCallback(() => {
+    if (!profile) return;
+    navigation.navigate("EditProfile", {
+      profileId: profile.id,
+      firstName: profile.first_name,
+      lastName: profile.last_name,
+      birthDate: profile.birth_date,
+      sex: profile.sex,
+    });
+  }, [navigation, profile]);
 
   const handleSignOut = useCallback(async () => {
     if (isSigningOut) return;
@@ -42,7 +63,11 @@ export function SettingsScreen() {
       showBackground={false}
       contentClassName="flex-1 px-6 pt-16"
     >
-      <View className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl">
+      <Pressable
+        onPress={handleEditProfile}
+        disabled={isLoading || !profile}
+        className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl"
+      >
         <View className="flex-row items-center gap-4">
           <View className="h-14 w-14 rounded-2xl bg-white/10 items-center justify-center">
             <Ionicons name="person-outline" size={26} color="#e2e8f0" />
@@ -64,8 +89,15 @@ export function SettingsScreen() {
               </>
             )}
           </View>
+          <Ionicons name="chevron-forward" size={20} color="#64748b" />
         </View>
-      </View>
+      </Pressable>
+
+      {profile ? (
+        <View className="mt-6">
+          <SupervisionTokenCard token={profile.supervision_token} />
+        </View>
+      ) : null}
 
       <View className="mt-6 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl">
         <Text className="text-white text-base font-semibold mb-4">Account</Text>
