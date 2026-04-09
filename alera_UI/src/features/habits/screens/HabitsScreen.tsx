@@ -12,11 +12,15 @@ import { COLORS } from "../../../constants/theme";
 import type { HabitsStackParamList } from "../../../navigation/HabitsStack";
 import type { RootStackParamList } from "../../../navigation/RootNavigator";
 import { useHabits } from "../../../state/HabitsStore";
+import { useSupervisedProfile } from "../../supervision/context/SupervisedProfileContext";
+import { useIsSupervised } from "../../supervision/hooks/useIsSupervised";
 
 type Props = NativeStackScreenProps<HabitsStackParamList, "HabitsHome">;
 
 export function HabitsScreen({ navigation }: Props) {
   const { habits, isLoading } = useHabits();
+  const { isSupervised } = useIsSupervised();
+  const supervisedProfile = useSupervisedProfile();
   const [showArchived, setShowArchived] = useState(false);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const archiveButtonScale = useRef(new Animated.Value(1)).current;
@@ -44,7 +48,7 @@ export function HabitsScreen({ navigation }: Props) {
   return (
     <MainLayout
       title="Habits"
-      subtitle="Track and manage your habits"
+      subtitle={supervisedProfile ? `Managing ${supervisedProfile.fullName}` : "Track and manage your habits"}
       headerVariant="icon"
       headerIconName="leaf-outline"
       isLoading={isLoading}
@@ -69,9 +73,17 @@ export function HabitsScreen({ navigation }: Props) {
               />
             </Animated.View>
           </Pressable>
-          {!showArchived ? (
+          {!showArchived && (!isSupervised || supervisedProfile) ? (
             <Pressable
-              onPress={() => rootNavigation?.navigate("CreateHabit")}
+              onPress={() => {
+                if (supervisedProfile) {
+                  rootNavigation?.navigate("SupervisedCreateHabit", {
+                    profileId: supervisedProfile.profileId,
+                  });
+                } else {
+                  rootNavigation?.navigate("CreateHabit");
+                }
+              }}
               onPressIn={() => animateIconButton(addButtonScale, 0.9)}
               onPressOut={() => animateIconButton(addButtonScale, 1)}
               className="h-10 w-10"

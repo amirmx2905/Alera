@@ -18,6 +18,7 @@ import {
   StatsInsightsPlaceholder,
 } from "../components/StatsDetailBlocks";
 import { useStatsData } from "../hooks/useStatsData";
+import { useSupervisedProfile } from "../../supervision/context/SupervisedProfileContext";
 import {
   buildHabitTrend,
   formatHabitGoalSummary,
@@ -98,8 +99,13 @@ export function StatsDetailScreen() {
     >();
   const route = useRoute<DetailRoute>();
   const [granularity, setGranularity] = useState<StatsGranularity>("daily");
+  const supervisedProfile = useSupervisedProfile();
 
-  const { getHabitDetail, overview } = useStatsData(granularity);
+  const { getHabitDetail, overview } = useStatsData(
+    granularity,
+    undefined,
+    supervisedProfile?.profileId,
+  );
   const detail = getHabitDetail(route.params.habitId);
 
   const habitTrend = useMemo(() => {

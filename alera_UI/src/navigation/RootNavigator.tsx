@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { NavigatorScreenParams } from "@react-navigation/native";
 import { AppTabs } from "./AppTabs.tsx";
 import { LoginScreen } from "../features/auth/screens/LoginScreen.tsx";
@@ -8,6 +9,8 @@ import { ConfirmEmailScreen } from "../features/auth/screens/ConfirmEmailScreen.
 import { ProfileScreen } from "../features/profile/screens/ProfileScreen.tsx";
 import { CreateHabitScreen } from "../features/habits/screens/CreateHabitScreen";
 import { HabitDetailScreen } from "../features/habits/screens/HabitDetailScreen";
+import { SupervisedViewScreen } from "../features/supervision/screens/SupervisedViewScreen";
+import { SupervisedCreateHabitScreen } from "../features/supervision/screens/SupervisedCreateHabitScreen";
 import { useAuth } from "../state/AuthStore";
 import { View } from "react-native";
 import { getProfile } from "../services/profile.ts";
@@ -27,6 +30,8 @@ export type RootStackParamList = {
   ProfileSetup: undefined;
   CreateHabit: undefined;
   HabitDetail: { habitId: string };
+  SupervisedView: { profileId: string; firstName: string; lastName: string };
+  SupervisedCreateHabit: { profileId: string };
 };
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
@@ -134,6 +139,23 @@ export function RootNavigator() {
           {() => (
             <AppBackground>
               <HabitDetailScreen />
+            </AppBackground>
+          )}
+        </RootStack.Screen>
+        <RootStack.Screen name="SupervisedView">
+          {(props: NativeStackScreenProps<RootStackParamList, "SupervisedView">) => (
+            <AppBackground>
+              <SupervisedViewScreen {...props} />
+            </AppBackground>
+          )}
+        </RootStack.Screen>
+        <RootStack.Screen
+          name="SupervisedCreateHabit"
+          options={{ presentation: "modal", gestureEnabled: true }}
+        >
+          {(props: NativeStackScreenProps<RootStackParamList, "SupervisedCreateHabit">) => (
+            <AppBackground>
+              <SupervisedCreateHabitScreen {...props} />
             </AppBackground>
           )}
         </RootStack.Screen>

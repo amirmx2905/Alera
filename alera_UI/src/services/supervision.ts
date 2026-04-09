@@ -7,11 +7,19 @@ type SupervisionLookupResult = {
   last_name: string;
 };
 
-export type UserSupervision = {
+type UserSupervision = {
   id: string;
   supervisor_profile_id: string;
   monitored_profile_id: string;
   created_at: string;
+};
+
+export type SupervisedUser = {
+  supervisionId: string;
+  profileId: string;
+  firstName: string;
+  lastName: string;
+  linkedAt: string;
 };
 
 export async function lookupProfileByToken(token: string) {
@@ -55,4 +63,55 @@ export async function linkSupervisedProfile(token: string) {
     supervision: data as UserSupervision,
     profile: targetProfile,
   };
+}
+
+export async function getMySupervised(): Promise<SupervisedUser[]> {
+  const myProfileId = await getCurrentProfileId();
+
+  const { data, error } = await supabase
+    .from("user_supervision")
+    .select(
+      "id, monitored_profile_id, created_at, profiles:monitored_profile_id(first_name, last_name)",
+    )
+    .eq("supervisor_profile_id", myProfileId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+
+  return ((data as any[]) ?? []).map((row) => {
+    const profile = Array.isArray(row.profiles)
+      ? row.profiles[0]
+      : row.profiles;
+    return {
+      supervisionId: row.id as string,
+      profileId: row.monitored_profile_id as string,
+      firstName: (profile?.first_name ?? "") as string,
+      lastName: (profile?.last_name ?? "") as string,
+      linkedAt: row.created_at as string,
+    };
+  });
+}
+
+export async function removeSupervisedLink(
+  supervisionId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("user_supervision")
+    .delete()
+    .eq("id", supervisionId);
+
+  if (error) throw error;
+}
+
+export async function checkIsSupervised(): Promise<boolean> {
+  const myProfileId = await getCurrentProfileId();
+
+  const { data, error } = await supabase
+    .from("user_supervision")
+    .select("id")
+    .eq("monitored_profile_id", myProfileId)
+    .limit(1);
+
+  if (error) throw error;
+  return (data?.length ?? 0) > 0;
 }

@@ -19,6 +19,8 @@ import { usePressScale } from "../../../hooks/usePressScale";
 import { useHabits } from "../../../state/HabitsStore";
 import { useHabitDetail } from "../hooks/useHabitDetail";
 import { getProgressData } from "../utils/habitProgress";
+import { useIsSupervised } from "../../supervision/hooks/useIsSupervised";
+import { useSupervisedProfile } from "../../supervision/context/SupervisedProfileContext";
 
 type HabitDetailRoute = RouteProp<
   HabitsStackParamList & RootStackParamList,
@@ -42,6 +44,8 @@ export function HabitDetailScreen() {
     removeHabit,
   } = useHabits();
   const habit = habits.find((item) => item.id === habitId);
+  const { isSupervised } = useIsSupervised();
+  const supervisedProfile = useSupervisedProfile();
   const isMounted = useRef(true);
   const [isArchiveLoading, setIsArchiveLoading] = useState(false);
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
@@ -91,6 +95,7 @@ export function HabitDetailScreen() {
     addEntry,
     updateEntry,
     deleteEntry,
+    profileId: supervisedProfile?.profileId,
   });
 
   const handleArchive = () => {
@@ -286,13 +291,15 @@ export function HabitDetailScreen() {
           />
         </View>
 
-        <HabitDetailActions
-          archived={Boolean(habit.archived)}
-          isArchiveLoading={isArchiveLoading}
-          isDeleteLoading={isDeleteLoading}
-          onArchive={handleArchive}
-          onDelete={handleDelete}
-        />
+        {!isSupervised || supervisedProfile ? (
+          <HabitDetailActions
+            archived={Boolean(habit.archived)}
+            isArchiveLoading={isArchiveLoading}
+            isDeleteLoading={isDeleteLoading}
+            onArchive={handleArchive}
+            onDelete={handleDelete}
+          />
+        ) : null}
       </View>
     </MainLayout>
   );
