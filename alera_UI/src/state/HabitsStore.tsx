@@ -52,8 +52,9 @@ type HabitsActionsValue = {
   removeHabit: (id: string) => Promise<void>;
 };
 
-const HabitsDataContext = createContext<HabitsDataValue | null>(null);
-const HabitsActionsContext = createContext<HabitsActionsValue | null>(null);
+export type { HabitsDataValue, HabitsActionsValue };
+export const HabitsDataContext = createContext<HabitsDataValue | null>(null);
+export const HabitsActionsContext = createContext<HabitsActionsValue | null>(null);
 
 export function HabitsProvider({ children }: { children: React.ReactNode }) {
   const { session } = useAuth();

@@ -13,6 +13,7 @@ import {
 } from "../components/StatsCharts";
 import { StatsHabitsList } from "../components/StatsHabitsList";
 import { useStatsData } from "../hooks/useStatsData";
+import { useSupervisedProfile } from "../../supervision/context/SupervisedProfileContext";
 import type { StatsGranularity } from "../types";
 
 export function StatsScreen() {
@@ -23,10 +24,12 @@ export function StatsScreen() {
     useNavigation<
       NativeStackNavigationProp<StatsStackParamList, "StatsHome">
     >();
+  const supervisedProfile = useSupervisedProfile();
 
   const { overview, isLoading, isSnapshotsLoading, warnings } = useStatsData(
     granularity,
     isFocused,
+    supervisedProfile?.profileId,
   );
 
   const hasHabits = overview.kpis.totalHabits > 0;
@@ -39,7 +42,7 @@ export function StatsScreen() {
   return (
     <MainLayout
       title="Stats"
-      subtitle="Track your progress and insights"
+      subtitle={supervisedProfile ? `${supervisedProfile.fullName}'s insights` : "Track your progress and insights"}
       headerVariant="icon"
       scrollable
       headerIconName="stats-chart-outline"

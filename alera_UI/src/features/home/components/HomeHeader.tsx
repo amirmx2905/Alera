@@ -4,8 +4,9 @@
  */
 
 import React from "react";
-import { View, Text, Pressable } from "react-native";
+import { View, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { AnimatedPillSelector } from "../../../components/shared/AnimatedPillSelector";
 import { GreetingType, HomeGoalFilter } from "../types";
 
 type HomeHeaderProps = {
@@ -16,6 +17,8 @@ type HomeHeaderProps = {
   onSelectGoalType: (value: HomeGoalFilter) => void;
 };
 
+const GOAL_OPTIONS: HomeGoalFilter[] = ["daily", "weekly", "monthly"];
+
 export function HomeHeader({
   greeting,
   completedToday,
@@ -23,8 +26,6 @@ export function HomeHeader({
   selectedGoalType,
   onSelectGoalType,
 }: HomeHeaderProps) {
-  const goalOptions: HomeGoalFilter[] = ["daily", "weekly", "monthly"];
-
   return (
     <View className="mb-6">
       <Text className="text-4xl font-semibold text-white mb-4 text-center">
@@ -46,28 +47,11 @@ export function HomeHeader({
         </Text>
       </View>
 
-      <View className="flex-row items-center justify-center gap-2 bg-white/5 rounded-2xl border border-white/10 p-2 self-center w-full max-w-[360px]">
-        {goalOptions.map((option) => {
-          const isActive = selectedGoalType === option;
-          return (
-            <Pressable
-              key={option}
-              onPress={() => onSelectGoalType(option)}
-              className={`flex-1 items-center px-4 py-2 rounded-full ${
-                isActive ? "bg-purple-500/20" : "bg-transparent"
-              }`}
-            >
-              <Text
-                className={`text-xs font-semibold uppercase tracking-widest ${
-                  isActive ? "text-purple-200" : "text-slate-300"
-                }`}
-              >
-                {option}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <AnimatedPillSelector
+        options={GOAL_OPTIONS}
+        value={selectedGoalType}
+        onChange={onSelectGoalType}
+      />
     </View>
   );
 }

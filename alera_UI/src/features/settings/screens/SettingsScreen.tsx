@@ -43,6 +43,10 @@ export function SettingsScreen({ navigation, route }: Props) {
     });
   }, [navigation, profile]);
 
+  const handleSupervision = useCallback(() => {
+    navigation.navigate("Supervision");
+  }, [navigation]);
+
   const handleSignOut = useCallback(async () => {
     if (isSigningOut) return;
     try {
@@ -97,6 +101,25 @@ export function SettingsScreen({ navigation, route }: Props) {
         <View className="mt-6">
           <SupervisionTokenCard token={profile.supervision_token} />
         </View>
+      ) : null}
+
+      {profile ? (
+        <Pressable onPress={handleSupervision} className="mt-4 rounded-3xl border border-white/10 bg-white/5 p-6">
+          <View className="flex-row items-center gap-4">
+            <View className="h-11 w-11 rounded-2xl bg-purple-500/20 items-center justify-center">
+              <Ionicons name="people-outline" size={22} color="#a78bfa" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-white text-base font-semibold">
+                Supervision
+              </Text>
+              <Text className="text-slate-400 text-sm mt-0.5">
+                Manage users you supervise
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#64748b" />
+          </View>
+        </Pressable>
       ) : null}
 
       <View className="mt-6 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl">

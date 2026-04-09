@@ -17,6 +17,7 @@ type Params = {
   addEntry: (habitId: string, entry: Entry) => void;
   updateEntry: (habitId: string, entryId: string, amount: number) => void;
   deleteEntry: (habitId: string, entryId: string) => void;
+  profileId?: string;
 };
 
 function normalizeDateStart(value: Date) {
@@ -61,6 +62,7 @@ export const useHabitDetail = ({
   addEntry,
   updateEntry,
   deleteEntry,
+  profileId,
 }: Params) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [entryState, setEntryState] = useState<PendingEntry>({
@@ -92,7 +94,7 @@ export const useHabitDetail = ({
 
     if (habit.entries.length === 0) {
       setIsLogsLoading(true);
-      listLogs(habit.id)
+      listLogs(habit.id, undefined, undefined, profileId)
         .then((logs) => {
           if (isMounted) setEntries(logs.map(toEntry));
         })
@@ -160,7 +162,7 @@ export const useHabitDetail = ({
       const created = await createLog(habit.id, {
         value: amountValue,
         logged_at: getLoggedAtForDate(selectedDateStr, todayStr),
-      });
+      }, profileId);
       setEntries((prev) => [
         {
           id: created.id,
@@ -188,6 +190,7 @@ export const useHabitDetail = ({
     hasEntryForSelectedDate,
     isEntrySaving,
     isFuture,
+    profileId,
     selectedDateStr,
   ]);
 
@@ -213,7 +216,7 @@ export const useHabitDetail = ({
       const updated = await updateLog(habit.id, entryState.editingEntry.id, {
         value: amountValue,
         logged_at: editingDateIso,
-      });
+      }, profileId);
       setEntries((prev) =>
         prev.map((entry) =>
           entry.id === updated.id ? { ...entry, amount: updated.value } : entry,
@@ -232,6 +235,7 @@ export const useHabitDetail = ({
     entryState.editingEntry,
     habit,
     isEntrySaving,
+    profileId,
     selectedDateStr,
     todayStr,
     updateEntry,
@@ -246,7 +250,7 @@ export const useHabitDetail = ({
       if (!habit || deletingEntryId === entryId) return;
       setDeletingEntryId(entryId);
       try {
-        await deleteLog(habit.id, entryId);
+        await deleteLog(habit.id, entryId, profileId);
         setEntries((prev) => prev.filter((entry) => entry.id !== entryId));
         deleteEntry(habit.id, entryId);
       } catch (error) {
@@ -255,7 +259,7 @@ export const useHabitDetail = ({
         setDeletingEntryId((current) => (current === entryId ? null : current));
       }
     },
-    [deleteEntry, deletingEntryId, habit],
+    [deleteEntry, deletingEntryId, habit, profileId],
   );
 
   const goToPreviousDay = useCallback(() => {

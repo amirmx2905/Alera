@@ -36,6 +36,7 @@ type UseStatsDataReturn = {
 export function useStatsData(
   granularity: StatsGranularity,
   isFocused = true,
+  profileId?: string,
 ): UseStatsDataReturn {
   const { habits, streaksByHabitId, isLoading } = useHabits();
   const [profileMetricSnapshot, setProfileMetricSnapshot] =
@@ -105,23 +106,23 @@ export function useStatsData(
         listMetrics(null, {
           metricType: "active_days",
           granularity: "monthly",
-        }),
+        }, profileId),
         listMetrics(null, {
           metricType: "best_streak_overall",
           granularity: "all_time",
-        }),
+        }, profileId),
         listMetrics(undefined, {
           metricType: "days_completed_30d",
           granularity: "monthly",
-        }),
+        }, profileId),
         listMetrics(undefined, {
           metricType: "avg_value_30d",
           granularity: "monthly",
-        }),
+        }, profileId),
         listMetrics(undefined, {
           metricType: "total_entries_all_time",
           granularity: "all_time",
-        }),
+        }, profileId),
       ])
         .then(
           ([
@@ -211,7 +212,7 @@ export function useStatsData(
       isMounted = false;
       task.cancel();
     };
-  }, [activeHabits, activeHabitsSnapshotKey, isFocused]);
+  }, [activeHabits, activeHabitsSnapshotKey, isFocused, profileId]);
 
   const trend = useMemo(() => {
     const buckets = buildBuckets(granularity, firstEntryDateKey);
