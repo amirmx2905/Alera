@@ -6,6 +6,7 @@ import { SupervisorCard } from "./SupervisorCard";
 import {
   getMySupervisors,
   requestUnlink,
+  cancelUnlinkRequest,
   type MySupervisor,
 } from "../../../services/supervision";
 
@@ -59,6 +60,23 @@ export function MySupervisorsSection() {
     }
   }, []);
 
+  const handleCancelUnlink = useCallback(async (supervisionId: string) => {
+    try {
+      await cancelUnlinkRequest(supervisionId);
+      setSupervisors((prev) =>
+        prev.map((s) =>
+          s.supervisionId === supervisionId
+            ? { ...s, unlinkRequestedAt: null }
+            : s,
+        ),
+      );
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Could not cancel request";
+      Alert.alert("Error", msg);
+    }
+  }, []);
+
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center">
@@ -69,7 +87,7 @@ export function MySupervisorsSection() {
 
   if (supervisors.length === 0) {
     return (
-      <View className="flex-1 items-center justify-center">
+      <View className="flex-1 items-center justify-center pb-24">
         <EmptyState
           opacity={emptyOpacity}
           iconName="shield-outline"
@@ -92,6 +110,7 @@ export function MySupervisorsSection() {
             key={supervisor.supervisionId}
             supervisor={supervisor}
             onRequestUnlink={handleRequestUnlink}
+            onCancelUnlink={handleCancelUnlink}
           />
         ))}
       </View>

@@ -1,10 +1,10 @@
 import React, { useCallback, useRef, useState } from "react";
-import { View, Text, Pressable, Alert, Animated } from "react-native";
+import { View, Text, TextInput, Pressable, Alert, Animated } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import { MainLayout } from "../../../layouts/MainLayout";
-import { InputField } from "../../../components/shared/InputField";
 import { PrimaryButton } from "../../../components/shared/PrimaryButton";
+import { OtpInputRow } from "../../auth/components/OtpInputRow";
 import {
   lookupProfileByToken,
   linkSupervisedProfile,
@@ -20,6 +20,8 @@ export function AddSupervisedScreen({ navigation }: Props) {
   const [lookupResult, setLookupResult] = useState<LookupResult | null>(null);
   const [isLooking, setIsLooking] = useState(false);
   const [isLinking, setIsLinking] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const tokenInputRef = useRef<TextInput>(null);
   const continueScaleAnim = useRef(new Animated.Value(1)).current;
   const confirmScaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -120,13 +122,36 @@ export function AddSupervisedScreen({ navigation }: Props) {
               </Text>
             </View>
 
-            <InputField
-              icon="key-outline"
-              value={token}
-              onChangeText={(v) => setToken(v.toUpperCase().slice(0, 6))}
-              placeholder="e.g. A1B2C3"
-              autoCapitalize="characters"
-            />
+            <Pressable
+              className="rounded-2xl bg-white/5 px-4 py-4"
+              onPress={() => tokenInputRef.current?.focus()}
+            >
+              <View className="flex-row items-center self-center gap-3">
+                <Ionicons name="key-outline" size={18} color="#94a3b8" />
+                <Text className="text-slate-400">
+                  Enter the 6-character supervision token
+                </Text>
+              </View>
+
+              <OtpInputRow
+                length={6}
+                value={token}
+                isFocused={isFocused}
+                onPress={() => tokenInputRef.current?.focus()}
+              />
+
+              <TextInput
+                ref={tokenInputRef}
+                value={token}
+                onChangeText={(v) => setToken(v.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))}
+                maxLength={6}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
+                autoCapitalize="characters"
+                className="absolute opacity-0"
+                autoFocus
+              />
+            </Pressable>
 
             <PrimaryButton
               label="Continue"

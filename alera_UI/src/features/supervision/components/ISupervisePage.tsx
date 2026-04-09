@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { View, Animated, Alert, ScrollView } from "react-native";
+import { View, Text, Animated, Alert, ScrollView } from "react-native";
 import type { NavigationProp } from "@react-navigation/native";
 import { useNavigation } from "@react-navigation/native";
 import { EmptyState } from "../../../components/shared/EmptyState";
@@ -11,6 +11,7 @@ import {
   getMySupervised,
   removeSupervisedLink,
   denyUnlinkRequest,
+  SUPERVISION_LIMITS,
   type SupervisedUser,
 } from "../../../services/supervision";
 import type { RootStackParamList } from "../../../navigation/RootNavigator";
@@ -107,9 +108,18 @@ export function ISupervisePage() {
   );
 
   const handleAddUser = useCallback(() => {
+    if (users.length >= SUPERVISION_LIMITS.maxSupervised) {
+      Alert.alert(
+        "Limit reached",
+        `You can supervise up to ${SUPERVISION_LIMITS.maxSupervised} users.`,
+      );
+      return;
+    }
     needsRefetch.current = true;
     rootNavigation?.navigate("AddSupervised");
-  }, [rootNavigation]);
+  }, [rootNavigation, users.length]);
+
+  const isAtLimit = users.length >= SUPERVISION_LIMITS.maxSupervised;
 
   return (
     <View className="flex-1 px-6">
@@ -118,7 +128,7 @@ export function ISupervisePage() {
           <DotLoader />
         </View>
       ) : users.length === 0 ? (
-        <View className="flex-1 items-center justify-center">
+        <View className="flex-1 items-center justify-center pb-24">
           <EmptyState
             opacity={emptyOpacity}
             iconName="people-outline"
@@ -146,9 +156,15 @@ export function ISupervisePage() {
       )}
 
       <View className="absolute bottom-8 left-6 right-6">
+        {!isLoading && users.length > 0 && (
+          <Text className="text-slate-500 text-xs text-center mb-2">
+            {users.length}/{SUPERVISION_LIMITS.maxSupervised} slots used
+          </Text>
+        )}
         <PrimaryButton
-          label="Supervise a User"
+          label={isAtLimit ? "Limit reached" : "Supervise a User"}
           isLoading={false}
+          disabled={isAtLimit}
           onPress={handleAddUser}
           onPressIn={onPressIn}
           onPressOut={onPressOut}

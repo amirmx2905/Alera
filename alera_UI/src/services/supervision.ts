@@ -1,6 +1,10 @@
 import { supabase } from "./supabase";
 import { getCurrentProfileId } from "./profile";
 
+export const SUPERVISION_LIMITS = {
+  maxSupervised: 5,
+} as const;
+
 type SupervisionLookupResult = {
   id: string;
   first_name: string;
@@ -52,6 +56,18 @@ export async function lookupProfileByToken(token: string) {
   return (row as SupervisionLookupResult) || null;
 }
 
+async function getSupervisedCount(): Promise<number> {
+  const myProfileId = await getCurrentProfileId();
+
+  const { count, error } = await supabase
+    .from("user_supervision")
+    .select("id", { count: "exact", head: true })
+    .eq("supervisor_profile_id", myProfileId);
+
+  if (error) throw error;
+  return count ?? 0;
+}
+
 export async function linkSupervisedProfile(token: string) {
   const supervisorProfileId = await getCurrentProfileId();
   const targetProfile = await lookupProfileByToken(token.trim());
@@ -62,6 +78,14 @@ export async function linkSupervisedProfile(token: string) {
 
   if (targetProfile.id === supervisorProfileId) {
     throw new Error("You cannot supervise your own profile");
+  }
+
+  // Check supervisor's limit (how many they already supervise)
+  const supervisedCount = await getSupervisedCount();
+  if (supervisedCount >= SUPERVISION_LIMITS.maxSupervised) {
+    throw new Error(
+      `You can supervise up to ${SUPERVISION_LIMITS.maxSupervised} users`,
+    );
   }
 
   const { data, error } = await supabase
@@ -181,3 +205,6 @@ export async function denyUnlinkRequest(supervisionId: string): Promise<void> {
 
   if (error) throw error;
 }
+
+/** Monitored user cancels their own pending unlink request (same DB op as deny). */
+export const cancelUnlinkRequest = denyUnlinkRequest;

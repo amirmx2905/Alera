@@ -5,26 +5,29 @@ import type { MySupervisor } from "../../../services/supervision";
 type SupervisorCardProps = {
   supervisor: MySupervisor;
   onRequestUnlink: (supervisionId: string) => Promise<void>;
+  onCancelUnlink: (supervisionId: string) => Promise<void>;
 };
 
 export function SupervisorCard({
   supervisor,
   onRequestUnlink,
+  onCancelUnlink,
 }: SupervisorCardProps) {
   const [isRequesting, setIsRequesting] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const btnScale = useRef(new Animated.Value(1)).current;
   const hasPendingRequest = supervisor.unlinkRequestedAt !== null;
 
-  const animateBtn = useCallback(
-    (toValue: number) => {
-      Animated.spring(btnScale, {
+  const animateScale = useCallback(
+    (scaleRef: Animated.Value, toValue: number) => {
+      Animated.spring(scaleRef, {
         toValue,
         useNativeDriver: true,
         speed: 50,
         bounciness: 4,
       }).start();
     },
-    [btnScale],
+    [],
   );
 
   const fullName =
@@ -57,6 +60,27 @@ export function SupervisorCard({
     );
   }, [fullName, onRequestUnlink, supervisor.supervisionId]);
 
+  const handleCancelUnlink = useCallback(() => {
+    Alert.alert(
+      "Cancel request",
+      "Cancel your unlink request? The supervision link will remain active.",
+      [
+        { text: "Keep request", style: "cancel" },
+        {
+          text: "Cancel request",
+          onPress: async () => {
+            setIsCancelling(true);
+            try {
+              await onCancelUnlink(supervisor.supervisionId);
+            } finally {
+              setIsCancelling(false);
+            }
+          },
+        },
+      ],
+    );
+  }, [onCancelUnlink, supervisor.supervisionId]);
+
   return (
     <View className="flex-row items-center rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
       <View className="h-11 w-11 rounded-full bg-blue-500/20 items-center justify-center mr-3">
@@ -71,14 +95,27 @@ export function SupervisorCard({
       </View>
 
       {hasPendingRequest ? (
-        <View className="h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 px-3 items-center justify-center">
-          <Text className="text-amber-300 text-xs font-medium">Pending</Text>
-        </View>
+        <Pressable
+          onPress={handleCancelUnlink}
+          onPressIn={() => animateScale(btnScale, 0.85)}
+          onPressOut={() => animateScale(btnScale, 1)}
+          disabled={isCancelling}
+          hitSlop={12}
+        >
+          <Animated.View
+            className="h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 px-3 items-center justify-center"
+            style={{ transform: [{ scale: btnScale }] }}
+          >
+            <Text className="text-amber-300 text-xs font-medium">
+              {isCancelling ? "..." : "Cancel request"}
+            </Text>
+          </Animated.View>
+        </Pressable>
       ) : (
         <Pressable
           onPress={handleRequestUnlink}
-          onPressIn={() => animateBtn(0.85)}
-          onPressOut={() => animateBtn(1)}
+          onPressIn={() => animateScale(btnScale, 0.85)}
+          onPressOut={() => animateScale(btnScale, 1)}
           disabled={isRequesting}
           hitSlop={12}
         >
