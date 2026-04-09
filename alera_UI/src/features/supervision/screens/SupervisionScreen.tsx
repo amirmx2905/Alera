@@ -1,100 +1,96 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { View, Pressable, Animated, Alert, ScrollView } from "react-native";
+import React, { useCallback, useState } from "react";
+import { View, Text, Pressable, Animated, Dimensions } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import type { NavigationProp } from "@react-navigation/native";
+import {
+  createMaterialTopTabNavigator,
+  type MaterialTopTabBarProps,
+} from "@react-navigation/material-top-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { MainLayout } from "../../../layouts/MainLayout";
-import { EmptyState } from "../../../components/shared/EmptyState";
-import { PrimaryButton } from "../../../components/shared/PrimaryButton";
-import { DotLoader } from "../../../components/shared/DotLoader";
-import { usePressScale } from "../../../hooks/usePressScale";
-import { SupervisedUserCard } from "../components/SupervisedUserCard";
-import { AddSupervisedModal } from "../components/AddSupervisedModal";
-import {
-  getMySupervised,
-  removeSupervisedLink,
-  type SupervisedUser,
-} from "../../../services/supervision";
+import { ISupervisePage } from "../components/ISupervisePage";
+import { MySupervisorsSection } from "../components/MySupervisorsSection";
 import type { SettingsStackParamList } from "../../../navigation/SettingsStack";
-import type { RootStackParamList } from "../../../navigation/RootNavigator";
 
 type Props = NativeStackScreenProps<SettingsStackParamList, "Supervision">;
 
-export function SupervisionScreen({ navigation }: Props) {
-  const [users, setUsers] = useState<SupervisedUser[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [modalVisible, setModalVisible] = useState(false);
-  const { scale, onPressIn, onPressOut } = usePressScale();
-  const emptyOpacity = useRef(new Animated.Value(0)).current;
+const Tab = createMaterialTopTabNavigator();
+const INITIAL_LAYOUT = { width: Dimensions.get("window").width };
+const PILL_PADDING = 8; // p-2
 
-  const fetchUsers = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const data = await getMySupervised();
-      setUsers(data);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Could not load data";
-      Alert.alert("Error", msg);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+function PillTabBar({ state, descriptors, navigation, position }: MaterialTopTabBarProps) {
+  const [containerWidth, setContainerWidth] = useState(0);
+  const tabCount = state.routes.length;
+  const pillWidth = containerWidth > 0
+    ? (containerWidth - PILL_PADDING * 2 - (tabCount - 1) * 8) / tabCount
+    : 0;
 
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+  const translateX = position.interpolate({
+    inputRange: state.routes.map((_, i) => i),
+    outputRange: state.routes.map((_, i) => i * (pillWidth + 8)),
+  });
 
-  useEffect(() => {
-    if (!isLoading && users.length === 0) {
-      Animated.timing(emptyOpacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      emptyOpacity.setValue(0);
-    }
-  }, [isLoading, users.length, emptyOpacity]);
+  return (
+    <View
+      className="flex-row items-center gap-2 bg-white/5 rounded-2xl border border-white/10 p-2 mb-4"
+      onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
+    >
+      {pillWidth > 0 && (
+        <Animated.View
+          className="absolute rounded-full bg-purple-500/20"
+          style={{
+            width: pillWidth,
+            top: PILL_PADDING,
+            bottom: PILL_PADDING,
+            left: PILL_PADDING,
+            transform: [{ translateX }],
+          }}
+        />
+      )}
+      {state.routes.map((route, index) => {
+        const { options } = descriptors[route.key];
+        const label = options.title ?? route.name;
+        const isFocused = state.index === index;
 
-  const handleRemove = useCallback(
-    async (supervisionId: string) => {
-      try {
-        await removeSupervisedLink(supervisionId);
-        setUsers((prev) =>
-          prev.filter((u) => u.supervisionId !== supervisionId),
+        const onPress = () => {
+          const event = navigation.emit({
+            type: "tabPress",
+            target: route.key,
+            canPreventDefault: true,
+          });
+          if (!isFocused && !event.defaultPrevented) {
+            navigation.navigate(route.name);
+          }
+        };
+
+        return (
+          <Pressable
+            key={route.key}
+            onPress={onPress}
+            className="flex-1 items-center px-4 py-2 rounded-full"
+          >
+            <Text
+              className={`text-xs font-semibold uppercase tracking-widest ${
+                isFocused ? "text-purple-200" : "text-slate-300"
+              }`}
+            >
+              {label}
+            </Text>
+          </Pressable>
         );
-      } catch (err) {
-        const msg =
-          err instanceof Error ? err.message : "Could not remove link";
-        Alert.alert("Error", msg);
-      }
-    },
-    [],
+      })}
+    </View>
   );
+}
 
+export function SupervisionScreen({ navigation }: Props) {
   const handleGoBack = useCallback(() => {
     navigation.goBack();
   }, [navigation]);
 
-  const rootNavigation = navigation.getParent()?.getParent() as
-    | NavigationProp<RootStackParamList>
-    | undefined;
-
-  const handleOpenSupervised = useCallback(
-    (user: SupervisedUser) => {
-      rootNavigation?.navigate("SupervisedView", {
-        profileId: user.profileId,
-        firstName: user.firstName,
-        lastName: user.lastName,
-      });
-    },
-    [rootNavigation],
-  );
-
   return (
     <MainLayout
       title="Supervision"
-      subtitle="Users you supervise."
+      subtitle="Manage supervision links."
       headerVariant="icon"
       headerIconName="people-outline"
       showBackground={false}
@@ -108,57 +104,14 @@ export function SupervisionScreen({ navigation }: Props) {
         </Pressable>
       }
     >
-      <View className="flex-1">
-        {isLoading ? (
-          <View className="flex-1 items-center justify-center">
-            <DotLoader />
-          </View>
-        ) : users.length === 0 ? (
-          <View className="flex-1 items-center justify-center">
-            <EmptyState
-              opacity={emptyOpacity}
-              iconName="people-outline"
-              title="No supervised users"
-              message="Link to someone by entering their 6-character supervision token."
-            />
-          </View>
-        ) : (
-          <ScrollView
-            className="flex-1"
-            contentContainerStyle={{ paddingBottom: 100 }}
-            showsVerticalScrollIndicator={false}
-          >
-            <View className="gap-3">
-              {users.map((user) => (
-                <SupervisedUserCard
-                  key={user.supervisionId}
-                  user={user}
-                  onRemove={handleRemove}
-                  onPress={() => handleOpenSupervised(user)}
-                />
-              ))}
-            </View>
-          </ScrollView>
-        )}
-      </View>
-
-      <View className="absolute bottom-8 left-6 right-6">
-        <PrimaryButton
-          label="Add user"
-          isLoading={false}
-          onPress={() => setModalVisible(true)}
-          onPressIn={onPressIn}
-          onPressOut={onPressOut}
-          scaleAnim={scale}
-          containerClassName="w-full"
-        />
-      </View>
-
-      <AddSupervisedModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onLinked={fetchUsers}
-      />
+      <Tab.Navigator
+        initialLayout={INITIAL_LAYOUT}
+        tabBar={(props) => <PillTabBar {...props} />}
+        screenOptions={{ swipeEnabled: true }}
+      >
+        <Tab.Screen name="I supervise" component={ISupervisePage} />
+        <Tab.Screen name="Supervising me" component={MySupervisorsSection} />
+      </Tab.Navigator>
     </MainLayout>
   );
 }

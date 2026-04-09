@@ -11,6 +11,7 @@ import { CreateHabitScreen } from "../features/habits/screens/CreateHabitScreen"
 import { HabitDetailScreen } from "../features/habits/screens/HabitDetailScreen";
 import { SupervisedViewScreen } from "../features/supervision/screens/SupervisedViewScreen";
 import { SupervisedCreateHabitScreen } from "../features/supervision/screens/SupervisedCreateHabitScreen";
+import { AddSupervisedScreen } from "../features/supervision/screens/AddSupervisedScreen";
 import { useAuth } from "../state/AuthStore";
 import { View } from "react-native";
 import { getProfile } from "../services/profile.ts";
@@ -32,6 +33,7 @@ export type RootStackParamList = {
   HabitDetail: { habitId: string };
   SupervisedView: { profileId: string; firstName: string; lastName: string };
   SupervisedCreateHabit: { profileId: string };
+  AddSupervised: undefined;
 };
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
@@ -156,6 +158,16 @@ export function RootNavigator() {
           {(props: NativeStackScreenProps<RootStackParamList, "SupervisedCreateHabit">) => (
             <AppBackground>
               <SupervisedCreateHabitScreen {...props} />
+            </AppBackground>
+          )}
+        </RootStack.Screen>
+        <RootStack.Screen
+          name="AddSupervised"
+          options={{ presentation: "modal", gestureEnabled: true }}
+        >
+          {(props: NativeStackScreenProps<RootStackParamList, "AddSupervised">) => (
+            <AppBackground>
+              <AddSupervisedScreen {...props} />
             </AppBackground>
           )}
         </RootStack.Screen>

@@ -6,6 +6,7 @@ import {
   type MaterialTopTabBarProps,
 } from "@react-navigation/material-top-tabs";
 import { Ionicons } from "@expo/vector-icons";
+import type { ComponentProps } from "react";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -191,7 +192,7 @@ function TabBarIconBase({
         }}
       />
       <Ionicons
-        name={(focused ? icon.focused : icon.unfocused) as any}
+        name={(focused ? icon.focused : icon.unfocused) as ComponentProps<typeof Ionicons>["name"]}
         size={22}
         color={color}
       />
