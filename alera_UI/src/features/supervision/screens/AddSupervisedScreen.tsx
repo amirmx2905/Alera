@@ -1,5 +1,12 @@
 import React, { useCallback, useRef, useState } from "react";
-import { View, Text, TextInput, Pressable, Alert, Animated } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  Alert,
+  Animated,
+} from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import { MainLayout } from "../../../layouts/MainLayout";
@@ -143,7 +150,14 @@ export function AddSupervisedScreen({ navigation }: Props) {
               <TextInput
                 ref={tokenInputRef}
                 value={token}
-                onChangeText={(v) => setToken(v.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))}
+                onChangeText={(v) =>
+                  setToken(
+                    v
+                      .toUpperCase()
+                      .replace(/[^A-Z0-9]/g, "")
+                      .slice(0, 6),
+                  )
+                }
                 maxLength={6}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}

@@ -24,7 +24,10 @@ type SupervisionJoinRow = {
   supervisor_profile_id?: string;
   created_at: string;
   unlink_requested_at: string | null;
-  profiles: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null;
+  profiles:
+    | { first_name: string; last_name: string }
+    | { first_name: string; last_name: string }[]
+    | null;
 };
 
 export type SupervisedUser = {
