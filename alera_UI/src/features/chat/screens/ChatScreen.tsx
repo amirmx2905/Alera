@@ -5,12 +5,11 @@ import {
   Animated,
   View,
   Platform,
-  InteractionManager,
 } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
 import { supabase } from "../../../services/supabase";
 import { usePressScale } from "../../../hooks/usePressScale";
-import { getChatHistory, sendChatMessage } from "../services/ai";
+import { sendChatMessage } from "../services/ai";
+import { usePreload } from "../../../state/PreloadStore";
 import { ChatMessages } from "../components/ChatMessages";
 import { ChatInput } from "../components/ChatInput";
 import { MainLayout } from "../../../layouts/MainLayout";
@@ -30,17 +29,6 @@ function createMessage(
   };
 }
 
-function mapHistoryToMessages(result: Awaited<ReturnType<typeof getChatHistory>>) {
-  return (result?.messages || [])
-    .map((item, index) => ({
-      id: item.id ?? `history-${index}`,
-      role: item.role,
-      content: item.message,
-      createdAt: item.created_at ?? new Date(0).toISOString(),
-    }))
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-}
-
 export function ChatScreen() {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -55,6 +43,7 @@ export function ChatScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const animatedMessagesRef = useRef(new Set<string>());
   const hasLoadedHistoryRef = useRef(false);
+  const { chatHistory } = usePreload();
   const { scale, onPressIn, onPressOut } = usePressScale({
     pressedScale: 0.85,
   });
@@ -68,45 +57,23 @@ export function ChatScreen() {
     scrollRef.current?.scrollToEnd({ animated: true });
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (hasLoadedHistoryRef.current) {
-        return undefined;
-      }
+  // Hydrate from preloaded chat history
+  useEffect(() => {
+    if (hasLoadedHistoryRef.current || !chatHistory) return;
+    hasLoadedHistoryRef.current = true;
 
-      let isMounted = true;
-      const task = InteractionManager.runAfterInteractions(() => {
-        supabase.auth.getSession().then(({ data }) => {
-          if (!isMounted) return;
-          if (!data.session) {
-            setMessages([]);
-            setIsLoadingHistory(false);
-            hasLoadedHistoryRef.current = true;
-            return;
-          }
+    const mapped = (chatHistory.messages || [])
+      .map((item, index) => ({
+        id: item.id ?? `history-${index}`,
+        role: item.role,
+        content: item.message,
+        createdAt: item.created_at ?? new Date(0).toISOString(),
+      }))
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 
-          getChatHistory()
-            .then((result) => {
-              if (!isMounted) return;
-              setMessages(mapHistoryToMessages(result));
-              setIsLoadingHistory(false);
-              hasLoadedHistoryRef.current = true;
-            })
-            .catch(() => {
-              if (!isMounted) return;
-              setMessages([]);
-              setIsLoadingHistory(false);
-              hasLoadedHistoryRef.current = true;
-            });
-        });
-      });
-
-      return () => {
-        isMounted = false;
-        task.cancel();
-      };
-    }, []),
-  );
+    setMessages(mapped);
+    setIsLoadingHistory(false);
+  }, [chatHistory]);
 
   useEffect(() => {
     if (!isLoadingHistory) {
@@ -117,10 +84,6 @@ export function ChatScreen() {
       }).start();
     }
   }, [isLoadingHistory, fadeAnim]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
 
   useEffect(() => {
     const showEvent =

@@ -86,6 +86,8 @@ export function ChatMessages({
   lastAddedMessageId,
   animatedMessagesRef,
 }: ChatMessagesProps) {
+  const isInitialRenderRef = useRef(true);
+
   const handleAnimated = useCallback(
     (id: string) => animatedMessagesRef.current.add(id),
     [animatedMessagesRef],
@@ -145,9 +147,18 @@ export function ChatMessages({
             flexGrow: 1,
           }}
           keyboardShouldPersistTaps="handled"
-          onContentSizeChange={() =>
-            scrollRef.current?.scrollToEnd({ animated: true })
-          }
+          onContentSizeChange={() => {
+            if (isInitialRenderRef.current) {
+              isInitialRenderRef.current = false;
+              // Delay initial scroll so FlatList finishes measuring all bubbles
+              setTimeout(
+                () => scrollRef.current?.scrollToEnd({ animated: false }),
+                150,
+              );
+            } else {
+              scrollRef.current?.scrollToEnd({ animated: true });
+            }
+          }}
           ListFooterComponent={
             isSending ? (
               <View

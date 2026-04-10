@@ -15,6 +15,7 @@ import { useHomeData } from "../hooks/useHomeData";
 import type { AppTabParamList } from "../../../navigation/AppTabs";
 import type { HomeGoalFilter } from "../types";
 import { useHomeStartupGate } from "../../../navigation/HomeStartupGate";
+import { usePreload } from "../../../state/PreloadStore";
 
 type NavigationProp = BottomTabNavigationProp<AppTabParamList>;
 
@@ -23,6 +24,7 @@ export function HomeScreen() {
   const [goalType, setGoalType] = useState<HomeGoalFilter>("daily");
   const { data, isLoading } = useHomeData(goalType);
   const { isHomeReady, markHomeReady } = useHomeStartupGate();
+  const { isAllReady: isPreloadReady } = usePreload();
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const filterAnim = useRef(new Animated.Value(0)).current;
   const hasSeenLoadingRef = useRef(false);
@@ -34,7 +36,7 @@ export function HomeScreen() {
       return;
     }
 
-    if (isLoading) {
+    if (isLoading || !isPreloadReady) {
       hasSeenLoadingRef.current = true;
       return;
     }
@@ -42,14 +44,14 @@ export function HomeScreen() {
     if (hasSeenLoadingRef.current || canRenderHome) {
       markHomeReady();
     }
-  }, [canRenderHome, isLoading, isHomeReady, markHomeReady]);
+  }, [canRenderHome, isLoading, isHomeReady, isPreloadReady, markHomeReady]);
 
   useEffect(() => {
     if (!hasData) return;
     filterAnim.setValue(0);
     Animated.timing(filterAnim, {
       toValue: 1,
-      duration: 220,
+      duration: 500,
       useNativeDriver: true,
     }).start();
   }, [filterAnim, goalType, hasData]);
@@ -90,7 +92,7 @@ export function HomeScreen() {
                   {
                     translateY: filterAnim.interpolate({
                       inputRange: [0, 1],
-                      outputRange: [8, 0],
+                      outputRange: [16, 0],
                     }),
                   },
                 ],
