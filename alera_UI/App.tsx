@@ -6,6 +6,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 import { AuthProvider } from "./src/state/AuthStore";
 import { HabitsProvider } from "./src/state/HabitsStore";
+import { PreloadProvider } from "./src/state/PreloadStore";
 
 enableScreens(true);
 
@@ -24,12 +25,14 @@ export default function App() {
   return (
     <AuthProvider>
       <HabitsProvider>
-        <SafeAreaProvider>
-          <NavigationContainer theme={AppTheme}>
-            <StatusBar style="light" />
-            <RootNavigator />
-          </NavigationContainer>
-        </SafeAreaProvider>
+        <PreloadProvider>
+          <SafeAreaProvider>
+            <NavigationContainer theme={AppTheme}>
+              <StatusBar style="light" />
+              <RootNavigator />
+            </NavigationContainer>
+          </SafeAreaProvider>
+        </PreloadProvider>
       </HabitsProvider>
     </AuthProvider>
   );

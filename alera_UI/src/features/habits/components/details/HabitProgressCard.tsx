@@ -29,8 +29,10 @@ export function HabitProgressCard({
           : unit
       : unit;
   const progressSummaryLabel =
-    habitType === "binary" && currentAmount >= goalAmount
-      ? "Completed"
+    habitType === "binary"
+      ? currentAmount >= goalAmount
+        ? "Completed"
+        : "Not done yet"
       : `${currentAmount} / ${goalAmount} ${displayUnit}`;
   const progressWidth = progressAnim.interpolate({
     inputRange: [0, 100],
