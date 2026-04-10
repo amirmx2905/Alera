@@ -61,8 +61,9 @@ export function PreloadProvider({ children }: { children: React.ReactNode }) {
   const { session } = useAuth();
   const [statsMetrics, setStatsMetrics] =
     useState<PreloadedStatsMetrics | null>(null);
-  const [chatHistory, setChatHistory] =
-    useState<PreloadedChatHistory | null>(null);
+  const [chatHistory, setChatHistory] = useState<PreloadedChatHistory | null>(
+    null,
+  );
   const [isStatsReady, setIsStatsReady] = useState(false);
   const [isChatReady, setIsChatReady] = useState(false);
   const hasFetchedRef = useRef(false);
@@ -131,7 +132,13 @@ export function PreloadProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <PreloadContext.Provider
-      value={{ statsMetrics, chatHistory, isStatsReady, isChatReady, isAllReady }}
+      value={{
+        statsMetrics,
+        chatHistory,
+        isStatsReady,
+        isChatReady,
+        isAllReady,
+      }}
     >
       {children}
     </PreloadContext.Provider>
