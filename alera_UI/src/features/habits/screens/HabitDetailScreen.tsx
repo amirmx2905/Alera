@@ -173,6 +173,8 @@ export function HabitDetailScreen() {
     );
   }
 
+  if (!habit) return null;
+
   const { progress, currentAmount } = getProgressData({
     entries,
     goalAmount: habit.goalAmount,
