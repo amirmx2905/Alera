@@ -3,7 +3,7 @@
  * Displays daily overview, progress, and today's habits
  */
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { View, Animated } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
@@ -16,6 +16,7 @@ import type { AppTabParamList } from "../../../navigation/AppTabs";
 import type { HomeGoalFilter } from "../types";
 import { useHomeStartupGate } from "../../../navigation/HomeStartupGate";
 import { usePreload } from "../../../state/PreloadStore";
+import { useHabits } from "../../../state/HabitsStore";
 import { requestNotificationPermissions } from "../../../services/notifications";
 import { useScheduleAllReminders } from "../../stats/hooks/useScheduleAllReminders";
 
@@ -25,6 +26,7 @@ export function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const [goalType, setGoalType] = useState<HomeGoalFilter>("daily");
   const { data, isLoading } = useHomeData(goalType);
+  const { refreshHabits } = useHabits();
   const { isHomeReady, markHomeReady } = useHomeStartupGate();
   const { isAllReady: isPreloadReady } = usePreload();
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -32,6 +34,10 @@ export function HomeScreen() {
   const hasSeenLoadingRef = useRef(false);
   const hasData = Boolean(data);
   const canRenderHome = !isLoading && data !== null;
+
+  const handleRefresh = useCallback(async () => {
+    await refreshHabits({ silent: true });
+  }, [refreshHabits]);
 
   useEffect(() => {
     if (isHomeReady) {
@@ -83,6 +89,7 @@ export function HomeScreen() {
       isLoading={isHomeReady ? isLoading : false}
       scrollable
       contentClassName="flex-1 px-6 pt-16"
+      onRefresh={handleRefresh}
     >
       <View className="pb-24">
         {data && (

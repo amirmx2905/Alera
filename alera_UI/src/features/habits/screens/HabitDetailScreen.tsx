@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useCallback, useRef, useEffect, useState } from "react";
 import { View, Text, Pressable, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import {
@@ -42,6 +42,7 @@ export function HabitDetailScreen() {
     deleteEntry,
     toggleArchive,
     removeHabit,
+    refreshHabits,
   } = useHabits();
   const habit = habits.find((item) => item.id === habitId);
   const { isSupervised } = useIsSupervised();
@@ -49,6 +50,10 @@ export function HabitDetailScreen() {
   const isMounted = useRef(true);
   const [isArchiveLoading, setIsArchiveLoading] = useState(false);
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    await refreshHabits({ silent: true });
+  }, [refreshHabits]);
   const {
     scale: primaryScale,
     onPressIn: onPrimaryPressIn,
@@ -141,7 +146,7 @@ export function HabitDetailScreen() {
     );
   };
 
-  if (!habit) {
+  if (!habit && !isDeleteLoading) {
     return (
       <MainLayout
         title="Habit"
@@ -188,6 +193,7 @@ export function HabitDetailScreen() {
       showBackground={false}
       scrollable
       contentClassName="flex-1 px-6 pt-16"
+      onRefresh={handleRefresh}
       headerRight={
         <Pressable
           onPress={() => navigation.goBack()}

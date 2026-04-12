@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { View, Text, Pressable, Animated } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -18,13 +18,17 @@ import { useIsSupervised } from "../../supervision/hooks/useIsSupervised";
 type Props = NativeStackScreenProps<HabitsStackParamList, "HabitsHome">;
 
 export function HabitsScreen({ navigation }: Props) {
-  const { habits, isLoading } = useHabits();
+  const { habits, isLoading, refreshHabits } = useHabits();
   const { isSupervised } = useIsSupervised();
   const supervisedProfile = useSupervisedProfile();
   const [showArchived, setShowArchived] = useState(false);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const archiveButtonScale = useRef(new Animated.Value(1)).current;
   const addButtonScale = useRef(new Animated.Value(1)).current;
+
+  const handleRefresh = useCallback(async () => {
+    await refreshHabits({ silent: true });
+  }, [refreshHabits]);
 
   const animateIconButton = (anim: Animated.Value, toValue: number) => {
     Animated.spring(anim, {
@@ -54,25 +58,6 @@ export function HabitsScreen({ navigation }: Props) {
       isLoading={isLoading}
       headerRight={
         <View className="flex-row items-center gap-4">
-          <Pressable
-            onPress={() => setShowArchived((prev) => !prev)}
-            onPressIn={() => animateIconButton(archiveButtonScale, 0.9)}
-            onPressOut={() => animateIconButton(archiveButtonScale, 1)}
-            className="h-10 w-10"
-          >
-            <Animated.View
-              className={`h-10 w-10 rounded-full border items-center justify-center ${
-                showArchived ? "border-purple-400/60" : "border-white/10"
-              }`}
-              style={{ transform: [{ scale: archiveButtonScale }] }}
-            >
-              <Ionicons
-                name={showArchived ? "archive" : "archive-outline"}
-                size={18}
-                color={COLORS.slate200}
-              />
-            </Animated.View>
-          </Pressable>
           {!showArchived && (!isSupervised || supervisedProfile) ? (
             <Pressable
               onPress={() => {
@@ -89,7 +74,7 @@ export function HabitsScreen({ navigation }: Props) {
               className="h-10 w-10"
             >
               <Animated.View
-                className="h-10 w-10 rounded-full overflow-hidden"
+                className="h-10 w-10 rounded-xl overflow-hidden"
                 style={{ transform: [{ scale: addButtonScale }] }}
               >
                 <LinearGradient
@@ -107,12 +92,32 @@ export function HabitsScreen({ navigation }: Props) {
               </Animated.View>
             </Pressable>
           ) : null}
+          <Pressable
+            onPress={() => setShowArchived((prev) => !prev)}
+            onPressIn={() => animateIconButton(archiveButtonScale, 0.9)}
+            onPressOut={() => animateIconButton(archiveButtonScale, 1)}
+            className="h-10 w-10"
+          >
+            <Animated.View
+              className={`h-10 w-10 rounded-xl border items-center justify-center ${
+                showArchived ? "border-purple-400/60" : "border-white/10"
+              }`}
+              style={{ transform: [{ scale: archiveButtonScale }] }}
+            >
+              <Ionicons
+                name={showArchived ? "archive" : "archive-outline"}
+                size={18}
+                color={COLORS.slate200}
+              />
+            </Animated.View>
+          </Pressable>
         </View>
       }
       scrollable
       showBackground={false}
       contentClassName="flex-1 px-6 pt-16"
       keyboardAvoiding
+      onRefresh={handleRefresh}
     >
       <View className="pb-20">
         {displayHabits.length === 0 ? (

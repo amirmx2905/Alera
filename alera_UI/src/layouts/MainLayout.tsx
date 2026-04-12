@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   Keyboard,
   Platform,
   ScrollView,
+  RefreshControl,
 } from "react-native";
 import { Ionicons, AntDesign } from "@expo/vector-icons";
 import { DotLoader } from "../components/shared/DotLoader";
@@ -32,6 +33,7 @@ type MainLayoutProps = {
   keyboardAvoiding?: boolean;
   scrollable?: boolean;
   isLoading?: boolean;
+  onRefresh?: () => Promise<void>;
 };
 
 export function MainLayout({
@@ -53,9 +55,21 @@ export function MainLayout({
   keyboardAvoiding = false,
   scrollable = false,
   isLoading = false,
+  onRefresh,
 }: MainLayoutProps) {
   const shouldShowHeader = showHeader;
   const showIconHeader = headerVariant === "icon";
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    if (!onRefresh) return;
+    setIsRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [onRefresh]);
 
   const headerContent = showIconHeader ? (
     <View
@@ -146,6 +160,16 @@ export function MainLayout({
         contentContainerStyle={{ paddingBottom: 32, flexGrow: 1 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              tintColor="#a78bfa"
+              colors={["#a78bfa"]}
+            />
+          ) : undefined
+        }
       >
         {bodyContent}
       </ScrollView>

@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { View, Animated, Text } from "react-native";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -13,6 +13,7 @@ import {
 } from "../components/StatsCharts";
 import { StatsHabitsList } from "../components/StatsHabitsList";
 import { useStatsData } from "../hooks/useStatsData";
+import { useHabits } from "../../../state/HabitsStore";
 import { useSupervisedProfile } from "../../supervision/context/SupervisedProfileContext";
 import type { StatsGranularity } from "../types";
 
@@ -25,6 +26,7 @@ export function StatsScreen() {
       NativeStackNavigationProp<StatsStackParamList, "StatsHome">
     >();
   const supervisedProfile = useSupervisedProfile();
+  const { refreshHabits } = useHabits();
 
   const { overview, isLoading, isSnapshotsLoading, warnings } = useStatsData(
     granularity,
@@ -33,6 +35,11 @@ export function StatsScreen() {
   );
 
   const hasHabits = overview.kpis.totalHabits > 0;
+
+  const handleRefresh = useCallback(async () => {
+    await refreshHabits({ silent: true });
+  }, [refreshHabits]);
+
   const trendPeriodLabel = useMemo(() => {
     if (granularity === "daily") return "Last 7 days";
     if (granularity === "weekly") return "Last 4 weeks";
@@ -49,6 +56,7 @@ export function StatsScreen() {
       showBackground={false}
       contentClassName="flex-1 px-6 pt-16"
       isLoading={isLoading}
+      onRefresh={handleRefresh}
     >
       <View className="pb-20">
         {!hasHabits ? (

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { View, Text, Animated, Alert, ScrollView } from "react-native";
+import { View, Text, Animated, Alert, ScrollView, RefreshControl } from "react-native";
 import type { NavigationProp } from "@react-navigation/native";
 import { useNavigation } from "@react-navigation/native";
 import { EmptyState } from "../../../components/shared/EmptyState";
@@ -19,10 +19,10 @@ import type { RootStackParamList } from "../../../navigation/RootNavigator";
 export function ISupervisePage() {
   const [users, setUsers] = useState<SupervisedUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { scale, onPressIn, onPressOut } = usePressScale();
   const emptyOpacity = useRef(new Animated.Value(0)).current;
-  const needsRefetch = useRef(false);
 
   const navigation = useNavigation();
 
@@ -47,17 +47,6 @@ export function ISupervisePage() {
     fetchUsers();
   }, [fetchUsers]);
 
-  // Refetch only when returning from AddSupervised screen
-  useEffect(() => {
-    const unsubscribe = navigation.addListener("focus", () => {
-      if (needsRefetch.current) {
-        needsRefetch.current = false;
-        fetchUsers();
-      }
-    });
-    return unsubscribe;
-  }, [navigation, fetchUsers]);
-
   useEffect(() => {
     if (!isLoading && users.length === 0) {
       Animated.timing(emptyOpacity, {
@@ -69,6 +58,18 @@ export function ISupervisePage() {
       emptyOpacity.setValue(0);
     }
   }, [isLoading, users.length, emptyOpacity]);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const data = await getMySupervised();
+      setUsers(data);
+    } catch {
+      // silent refresh — don't alert
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
 
   const handleRemove = useCallback(async (supervisionId: string) => {
     try {
@@ -115,7 +116,6 @@ export function ISupervisePage() {
       );
       return;
     }
-    needsRefetch.current = true;
     rootNavigation?.navigate("AddSupervised");
   }, [rootNavigation, users.length]);
 
@@ -123,24 +123,32 @@ export function ISupervisePage() {
 
   return (
     <View className="flex-1 px-6">
-      {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <DotLoader />
-        </View>
-      ) : users.length === 0 ? (
-        <View className="flex-1 items-center justify-center pb-24">
-          <EmptyState
-            opacity={emptyOpacity}
-            iconName="people-outline"
-            title="No supervised users"
-            message="Link to someone by entering their 6-character supervision token."
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: 100, paddingTop: 12, flexGrow: 1 }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor="#a78bfa"
+            colors={["#a78bfa"]}
           />
-        </View>
-      ) : (
-        <ScrollView
-          contentContainerStyle={{ paddingBottom: 100, paddingTop: 12 }}
-          showsVerticalScrollIndicator={false}
-        >
+        }
+      >
+        {isLoading ? (
+          <View className="flex-1 items-center justify-center">
+            <DotLoader />
+          </View>
+        ) : users.length === 0 ? (
+          <View className="flex-1 items-center justify-center pb-24">
+            <EmptyState
+              opacity={emptyOpacity}
+              iconName="people-outline"
+              title="No supervised users"
+              message="Link to someone by entering their 6-character supervision token."
+            />
+          </View>
+        ) : (
           <View className="gap-3">
             {users.map((user) => (
               <SupervisedUserCard
@@ -152,8 +160,8 @@ export function ISupervisePage() {
               />
             ))}
           </View>
-        </ScrollView>
-      )}
+        )}
+      </ScrollView>
 
       <View className="absolute bottom-8 left-6 right-6">
         {!isLoading && users.length > 0 && (

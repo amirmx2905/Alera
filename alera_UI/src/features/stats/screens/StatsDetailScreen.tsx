@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { Animated, Pressable, Text, View } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -14,6 +14,7 @@ import { StatsInsightsCard } from "../components/StatsDetailBlocks";
 import { useStatsData } from "../hooks/useStatsData";
 import { usePredictions } from "../hooks/usePredictions";
 import { useSupervisedProfile } from "../../supervision/context/SupervisedProfileContext";
+import { useHabits } from "../../../state/HabitsStore";
 import { buildHabitTrend, formatHabitGoalSummary, formatPeriodUnit } from "../utils/habitStatsPresentation";
 
 type DetailRoute = RouteProp<StatsStackParamList, "StatsDetail">;
@@ -83,6 +84,11 @@ export function StatsDetailScreen() {
   const route = useRoute<DetailRoute>();
   const [granularity, setGranularity] = useState<StatsGranularity>("daily");
   const supervisedProfile = useSupervisedProfile();
+  const { refreshHabits } = useHabits();
+
+  const handleRefresh = useCallback(async () => {
+    await refreshHabits({ silent: true });
+  }, [refreshHabits]);
 
   const { getHabitDetail, overview } = useStatsData(
     granularity,
@@ -147,6 +153,7 @@ export function StatsDetailScreen() {
       showBackground={false}
       scrollable
       contentClassName="flex-1 px-6 pt-16"
+      onRefresh={handleRefresh}
       headerRight={
         <Pressable
           onPress={() => navigation.goBack()}

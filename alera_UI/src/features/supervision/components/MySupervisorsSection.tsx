@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { View, Animated, Alert, ScrollView } from "react-native";
+import { View, Animated, Alert, ScrollView, RefreshControl } from "react-native";
 import { DotLoader } from "../../../components/shared/DotLoader";
 import { EmptyState } from "../../../components/shared/EmptyState";
 import { SupervisorCard } from "./SupervisorCard";
@@ -13,6 +13,7 @@ import {
 export function MySupervisorsSection() {
   const [supervisors, setSupervisors] = useState<MySupervisor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const emptyOpacity = useRef(new Animated.Value(0)).current;
 
   const fetchSupervisors = useCallback(async () => {
@@ -43,6 +44,18 @@ export function MySupervisorsSection() {
       emptyOpacity.setValue(0);
     }
   }, [isLoading, supervisors.length, emptyOpacity]);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const data = await getMySupervisors();
+      setSupervisors(data);
+    } catch {
+      // silent refresh
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
 
   const handleRequestUnlink = useCallback(async (supervisionId: string) => {
     try {
@@ -77,43 +90,45 @@ export function MySupervisorsSection() {
     }
   }, []);
 
-  if (isLoading) {
-    return (
-      <View className="flex-1 items-center justify-center">
-        <DotLoader />
-      </View>
-    );
-  }
-
-  if (supervisors.length === 0) {
-    return (
-      <View className="flex-1 items-center justify-center pb-24">
-        <EmptyState
-          opacity={emptyOpacity}
-          iconName="shield-outline"
-          title="No one supervises you"
-          message="If someone links your token, they'll appear here."
-        />
-      </View>
-    );
-  }
-
   return (
     <ScrollView
-      contentContainerStyle={{ paddingBottom: 32, paddingTop: 12 }}
+      contentContainerStyle={{ paddingBottom: 32, paddingTop: 12, flexGrow: 1 }}
       showsVerticalScrollIndicator={false}
       className="px-6"
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          tintColor="#a78bfa"
+          colors={["#a78bfa"]}
+        />
+      }
     >
-      <View className="gap-3">
-        {supervisors.map((supervisor) => (
-          <SupervisorCard
-            key={supervisor.supervisionId}
-            supervisor={supervisor}
-            onRequestUnlink={handleRequestUnlink}
-            onCancelUnlink={handleCancelUnlink}
+      {isLoading ? (
+        <View className="flex-1 items-center justify-center">
+          <DotLoader />
+        </View>
+      ) : supervisors.length === 0 ? (
+        <View className="flex-1 items-center justify-center pb-24">
+          <EmptyState
+            opacity={emptyOpacity}
+            iconName="shield-outline"
+            title="No one supervises you"
+            message="If someone links your token, they'll appear here."
           />
-        ))}
-      </View>
+        </View>
+      ) : (
+        <View className="gap-3">
+          {supervisors.map((supervisor) => (
+            <SupervisorCard
+              key={supervisor.supervisionId}
+              supervisor={supervisor}
+              onRequestUnlink={handleRequestUnlink}
+              onCancelUnlink={handleCancelUnlink}
+            />
+          ))}
+        </View>
+      )}
     </ScrollView>
   );
 }
