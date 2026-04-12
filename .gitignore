@@ -44,3 +44,8 @@ expo-env.d.ts
 
 # Project notes (local)
 /docs/personalNotes/
+
+
+#others
+ml/seed
+ml/seed.py
