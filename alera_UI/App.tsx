@@ -7,8 +7,10 @@ import { RootNavigator } from "./src/navigation/RootNavigator";
 import { AuthProvider } from "./src/state/AuthStore";
 import { HabitsProvider } from "./src/state/HabitsStore";
 import { PreloadProvider } from "./src/state/PreloadStore";
+import { initNotificationHandler } from "./src/services/notifications";
 
 enableScreens(true);
+initNotificationHandler();
 
 const AppTheme = {
   ...DefaultTheme,

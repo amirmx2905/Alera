@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { View, Alert, Animated } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { MainLayout } from "../../../layouts/MainLayout";
@@ -35,15 +35,25 @@ export function CreateHabitScreen({ navigation }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const continueScaleAnim = useRef(new Animated.Value(1)).current;
   const createScaleAnim = useRef(new Animated.Value(1)).current;
+  const bar1 = useRef(new Animated.Value(1)).current;
+  const bar2 = useRef(new Animated.Value(0)).current;
+  const bar3 = useRef(new Animated.Value(0)).current;
+  const stepOpacity = useRef(new Animated.Value(1)).current;
+  const stepTranslateX = useRef(new Animated.Value(0)).current;
+  const isAnimatingRef = useRef(false);
 
-  useEffect(() => {
-    if (formData.type !== "binary") return;
-    setFormData((prev) => ({
-      ...prev,
-      unit: "Times",
-      goalAmount: prev.goalAmount || "1",
-    }));
-  }, [formData.type]);
+  const animateBars = useCallback(
+    (newStep: number) => {
+      [bar1, bar2, bar3].forEach((bar, i) => {
+        Animated.timing(bar, {
+          toValue: newStep >= i + 1 ? 1 : 0,
+          duration: 300,
+          useNativeDriver: false,
+        }).start();
+      });
+    },
+    [bar1, bar2, bar3],
+  );
 
   const animateScale = useCallback((scale: Animated.Value, toValue: number) => {
     Animated.spring(scale, {
@@ -54,23 +64,60 @@ export function CreateHabitScreen({ navigation }: Props) {
     }).start();
   }, []);
 
+  const animateStep = useCallback(
+    (newStep: number, direction: "forward" | "back") => {
+      if (isAnimatingRef.current) return;
+      isAnimatingRef.current = true;
+      const offset = direction === "forward" ? 30 : -30;
+      setStep(newStep);
+      stepOpacity.setValue(0);
+      stepTranslateX.setValue(offset);
+      Animated.parallel([
+        Animated.timing(stepOpacity, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(stepTranslateX, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        isAnimatingRef.current = false;
+      });
+      animateBars(newStep);
+    },
+    [stepOpacity, stepTranslateX, animateBars],
+  );
+
   const handleContinue = () => {
     if (step === 1) {
-      setStep(2);
+      animateStep(2, "forward");
       return;
     }
     if (step === 2 && formData.name && formData.category) {
-      setStep(3);
+      animateStep(3, "forward");
     }
   };
 
   const handleBack = () => {
-    setStep((prev) => Math.max(1, prev - 1));
+    if (step > 1) animateStep(step - 1, "back");
   };
 
   const handleFieldChange = useCallback(
     (patch: Partial<CreateHabitFormState>) => {
-      setFormData((prev) => ({ ...prev, ...patch }));
+      setFormData((prev) => {
+        const next = { ...prev, ...patch };
+        if (patch.type === "binary") {
+          next.unit = "Times";
+          next.goalAmount = next.goalAmount || "1";
+        } else if (patch.type === "numeric") {
+          next.unit = "";
+          next.goalAmount = "";
+        }
+        return next;
+      });
     },
     [],
   );
@@ -112,63 +159,73 @@ export function CreateHabitScreen({ navigation }: Props) {
       headerVariant="icon"
       headerIconName="leaf-outline"
       keyboardAvoiding
+      scrollable
       showBackground={false}
       contentClassName="flex-1 px-6 pt-16"
     >
       <View className="pb-20">
         <View className="mb-6">
           <View className="flex-row items-center gap-2">
-            <View
-              className={`h-1 flex-1 rounded-full ${
-                step >= 1 ? "bg-purple-500" : "bg-white/10"
-              }`}
-            />
-            <View
-              className={`h-1 flex-1 rounded-full ${
-                step >= 2 ? "bg-purple-500" : "bg-white/10"
-              }`}
-            />
-            <View
-              className={`h-1 flex-1 rounded-full ${
-                step >= 3 ? "bg-purple-500" : "bg-white/10"
-              }`}
-            />
+            {[bar1, bar2, bar3].map((bar, i) => (
+              <View
+                key={i}
+                className="h-1 flex-1 rounded-full bg-white/10 overflow-hidden"
+              >
+                <Animated.View
+                  className="h-full rounded-full bg-purple-500"
+                  style={{
+                    width: bar.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ["0%", "100%"],
+                    }),
+                  }}
+                />
+              </View>
+            ))}
           </View>
         </View>
 
-        {step === 1 ? (
-          <CreateHabitStepType
-            formData={formData}
-            onFieldChange={handleFieldChange}
-            onContinue={handleContinue}
-            continueScaleAnim={continueScaleAnim}
-            animateScale={animateScale}
-          />
-        ) : step === 2 ? (
-          <CreateHabitStepOne
-            formData={formData}
-            categories={categories}
-            isCategoriesLoading={isCategoriesLoading}
-            onFieldChange={handleFieldChange}
-            onContinue={handleContinue}
-            continueScaleAnim={continueScaleAnim}
-            animateScale={animateScale}
-          />
-        ) : (
-          <CreateHabitStepTwo
-            formData={formData}
-            showCurrencyPicker={showCurrencyPicker}
-            onFieldChange={handleFieldChange}
-            onToggleCurrencyPicker={setShowCurrencyPicker}
-            onBack={handleBack}
-            onCreate={handleCreate}
-            isSubmitting={isSubmitting}
-            createScaleAnim={createScaleAnim}
-            animateScale={animateScale}
-            categoryUnits={CATEGORY_UNITS[formData.category] || UNITS}
-            currencies={CURRENCIES}
-          />
-        )}
+        <Animated.View
+          style={{
+            opacity: stepOpacity,
+            transform: [{ translateX: stepTranslateX }],
+          }}
+        >
+          {step === 1 ? (
+            <CreateHabitStepType
+              formData={formData}
+              onFieldChange={handleFieldChange}
+              onContinue={handleContinue}
+              continueScaleAnim={continueScaleAnim}
+              animateScale={animateScale}
+            />
+          ) : step === 2 ? (
+            <CreateHabitStepOne
+              formData={formData}
+              categories={categories}
+              isCategoriesLoading={isCategoriesLoading}
+              onFieldChange={handleFieldChange}
+              onBack={handleBack}
+              onContinue={handleContinue}
+              continueScaleAnim={continueScaleAnim}
+              animateScale={animateScale}
+            />
+          ) : (
+            <CreateHabitStepTwo
+              formData={formData}
+              showCurrencyPicker={showCurrencyPicker}
+              onFieldChange={handleFieldChange}
+              onToggleCurrencyPicker={setShowCurrencyPicker}
+              onBack={handleBack}
+              onCreate={handleCreate}
+              isSubmitting={isSubmitting}
+              createScaleAnim={createScaleAnim}
+              animateScale={animateScale}
+              categoryUnits={CATEGORY_UNITS[formData.category] || UNITS}
+              currencies={CURRENCIES}
+            />
+          )}
+        </Animated.View>
       </View>
     </MainLayout>
   );

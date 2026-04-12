@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, Animated } from "react-native";
+import { View, Text, Pressable, Animated } from "react-native";
 import { DotLoader } from "../../../../components/shared/DotLoader";
 import { PrimaryButton } from "../../../../components/shared/PrimaryButton";
 import { InputField } from "../../../../components/shared/InputField";
@@ -11,6 +11,7 @@ type CreateHabitStepOneProps = {
   isCategoriesLoading: boolean;
   categories: Array<{ id: string; name: string }>;
   onFieldChange: (patch: Partial<CreateHabitFormState>) => void;
+  onBack: () => void;
   onContinue: () => void;
   continueScaleAnim: Animated.Value;
   animateScale: (scale: Animated.Value, toValue: number) => void;
@@ -21,6 +22,7 @@ export function CreateHabitStepOne({
   isCategoriesLoading,
   categories,
   onFieldChange,
+  onBack,
   onContinue,
   continueScaleAnim,
   animateScale,
@@ -33,7 +35,6 @@ export function CreateHabitStepOne({
           value={formData.name}
           onChangeText={(value) => onFieldChange({ name: value })}
           placeholder="e.g., Read books, Exercise, Meditate"
-          autoFocus
           containerClassName="border border-white/10 py-5"
         />
       </View>
@@ -81,16 +82,25 @@ export function CreateHabitStepOne({
         )}
       </View>
 
-      <PrimaryButton
-        label="Continue"
-        isLoading={false}
-        disabled={!formData.name || !formData.category}
-        onPress={onContinue}
-        onPressIn={() => animateScale(continueScaleAnim, 0.96)}
-        onPressOut={() => animateScale(continueScaleAnim, 1)}
-        scaleAnim={continueScaleAnim}
-        containerClassName="w-full"
-      />
+      <View className="flex-row gap-3">
+        <Pressable
+          onPress={onBack}
+          className="flex-1 rounded-2xl border border-white/10 bg-white/5 py-4"
+        >
+          <Text className="text-white text-center font-semibold">Go back</Text>
+        </Pressable>
+        <PrimaryButton
+          label="Continue"
+          isLoading={false}
+          disabled={!formData.name || !formData.category}
+          onPress={onContinue}
+          onPressIn={() => animateScale(continueScaleAnim, 0.96)}
+          onPressOut={() => animateScale(continueScaleAnim, 1)}
+          scaleAnim={continueScaleAnim}
+          pressableClassName="flex-1"
+          containerClassName="w-full"
+        />
+      </View>
     </View>
   );
 }

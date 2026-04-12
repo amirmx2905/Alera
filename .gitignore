@@ -4,7 +4,9 @@
 # Environment files
 .env
 *.env
-backend/.env
+ml/venv
+__pycache__/
+
 
 # Node.js
 node_modules/
