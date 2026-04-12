@@ -1,10 +1,6 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { Animated, Pressable, Text, View } from "react-native";
-import {
-  useNavigation,
-  useRoute,
-  type RouteProp,
-} from "@react-navigation/native";
+import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import { MainLayout } from "../../../layouts/MainLayout";
@@ -13,29 +9,17 @@ import type { StatsStackParamList } from "../../../navigation/StatsStack";
 import type { StatsGranularity, StatsTrendPoint } from "../types";
 import { StatsPeriodSelector } from "../components/StatsPeriodSelector";
 import { StatsTrendChart } from "../components/StatsCharts";
-import {
-  StatsCalendarStrip,
-  StatsInsightsPlaceholder,
-} from "../components/StatsDetailBlocks";
+import { StatsCalendarStrip } from "../components/StatsCalendarStrip";
+import { StatsInsightsCard } from "../components/StatsDetailBlocks";
 import { useStatsData } from "../hooks/useStatsData";
+import { usePredictions } from "../hooks/usePredictions";
 import { useSupervisedProfile } from "../../supervision/context/SupervisedProfileContext";
-import {
-  buildHabitTrend,
-  formatHabitGoalSummary,
-  formatPeriodUnit,
-} from "../utils/habitStatsPresentation";
+import { useHabits } from "../../../state/HabitsStore";
+import { buildHabitTrend, formatHabitGoalSummary, formatPeriodUnit } from "../utils/habitStatsPresentation";
 
 type DetailRoute = RouteProp<StatsStackParamList, "StatsDetail">;
 
-function MetricCard({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: string | number;
-  hint: string;
-}) {
+function MetricCard({ label, value, hint }: { label: string; value: string | number; hint: string }) {
   return (
     <View className="w-[48.5%] rounded-2xl border border-white/10 bg-white/5 p-4">
       <Text className="text-xs text-slate-400">{label}</Text>
@@ -100,6 +84,11 @@ export function StatsDetailScreen() {
   const route = useRoute<DetailRoute>();
   const [granularity, setGranularity] = useState<StatsGranularity>("daily");
   const supervisedProfile = useSupervisedProfile();
+  const { refreshHabits } = useHabits();
+
+  const handleRefresh = useCallback(async () => {
+    await refreshHabits({ silent: true });
+  }, [refreshHabits]);
 
   const { getHabitDetail, overview } = useStatsData(
     granularity,
@@ -107,6 +96,11 @@ export function StatsDetailScreen() {
     supervisedProfile?.profileId,
   );
   const detail = getHabitDetail(route.params.habitId);
+
+  const { predictions, isLoading: isPredictionsLoading } = usePredictions(
+    route.params.habitId,
+    supervisedProfile?.profileId,
+  );
 
   const habitTrend = useMemo(() => {
     if (!detail) return [] as StatsTrendPoint[];
@@ -159,6 +153,7 @@ export function StatsDetailScreen() {
       showBackground={false}
       scrollable
       contentClassName="flex-1 px-6 pt-16"
+      onRefresh={handleRefresh}
       headerRight={
         <Pressable
           onPress={() => navigation.goBack()}
@@ -238,7 +233,13 @@ export function StatsDetailScreen() {
           }
           legendLabel={isBinaryHabit ? "Completed" : "Logged"}
         />
-        <StatsInsightsPlaceholder />
+        <StatsInsightsCard
+          predictions={predictions}
+          isLoading={isPredictionsLoading}
+          habitCreatedAt={detail.habit.createdAt}
+          calendar30Days={detail.calendar30Days}
+          habit={detail.habit}
+        />
       </View>
     </MainLayout>
   );

@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   HabitsDataContext,
   HabitsActionsContext,
@@ -28,6 +29,13 @@ export function SupervisedHabitsProvider({ profileId, children }: Props) {
 
   const { createHabitWithGoal, toggleArchive, removeHabit } =
     useSupervisedActions({ profileId, refreshHabits, categoryMap });
+
+  // Refresh when screen regains focus (e.g. after creating a habit in the modal)
+  useFocusEffect(
+    useCallback(() => {
+      refreshHabits();
+    }, [refreshHabits]),
+  );
 
   // Supervised addEntry/updateEntry/deleteEntry are no-ops in the context
   // since the supervisor observes but the store refresh handles it.

@@ -42,7 +42,7 @@ type HabitsDataValue = {
 };
 
 type HabitsActionsValue = {
-  refreshHabits: () => Promise<void>;
+  refreshHabits: (options?: { silent?: boolean }) => Promise<void>;
   refreshStreaks: () => Promise<void>;
   createHabitWithGoal: (payload: CreateHabitWithGoalPayload) => Promise<void>;
   addEntry: (habitId: string, entry: Entry) => void;
@@ -54,7 +54,9 @@ type HabitsActionsValue = {
 
 export type { HabitsDataValue, HabitsActionsValue };
 export const HabitsDataContext = createContext<HabitsDataValue | null>(null);
-export const HabitsActionsContext = createContext<HabitsActionsValue | null>(null);
+export const HabitsActionsContext = createContext<HabitsActionsValue | null>(
+  null,
+);
 
 export function HabitsProvider({ children }: { children: React.ReactNode }) {
   const { session } = useAuth();
@@ -183,23 +185,26 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
     [updateHabitEntries],
   );
 
-  const refreshHabits = useCallback(async () => {
-    if (!sessionUserId) {
-      setHabits([]);
-      setIsLoading(false);
-      return;
-    }
+  const refreshHabits = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!sessionUserId) {
+        setHabits([]);
+        setIsLoading(false);
+        return;
+      }
 
-    setIsLoading(true);
-    try {
-      const mappedHabits = await loadHabitsData();
-      setHabits(mappedHabits);
-      await refreshHabitMetrics();
-      await refreshStreaks();
-    } finally {
-      setIsLoading(false);
-    }
-  }, [refreshStreaks, sessionUserId]);
+      if (!options?.silent) setIsLoading(true);
+      try {
+        const mappedHabits = await loadHabitsData();
+        setHabits(mappedHabits);
+        await refreshHabitMetrics();
+        await refreshStreaks();
+      } finally {
+        if (!options?.silent) setIsLoading(false);
+      }
+    },
+    [refreshStreaks, sessionUserId],
+  );
 
   const createHabitWithGoal = useCallback(
     async (payload: CreateHabitWithGoalPayload) => {
@@ -215,32 +220,29 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
     [categoryMap, refreshCategories],
   );
 
-  const toggleArchive = useCallback(
-    async (id: string) => {
-      const habit = habitsRef.current.find((item) => item.id === id);
-      if (!habit) return;
+  const toggleArchive = useCallback(async (id: string) => {
+    const habit = habitsRef.current.find((item) => item.id === id);
+    if (!habit) return;
 
-      // Optimistic update
+    // Optimistic update
+    setHabits((current) =>
+      current.map((item) =>
+        item.id === id ? { ...item, archived: !item.archived } : item,
+      ),
+    );
+
+    try {
+      await toggleHabitArchiveStatus(id, Boolean(habit.archived));
+    } catch {
+      // Rollback on failure
       setHabits((current) =>
         current.map((item) =>
-          item.id === id ? { ...item, archived: !item.archived } : item,
+          item.id === id ? { ...item, archived: habit.archived } : item,
         ),
       );
-
-      try {
-        await toggleHabitArchiveStatus(id, Boolean(habit.archived));
-      } catch {
-        // Rollback on failure
-        setHabits((current) =>
-          current.map((item) =>
-            item.id === id ? { ...item, archived: habit.archived } : item,
-          ),
-        );
-        Alert.alert("Error", "Failed to update habit. Please try again.");
-      }
-    },
-    [],
-  );
+      Alert.alert("Error", "Failed to update habit. Please try again.");
+    }
+  }, []);
 
   const removeHabit = useCallback(async (id: string) => {
     const previous = habitsRef.current;
@@ -336,7 +338,14 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
       categories,
       isCategoriesLoading,
     }),
-    [habits, isLoading, streaksByHabitId, isStreaksLoading, categories, isCategoriesLoading],
+    [
+      habits,
+      isLoading,
+      streaksByHabitId,
+      isStreaksLoading,
+      categories,
+      isCategoriesLoading,
+    ],
   );
 
   const actionsValue = useMemo<HabitsActionsValue>(
