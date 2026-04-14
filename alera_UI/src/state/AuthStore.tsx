@@ -11,6 +11,7 @@ import {
   isInvalidRefreshTokenError,
   mapAuthErrorMessage,
 } from "../services/authErrors";
+import { cancelAllReminders } from "../services/notifications";
 
 type AuthContextValue = {
   session: Session | null;
@@ -53,6 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void bootstrapSession();
 
     const { data } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (!newSession) void cancelAllReminders();
       setSession(newSession);
     });
 

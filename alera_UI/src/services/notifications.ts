@@ -65,3 +65,12 @@ export async function cancelHabitReminder(habitId: string): Promise<void> {
     `habit-reminder-${habitId}`,
   );
 }
+
+/**
+ * Cancel all scheduled notifications.
+ * Called on any sign-out (explicit or session expiry) to prevent
+ * stale reminders from a previous account.
+ */
+export async function cancelAllReminders(): Promise<void> {
+  await Notifications.cancelAllScheduledNotificationsAsync();
+}
