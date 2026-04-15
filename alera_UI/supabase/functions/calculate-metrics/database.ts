@@ -3,7 +3,7 @@
  */
 
 import type { HabitLogRecord, Metric } from "./types.ts";
-import { getDateRangeForWindow, convertToLogicalDate } from "./utils.ts";
+import { convertToLogicalDate, getDateRangeForWindow } from "./utils.ts";
 
 function applyLogicalTimestampWindow(
   query: any,
@@ -291,8 +291,9 @@ export async function writeMetrics(
         updateQuery = updateQuery.is("habit_id", null);
       }
 
-      const { data: updated, error: updateError } =
-        await updateQuery.select("id");
+      const { data: updated, error: updateError } = await updateQuery.select(
+        "id",
+      );
       if (updateError) throw updateError;
 
       if (updated?.length) return;

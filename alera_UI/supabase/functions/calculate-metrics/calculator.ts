@@ -4,20 +4,20 @@
 
 import type { HabitLogRecord, Metric } from "./types.ts";
 import {
-  WEEKLY_WINDOW_DAYS,
   MONTHLY_WINDOW_DAYS,
   STREAK_LOOKBACK_DAYS,
+  WEEKLY_WINDOW_DAYS,
 } from "./config.ts";
 import {
+  fetchHabitAllTimeData,
+  fetchHabitGoalConfig,
+  fetchHabitGoalTarget,
+  fetchHabitGoalTargets,
   fetchHistoricalData,
   fetchProfileHistoricalData,
-  fetchHabitAllTimeData,
-  fetchProfileRecordsForDate,
   fetchProfileHistoricalDataForHabits,
+  fetchProfileRecordsForDate,
   fetchRecordsForDate,
-  fetchHabitGoalTarget,
-  fetchHabitGoalConfig,
-  fetchHabitGoalTargets,
 } from "./database.ts";
 import { convertToLogicalDate } from "./utils.ts";
 
@@ -56,8 +56,8 @@ function groupDailyTotals(records: HabitLogRecord[]): Record<string, number> {
   const dailyTotals: Record<string, number> = {};
   for (const record of records) {
     const recordLogicalDate = convertToLogicalDate(record);
-    dailyTotals[recordLogicalDate] =
-      (dailyTotals[recordLogicalDate] || 0) + (record.value || 0);
+    dailyTotals[recordLogicalDate] = (dailyTotals[recordLogicalDate] || 0) +
+      (record.value || 0);
   }
   return dailyTotals;
 }
@@ -65,8 +65,8 @@ function groupDailyTotals(records: HabitLogRecord[]): Record<string, number> {
 function groupTotalsByHabit(records: HabitLogRecord[]): Record<string, number> {
   const totals: Record<string, number> = {};
   for (const record of records) {
-    totals[record.habit_id] =
-      (totals[record.habit_id] || 0) + (record.value || 0);
+    totals[record.habit_id] = (totals[record.habit_id] || 0) +
+      (record.value || 0);
   }
   return totals;
 }
@@ -163,8 +163,8 @@ export async function calculateWeeklyAverage(
   const dailyTotals: Record<string, number> = {};
   for (const record of historicalData) {
     const recordLogicalDate = convertToLogicalDate(record);
-    dailyTotals[recordLogicalDate] =
-      (dailyTotals[recordLogicalDate] || 0) + (record.value || 0);
+    dailyTotals[recordLogicalDate] = (dailyTotals[recordLogicalDate] || 0) +
+      (record.value || 0);
   }
 
   const daysWithData = Object.keys(dailyTotals).length;
@@ -220,8 +220,8 @@ export async function calculateMonthlyAverage(
   const dailyTotals: Record<string, number> = {};
   for (const record of historicalData) {
     const recordLogicalDate = convertToLogicalDate(record);
-    dailyTotals[recordLogicalDate] =
-      (dailyTotals[recordLogicalDate] || 0) + (record.value || 0);
+    dailyTotals[recordLogicalDate] = (dailyTotals[recordLogicalDate] || 0) +
+      (record.value || 0);
   }
 
   const daysWithData = Object.keys(dailyTotals).length;
@@ -283,7 +283,7 @@ export async function calculateStreak(
       .filter(([, total]) =>
         goalConfig.target_value > 0
           ? total >= goalConfig.target_value
-          : total > 0,
+          : total > 0
       )
       .map(([dateKey]) => dateKey);
 
@@ -325,17 +325,15 @@ export async function calculateStreak(
 
   const totalsByPeriod: Record<string, number> = {};
   for (const [dateKey, total] of Object.entries(dailyTotals)) {
-    const periodKey =
-      goalConfig.goal_type === "weekly"
-        ? getMondayStartKey(dateKey)
-        : getMonthStartKey(dateKey);
+    const periodKey = goalConfig.goal_type === "weekly"
+      ? getMondayStartKey(dateKey)
+      : getMonthStartKey(dateKey);
     totalsByPeriod[periodKey] = (totalsByPeriod[periodKey] || 0) + total;
   }
 
-  const currentPeriodKey =
-    goalConfig.goal_type === "weekly"
-      ? getMondayStartKey(logicalDate)
-      : getMonthStartKey(logicalDate);
+  const currentPeriodKey = goalConfig.goal_type === "weekly"
+    ? getMondayStartKey(logicalDate)
+    : getMonthStartKey(logicalDate);
 
   if ((totalsByPeriod[currentPeriodKey] ?? 0) < goalConfig.target_value) {
     return null;
@@ -401,14 +399,12 @@ export async function calculateGoalProgress(
     );
     totalValue = sumValues(records);
   } else {
-    periodStart =
-      goalConfig.goal_type === "weekly"
-        ? getMondayStartKey(logicalDate)
-        : getMonthStartKey(logicalDate);
-    periodEnd =
-      goalConfig.goal_type === "weekly"
-        ? getSundayDateKey(logicalDate)
-        : getMonthEndKey(logicalDate);
+    periodStart = goalConfig.goal_type === "weekly"
+      ? getMondayStartKey(logicalDate)
+      : getMonthStartKey(logicalDate);
+    periodEnd = goalConfig.goal_type === "weekly"
+      ? getSundayDateKey(logicalDate)
+      : getMonthEndKey(logicalDate);
 
     const daysBack = getDaysBetween(periodStart, logicalDate);
     const historicalData = await fetchHistoricalData(
@@ -423,10 +419,9 @@ export async function calculateGoalProgress(
     const totalsByPeriod: Record<string, number> = {};
 
     for (const [dateKey, total] of Object.entries(dailyTotals)) {
-      const periodKey =
-        goalConfig.goal_type === "weekly"
-          ? getMondayStartKey(dateKey)
-          : getMonthStartKey(dateKey);
+      const periodKey = goalConfig.goal_type === "weekly"
+        ? getMondayStartKey(dateKey)
+        : getMonthStartKey(dateKey);
       totalsByPeriod[periodKey] = (totalsByPeriod[periodKey] || 0) + total;
     }
 

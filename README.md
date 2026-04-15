@@ -18,7 +18,7 @@ Alera is a mobile habit-tracking app where users create habits, log progress, re
   <a href="https://scikit-learn.org/" style="text-decoration: none;"><img src="https://img.shields.io/badge/scikit--learn-F7931E?style=for-the-badge&logo=scikitlearn&logoColor=white" alt="scikit-learn"></a>&nbsp;
 </p>
 
-<p align="center"><strong>In Progress / Planned</strong></p>
+<p align="center"><strong>In Progress / To Be Implemented</strong></p>
 
 <p align="center">
   <a href="https://developer.apple.com/watchos/" style="text-decoration: none;"><img src="https://img.shields.io/badge/Apple_Watch-watchOS-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Apple Watch"></a>&nbsp;
@@ -125,8 +125,8 @@ The ML pipeline runs daily (6:30 UTC) to generate data-driven predictions for ea
 - **Feature engineering**: `features.py` — builds feature matrices from habit logs
 - **Model training**: `models.py` — generates predictions using scikit-learn
 - **Data maturity**: `maturity.py` — evaluates readiness for predictions (3 tiers):
-  - **Locked**: < 7 days of data → no predictions
-  - **Basic**: 7–29 days → basic predictions (streak_risk, trajectory)
+  - **Locked**: < 14 days of data → no predictions
+  - **Basic**: 14–29 days → basic predictions (streak_risk, trajectory)
   - **Full**: ≥ 30 days → all predictions + advanced metrics
 
 ### Predictions

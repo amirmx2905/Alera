@@ -121,19 +121,26 @@ def process_habit(
     habit_created_at = habit["created_at"]
 
     logs_df = fetch_logs(client, habit_id, profile_id)
-    tier, total_days = check_maturity(logs_df, habit_created_at)
+
+    # Fetch goal before maturity check so goal_type can inform period counting
+    # (logged-period thresholds differ between daily / weekly / monthly habits).
+    goal = fetch_goal(client, habit_id)
+    goal_target = float(goal["target_value"]) if goal else None
+    goal_type = goal["goal_type"] if goal else "daily"
+
+    tier, calendar_days, logged_periods = check_maturity(logs_df, habit_created_at, goal_type)
 
     # Locked habits: not enough data, skip entirely
     if tier == "locked":
         return tier
 
-    days_to_full = max(0, 30 - total_days)
-    metadata = {"tier": tier, "unique_days": total_days, "days_to_full": days_to_full}
-
-    # Fetch goal for feature engineering
-    goal = fetch_goal(client, habit_id)
-    goal_target = float(goal["target_value"]) if goal else None
-    goal_type = goal["goal_type"] if goal else "daily"
+    days_to_full = max(0, 30 - calendar_days)
+    metadata = {
+        "tier": tier,
+        "calendar_days": calendar_days,
+        "logged_periods": logged_periods,
+        "days_to_full": days_to_full,
+    }
 
     # Build features
     features_df = build_feature_matrix(logs_df, goal_target, goal_type, tier, habit_created_at)
@@ -145,7 +152,7 @@ def process_habit(
     upsert_prediction(client, profile_id, habit_id, "streak_risk", risk, metadata, dry_run)
 
     # Trajectory (basic + full)
-    traj = predict_trajectory(features_df, tier)
+    traj = predict_trajectory(features_df, tier, goal_type, goal_target, habit_type)
     upsert_prediction(client, profile_id, habit_id, "trajectory", traj, metadata, dry_run)
 
     # Full-tier only predictions

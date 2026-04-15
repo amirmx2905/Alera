@@ -24,7 +24,9 @@ export async function fetchHabitIdsWithLogs(
 
   if (error) throw error;
 
-  return Array.from(new Set((data || []).map((row) => row.habit_id as string)));
+  return Array.from(
+    new Set((data || []).map((row: { habit_id: string }) => row.habit_id)),
+  ) as string[];
 }
 
 export async function deleteHabitMetrics(

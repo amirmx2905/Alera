@@ -1,20 +1,20 @@
 import type { HabitLogRecord, Metric } from "./types.ts";
 import { fetchHabitAllTimeData, fetchHabitType } from "./database.ts";
 import {
+  calculateActiveDays,
+  calculateAverageValue30d,
+  calculateBestStreak,
   calculateDailyTotal,
-  calculateWeeklyAverage,
+  calculateDaysCompleted30d,
+  calculateGoalProgress,
   calculateMonthlyAverage,
   calculateStreak,
-  calculateBestStreak,
-  calculateGoalProgress,
-  calculateActiveDays,
-  calculateTotalEntriesDaily,
-  calculateTotalEntriesWeekly,
-  calculateTotalEntriesMonthly,
-  calculateDaysCompleted30d,
-  calculateAverageValue30d,
-  calculateTotalEntriesAllTime,
   calculateTodayGoalsProgress,
+  calculateTotalEntriesAllTime,
+  calculateTotalEntriesDaily,
+  calculateTotalEntriesMonthly,
+  calculateTotalEntriesWeekly,
+  calculateWeeklyAverage,
 } from "./calculator.ts";
 
 export type HabitMetricsResult = {

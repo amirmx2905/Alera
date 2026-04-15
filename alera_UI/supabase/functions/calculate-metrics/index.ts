@@ -5,17 +5,16 @@
  * Extracts auth user from JWT, calculates all metrics, and writes to database.
  */
 
-import { serve } from "std/http/server.ts";
 import type { RequestBody } from "./types.ts";
 import { getUserIdFromToken } from "./utils.ts";
 import { createSupabaseClient } from "./client.ts";
 import { ensureHabitAccess, ensureProfileAccess } from "./authz.ts";
-import { jsonResponse, corsPreflightResponse } from "./response.ts";
+import { corsPreflightResponse, jsonResponse } from "./response.ts";
 import { runMetricsPipeline } from "./pipeline.ts";
 import { getErrorMessage, getErrorStatus } from "./errors.ts";
 import { logEvent } from "./telemetry.ts";
 
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return corsPreflightResponse();
   }

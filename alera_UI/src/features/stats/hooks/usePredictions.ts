@@ -17,12 +17,17 @@ function parsePredictions(rows: Prediction[]): HabitPredictions | null {
   const anyRow = rows[0];
   const meta = (anyRow.metadata ?? {}) as {
     tier?: PredictionTier;
+    // New field names (pipeline v2+)
+    calendar_days?: number;
+    logged_periods?: number;
+    // Legacy field name — kept for backward compat with rows written before the rename
     unique_days?: number;
     days_to_full?: number;
   };
 
   const tier: PredictionTier = meta.tier ?? "basic";
-  const uniqueDays = meta.unique_days ?? 14;
+  const uniqueDays = meta.calendar_days ?? meta.unique_days ?? 14;
+  const loggedPeriods = meta.logged_periods;
   const daysToNextTier =
     tier === "basic" ? (meta.days_to_full ?? Math.max(0, 30 - uniqueDays)) : 0;
 
@@ -34,6 +39,7 @@ function parsePredictions(rows: Prediction[]): HabitPredictions | null {
   return {
     tier,
     uniqueDays,
+    loggedPeriods,
     daysToNextTier,
     streakRisk: riskRow
       ? (riskRow.value as unknown as StreakRiskPrediction)

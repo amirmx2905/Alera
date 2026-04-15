@@ -21,7 +21,9 @@ export async function ensureProfileAccess(
     throw supervisorError;
   }
 
-  const supervisorIds = (supervisorProfiles || []).map((row) => row.id);
+  const supervisorIds = (supervisorProfiles || []).map(
+    (row: { id: string }) => row.id,
+  );
   if (supervisorIds.length === 0) {
     throw new Error("Profile not found or access denied");
   }

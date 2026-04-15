@@ -76,6 +76,12 @@ export type TrajectoryPrediction = {
   rate_7d: number;
   predicted_rate_next_7d: number;
   confidence?: number;
+  forecast?: number[];
+  value_forecast?: number[];
+  avg_hit_value?: number;
+  avg_miss_value?: number;
+  /** Rolling average of logged values over the last ~4 periods (numeric habits only). */
+  recent_avg_value?: number;
 };
 
 export type GoalEtaPrediction = {
@@ -92,7 +98,10 @@ export type BestReminderPrediction = {
 
 export type HabitPredictions = {
   tier: PredictionTier;
+  /** Calendar days elapsed since the habit was created. */
   uniqueDays: number;
+  /** Distinct periods (days/weeks/months) that have at least one log entry. */
+  loggedPeriods?: number;
   daysToNextTier: number;
   streakRisk: StreakRiskPrediction | null;
   trajectory: TrajectoryPrediction | null;
@@ -101,9 +110,9 @@ export type HabitPredictions = {
 };
 
 export type GoalProjectionPoint = {
-  dayLabel: string;
+  label: string;
   dateKey: string;
-  cumulative: number;
+  value: number;
   isActual: boolean;
-  isToday: boolean;
+  isCurrent: boolean;
 };
