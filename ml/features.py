@@ -39,7 +39,7 @@ def _build_period_spine(
     goal_type: str,
 ) -> pd.DataFrame:
     """Return one row per *complete-or-current* period from creation to today."""
-    start_day = pd.to_datetime(habit_created_at).date()
+    start_day = pd.to_datetime(habit_created_at, format='ISO8601').date()
     today = date.today()
 
     period_starts: list[date] = []
@@ -107,7 +107,7 @@ def build_feature_matrix(
         logs = logs_df.copy()
         # Prefer logged_at (user-selected date) over created_at
         effective_ts = logs["logged_at"].fillna(logs["created_at"])
-        logs.loc[:, "log_date"] = pd.to_datetime(effective_ts).dt.date
+        logs.loc[:, "log_date"] = pd.to_datetime(effective_ts, format='ISO8601').dt.date
         logs.loc[:, "value"] = pd.to_numeric(logs["value"], errors="coerce").fillna(0)
         daily = logs.groupby("log_date", as_index=False).agg(
             daily_total=("value", "sum"),
@@ -223,5 +223,5 @@ def get_logging_hours(logs_df: pd.DataFrame) -> list[int]:
     """Extract the hour-of-day from each log's created_at timestamp."""
     if logs_df.empty:
         return []
-    hours = pd.to_datetime(logs_df["created_at"]).dt.hour.tolist()
+    hours = pd.to_datetime(logs_df["created_at"], format='ISO8601').dt.hour.tolist()
     return [int(h) for h in hours]

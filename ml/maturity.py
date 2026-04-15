@@ -18,7 +18,7 @@ def check_maturity(logs_df: pd.DataFrame, habit_created_at: str) -> tuple[str, i
     Returns:
         (tier, total_days) where tier is 'locked', 'basic', or 'full'.
     """
-    created = pd.to_datetime(habit_created_at).date()
+    created = pd.to_datetime(habit_created_at, format='ISO8601').date()
     total_days = (date.today() - created).days + 1  # inclusive
 
     if total_days < 14:
