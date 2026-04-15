@@ -1,5 +1,11 @@
 import type { Entry } from "../types";
-import { getMondayStartKey, parseEntryDate, toLocalDateKey } from "./dates";
+import {
+  getCdmxDateKey,
+  getMondayStartKey,
+  getMonthStartKey,
+  parseEntryDate,
+  toLocalDateKey,
+} from "./dates";
 
 type GoalType = "daily" | "weekly" | "monthly";
 
@@ -7,35 +13,40 @@ type ProgressInput = {
   entries: Entry[];
   goalAmount: number;
   goalType: GoalType;
-  now?: Date;
+  todayKey?: string;
 };
 
-function getRelevantEntries(entries: Entry[], goalType: GoalType, now: Date) {
+function getRelevantEntries(
+  entries: Entry[],
+  goalType: GoalType,
+  todayKey: string,
+) {
   if (goalType === "daily") {
-    const today = toLocalDateKey(now);
     return entries.filter(
-      (entry) => toLocalDateKey(parseEntryDate(entry.date)) === today,
+      (entry) => toLocalDateKey(parseEntryDate(entry.date)) === todayKey,
     );
   }
 
   if (goalType === "weekly") {
-    const weekStartKey = getMondayStartKey(toLocalDateKey(now));
+    const weekStartKey = getMondayStartKey(todayKey);
     return entries.filter(
       (entry) => toLocalDateKey(parseEntryDate(entry.date)) >= weekStartKey,
     );
   }
 
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  return entries.filter((entry) => parseEntryDate(entry.date) >= monthStart);
+  const monthStartKey = getMonthStartKey(todayKey);
+  return entries.filter(
+    (entry) => toLocalDateKey(parseEntryDate(entry.date)) >= monthStartKey,
+  );
 }
 
 export function getProgressData({
   entries,
   goalAmount,
   goalType,
-  now = new Date(),
+  todayKey = getCdmxDateKey(),
 }: ProgressInput) {
-  const relevantEntries = getRelevantEntries(entries, goalType, now);
+  const relevantEntries = getRelevantEntries(entries, goalType, todayKey);
   const total = relevantEntries.reduce((sum, entry) => sum + entry.amount, 0);
   const progress = goalAmount ? Math.min((total / goalAmount) * 100, 100) : 0;
 

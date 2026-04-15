@@ -1,5 +1,6 @@
 import type { Entry, Habit } from "../types";
 import {
+  getCdmxDateKey,
   getMondayStartKey,
   getMonthEndKey,
   getMonthStartKey,
@@ -40,8 +41,8 @@ export const calculateLocalStreak = (
   };
 
   if (goalType === "daily") {
-    const todayKey = toLocalDateKey(new Date());
-    const cursor = new Date();
+    const todayKey = getCdmxDateKey();
+    const cursor = new Date(`${todayKey}T00:00:00`);
     if (!isDayComplete(todayKey)) {
       cursor.setDate(cursor.getDate() - 1);
     }
@@ -71,7 +72,7 @@ export const calculateLocalStreak = (
     {},
   );
 
-  const todayKey = toLocalDateKey(new Date());
+  const todayKey = getCdmxDateKey();
   const currentPeriodKey =
     goalType === "weekly"
       ? getMondayStartKey(todayKey)

@@ -7,15 +7,39 @@ import { DotLoader } from "../../../components/shared/DotLoader";
 import { GoalProjectionChart } from "./GoalProjectionChart";
 
 const RISK_COLORS = {
-  low: { bg: "bg-green-500/15", border: "border-green-400/30", text: "text-green-300" },
-  medium: { bg: "bg-yellow-500/15", border: "border-yellow-400/30", text: "text-yellow-300" },
-  high: { bg: "bg-red-500/15", border: "border-red-400/30", text: "text-red-300" },
+  low: {
+    bg: "bg-green-500/15",
+    border: "border-green-400/30",
+    text: "text-green-300",
+  },
+  medium: {
+    bg: "bg-yellow-500/15",
+    border: "border-yellow-400/30",
+    text: "text-yellow-300",
+  },
+  high: {
+    bg: "bg-red-500/15",
+    border: "border-red-400/30",
+    text: "text-red-300",
+  },
 };
 
 const DIRECTION_CONFIG = {
-  improving: { icon: "trending-up" as const, color: "#4ade80", label: "Improving" },
-  declining: { icon: "trending-down" as const, color: "#f87171", label: "Declining" },
-  stable: { icon: "remove-outline" as const, color: "#94a3b8", label: "Stable" },
+  improving: {
+    icon: "trending-up" as const,
+    color: "#4ade80",
+    label: "Improving",
+  },
+  declining: {
+    icon: "trending-down" as const,
+    color: "#f87171",
+    label: "Declining",
+  },
+  stable: {
+    icon: "remove-outline" as const,
+    color: "#94a3b8",
+    label: "Stable",
+  },
 };
 
 type StatsInsightsCardProps = {
@@ -97,7 +121,9 @@ function InsightsHeader({ badge }: { badge?: string }) {
           </View>
         ) : null}
       </View>
-      <Text className="text-[10px] text-slate-500">Updates daily at 12:30 AM</Text>
+      <Text className="text-[10px] text-slate-500">
+        Updates daily at 12:30 AM
+      </Text>
     </View>
   );
 }
@@ -201,7 +227,11 @@ function FullInsights({
   );
 }
 
-function StreakRiskCard({ risk }: { risk: HabitPredictions["streakRisk"] & {} }) {
+function StreakRiskCard({
+  risk,
+}: {
+  risk: HabitPredictions["streakRisk"] & {};
+}) {
   const style = RISK_COLORS[risk.risk_label];
   return (
     <View className={`rounded-2xl border ${style.border} ${style.bg} p-4`}>
@@ -216,7 +246,11 @@ function StreakRiskCard({ risk }: { risk: HabitPredictions["streakRisk"] & {} })
   );
 }
 
-function TrajectoryCard({ trajectory }: { trajectory: HabitPredictions["trajectory"] & {} }) {
+function TrajectoryCard({
+  trajectory,
+}: {
+  trajectory: HabitPredictions["trajectory"] & {};
+}) {
   const config = DIRECTION_CONFIG[trajectory.direction];
   return (
     <View className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -226,7 +260,7 @@ function TrajectoryCard({ trajectory }: { trajectory: HabitPredictions["trajecto
         <Text className="text-xl font-bold text-white">{config.label}</Text>
       </View>
       <Text className="text-xs text-slate-500">
-        7d rate: {Math.round(trajectory.rate_7d * 100)}%
+        recent rate: {Math.round(trajectory.rate_7d * 100)}%
       </Text>
     </View>
   );

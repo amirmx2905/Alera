@@ -69,7 +69,12 @@ export function PreloadProvider({ children }: { children: React.ReactNode }) {
   const hasFetchedRef = useRef(false);
 
   useEffect(() => {
-    if (!session || hasFetchedRef.current) return;
+    if (!session) {
+      // Reset so the next login always re-fetches for the correct account
+      hasFetchedRef.current = false;
+      return;
+    }
+    if (hasFetchedRef.current) return;
     hasFetchedRef.current = true;
 
     // Stats metrics — fire all 5 queries in parallel

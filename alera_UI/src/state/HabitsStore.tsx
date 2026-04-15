@@ -322,13 +322,6 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
     });
   }, [hasHydrated, refreshHabits, sessionUserId]);
 
-  useEffect(() => {
-    if (!sessionUserId || !hasHydrated) return;
-    refreshStreaks().catch(() => {
-      // ignore streak refresh failures here
-    });
-  }, [hasHydrated, refreshStreaks, sessionUserId]);
-
   const dataValue = useMemo<HabitsDataValue>(
     () => ({
       habits,

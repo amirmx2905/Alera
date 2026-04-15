@@ -136,7 +136,7 @@ def process_habit(
     goal_type = goal["goal_type"] if goal else "daily"
 
     # Build features
-    features_df = build_feature_matrix(logs_df, goal_target, tier, habit_created_at)
+    features_df = build_feature_matrix(logs_df, goal_target, goal_type, tier, habit_created_at)
     if features_df.empty:
         return tier
 

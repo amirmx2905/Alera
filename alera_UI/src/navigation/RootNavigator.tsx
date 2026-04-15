@@ -13,7 +13,7 @@ import { SupervisedViewScreen } from "../features/supervision/screens/Supervised
 import { SupervisedCreateHabitScreen } from "../features/supervision/screens/SupervisedCreateHabitScreen";
 import { AddSupervisedScreen } from "../features/supervision/screens/AddSupervisedScreen";
 import { useAuth } from "../state/AuthStore";
-import { View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { getProfile } from "../services/profile.ts";
 import { AppBackground } from "../layouts/AppBackground.tsx";
 import { DotLoader } from "../components/shared/DotLoader.tsx";
@@ -64,8 +64,9 @@ function AppTabsShell() {
 export function RootNavigator() {
   const { session, isLoading: isAuthLoading } = useAuth();
   const [profileStatus, setProfileStatus] = useState<
-    "loading" | "missing" | "ready"
+    "loading" | "missing" | "ready" | "error"
   >("loading");
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     if (!session) {
@@ -83,21 +84,43 @@ export function RootNavigator() {
       })
       .catch(() => {
         if (!isMounted) return;
-        setProfileStatus("missing");
+        setProfileStatus("error");
       });
 
     return () => {
       isMounted = false;
     };
-  }, [session?.user.id]);
+  }, [session?.user.id, retryCount]);
 
   const handleProfileComplete = () => setProfileStatus("ready");
+  const handleRetry = () => {
+    setProfileStatus("loading");
+    setRetryCount((n) => n + 1);
+  };
 
   if (isAuthLoading || (session && profileStatus === "loading")) {
     return (
       <AppBackground>
         <View className="flex-1 items-center justify-center">
           <DotLoader />
+        </View>
+      </AppBackground>
+    );
+  }
+
+  if (session && profileStatus === "error") {
+    return (
+      <AppBackground>
+        <View className="flex-1 items-center justify-center px-8 gap-6">
+          <Text className="text-white text-center text-base">
+            Unable to load your profile. Check your connection and try again.
+          </Text>
+          <Pressable
+            onPress={handleRetry}
+            className="rounded-2xl bg-purple-600 px-8 py-3"
+          >
+            <Text className="text-white font-semibold">Try again</Text>
+          </Pressable>
         </View>
       </AppBackground>
     );
@@ -145,7 +168,9 @@ export function RootNavigator() {
           )}
         </RootStack.Screen>
         <RootStack.Screen name="SupervisedView">
-          {(props: NativeStackScreenProps<RootStackParamList, "SupervisedView">) => (
+          {(
+            props: NativeStackScreenProps<RootStackParamList, "SupervisedView">,
+          ) => (
             <AppBackground>
               <SupervisedViewScreen {...props} />
             </AppBackground>
@@ -155,7 +180,12 @@ export function RootNavigator() {
           name="SupervisedCreateHabit"
           options={{ presentation: "modal", gestureEnabled: true }}
         >
-          {(props: NativeStackScreenProps<RootStackParamList, "SupervisedCreateHabit">) => (
+          {(
+            props: NativeStackScreenProps<
+              RootStackParamList,
+              "SupervisedCreateHabit"
+            >,
+          ) => (
             <AppBackground>
               <SupervisedCreateHabitScreen {...props} />
             </AppBackground>
@@ -165,7 +195,9 @@ export function RootNavigator() {
           name="AddSupervised"
           options={{ presentation: "modal", gestureEnabled: true }}
         >
-          {(props: NativeStackScreenProps<RootStackParamList, "AddSupervised">) => (
+          {(
+            props: NativeStackScreenProps<RootStackParamList, "AddSupervised">,
+          ) => (
             <AppBackground>
               <AddSupervisedScreen {...props} />
             </AppBackground>

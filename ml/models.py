@@ -14,15 +14,15 @@ from features import get_logging_hours
 
 _BASIC_FEATURES = [
     "day_of_week",
-    "completion_rate_7d",
-    "completion_rate_14d",
+    "completion_rate_short",
+    "completion_rate_long",
     "current_streak",
-    "days_since_last_completion",
+    "periods_since_last_completion",
 ]
 
 _FULL_FEATURES = _BASIC_FEATURES + [
-    "trend_slope_7d",
-    "trend_slope_14d",
+    "trend_slope_short",
+    "trend_slope_long",
     "value_variance",
 ]
 
@@ -92,37 +92,37 @@ def predict_trajectory(features_df: pd.DataFrame, tier: str) -> dict:
     """Predict whether the habit is improving, stable, or declining."""
     df = features_df.copy()
 
-    if len(df) < 7:
+    if len(df) < 4:
         return {"direction": "stable", "rate_7d": 0.0, "predicted_rate_next_7d": 0.0}
 
-    rate_7d = float(df["completion_rate_7d"].iloc[-1])
+    rate_short = float(df["completion_rate_short"].iloc[-1])
 
     if tier == "basic":
-        # Linear regression on the completion_rate_7d time series
-        y = df["completion_rate_7d"].values
+        # Linear regression on the completion_rate_short time series
+        y = df["completion_rate_short"].values
         X = np.arange(len(y)).reshape(-1, 1)
         model = LinearRegression()
         model.fit(X, y)
         slope = float(model.coef_[0])
-        next_x = np.array([[len(y) + 6]])  # 7 days ahead
+        next_x = np.array([[len(y) + 3]])  # ~4 periods ahead
         predicted = float(np.clip(model.predict(next_x)[0], 0, 1))
         direction = _classify_direction(slope)
 
         return {
             "direction": direction,
-            "rate_7d": round(rate_7d, 3),
+            "rate_7d": round(rate_short, 3),
             "predicted_rate_next_7d": round(predicted, 3),
         }
     else:
         # GradientBoosting on richer features
-        cols = ["completion_rate_7d", "completion_rate_14d", "trend_slope_7d", "day_of_week"]
+        cols = ["completion_rate_short", "completion_rate_long", "trend_slope_short", "day_of_week"]
         cols = [c for c in cols if c in df.columns]
 
-        # Target: completion_rate_7d shifted 7 days forward
-        df.loc[:, "target"] = df["completion_rate_7d"].shift(-7)
+        # Target: completion_rate_short shifted 4 periods forward
+        df.loc[:, "target"] = df["completion_rate_short"].shift(-4)
         train = df.dropna(subset=["target"])
 
-        if len(train) < 7:
+        if len(train) < 4:
             # Not enough data for GBR, fall back to linear
             return predict_trajectory(features_df, "basic")
 
@@ -135,12 +135,12 @@ def predict_trajectory(features_df: pd.DataFrame, tier: str) -> dict:
         last_row = df[cols].iloc[[-1]].values
         predicted = float(np.clip(model.predict(last_row)[0], 0, 1))
 
-        slope = predicted - rate_7d
+        slope = predicted - rate_short
         direction = _classify_direction(slope)
 
         return {
             "direction": direction,
-            "rate_7d": round(rate_7d, 3),
+            "rate_7d": round(rate_short, 3),
             "predicted_rate_next_7d": round(predicted, 3),
             "confidence": round(float(model.score(X, y)), 3) if len(X) > 0 else 0.0,
         }
@@ -167,12 +167,12 @@ def predict_goal_eta(
     """Estimate how many days until the user consistently meets their goal."""
     df = features_df.copy()
 
-    if len(df) < 14:
+    if len(df) < 8:
         return {"estimated_days": None, "on_track": False, "projected_completion_rate": 0.0}
 
     if habit_type == "binary":
-        # For binary habits, "meeting the goal" means completion rate >= threshold
-        current_rate = float(df["completion_rate_7d"].iloc[-1])
+        # For binary habits, "meeting the goal" means period completion rate >= threshold
+        current_rate = float(df["completion_rate_short"].iloc[-1])
         threshold = _goal_threshold(goal_type)
 
         if current_rate >= threshold:
@@ -182,22 +182,15 @@ def predict_goal_eta(
                 "projected_completion_rate": round(current_rate, 3),
             }
 
-        # Calculate velocity of completion rate improvement
-        recent = df["completion_rate_7d"].iloc[-7:].values
-        older = df["completion_rate_7d"].iloc[-14:-7].values
-        velocity = (float(np.mean(recent)) - float(np.mean(older))) / 7
+        # Calculate velocity of completion rate improvement over periods
+        recent = df["completion_rate_short"].iloc[-4:].values
+        older = df["completion_rate_short"].iloc[-8:-4].values
+        velocity = (float(np.mean(recent)) - float(np.mean(older))) / 4
     else:
-        # For numeric habits, compare average daily value to target
-        current_avg = float(df["avg_value_7d"].iloc[-1])
-
-        if goal_type == "daily":
-            effective_target = goal_target
-        elif goal_type == "weekly":
-            effective_target = goal_target / 7
-        else:  # monthly
-            effective_target = goal_target / 30
-
-        current_rate = min(current_avg / effective_target, 1.0) if effective_target > 0 else 0.0
+        # For numeric habits, compare average period value directly to the period target.
+        # avg_value_short is already summed per period so no division by 7/30 needed.
+        current_avg = float(df["avg_value_short"].iloc[-1])
+        current_rate = min(current_avg / goal_target, 1.0) if goal_target > 0 else 0.0
         threshold = 0.8
 
         if current_rate >= threshold:
@@ -207,9 +200,9 @@ def predict_goal_eta(
                 "projected_completion_rate": round(current_rate, 3),
             }
 
-        recent_avg = float(df["avg_value_7d"].iloc[-7:].mean())
-        older_avg = float(df["avg_value_7d"].iloc[-14:-7].mean())
-        velocity = (recent_avg - older_avg) / 7
+        recent_avg = float(df["avg_value_short"].iloc[-4:].mean())
+        older_avg = float(df["avg_value_short"].iloc[-8:-4].mean())
+        velocity = (recent_avg - older_avg) / 4
 
     if velocity <= 0:
         return {
