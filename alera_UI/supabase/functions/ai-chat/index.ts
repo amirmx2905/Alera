@@ -23,7 +23,6 @@ function jsonResponse(data: unknown, status = 200) {
     status,
     headers: {
       "Content-Type": "application/json",
-      Connection: "keep-alive",
       ...corsHeaders,
     },
   });

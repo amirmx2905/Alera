@@ -175,100 +175,6 @@ export async function fetchHabitAllTimeData(
 }
 
 /**
- * Fetch goal target for a habit
- */
-export async function fetchHabitGoalTarget(
-  supabase: any,
-  profileId: string,
-  habitId: string,
-): Promise<number | null> {
-  const { data, error } = await supabase
-    .from("user_goals")
-    .select("target_value")
-    .eq("profile_id", profileId)
-    .eq("habit_id", habitId)
-    .maybeSingle();
-
-  if (error) throw error;
-  return data?.target_value ?? null;
-}
-
-export type HabitGoalConfig = {
-  target_value: number;
-  goal_type: "daily" | "weekly" | "monthly";
-};
-
-export type HabitType = "numeric" | "binary";
-
-/**
- * Fetch goal target and goal type for a habit
- */
-export async function fetchHabitGoalConfig(
-  supabase: any,
-  profileId: string,
-  habitId: string,
-): Promise<HabitGoalConfig | null> {
-  const { data, error } = await supabase
-    .from("user_goals")
-    .select("target_value, goal_type")
-    .eq("profile_id", profileId)
-    .eq("habit_id", habitId)
-    .maybeSingle();
-
-  if (error) throw error;
-  if (!data) return null;
-  return {
-    target_value: Number(data.target_value ?? 0),
-    goal_type: data.goal_type as "daily" | "weekly" | "monthly",
-  };
-}
-
-/**
- * Fetch habit type
- */
-export async function fetchHabitType(
-  supabase: any,
-  profileId: string,
-  habitId: string,
-): Promise<HabitType | null> {
-  const { data, error } = await supabase
-    .from("habits")
-    .select("type")
-    .eq("profile_id", profileId)
-    .eq("id", habitId)
-    .maybeSingle();
-
-  if (error) throw error;
-  return (data?.type as HabitType) ?? null;
-}
-
-/**
- * Fetch goal targets for a list of habits
- */
-export async function fetchHabitGoalTargets(
-  supabase: any,
-  profileId: string,
-  habitIds: string[],
-): Promise<Record<string, number>> {
-  if (habitIds.length === 0) return {};
-
-  const { data, error } = await supabase
-    .from("user_goals")
-    .select("habit_id, target_value")
-    .eq("profile_id", profileId)
-    .in("habit_id", habitIds);
-
-  if (error) throw error;
-
-  const targets: Record<string, number> = {};
-  for (const row of data || []) {
-    targets[row.habit_id as string] = row.target_value as number;
-  }
-
-  return targets;
-}
-
-/**
  * Write metrics to database using upsert
  */
 export async function writeMetrics(
@@ -280,123 +186,32 @@ export async function writeMetrics(
   const habitMetrics = metrics.filter((m) => m.habit_id);
   const profileMetrics = metrics.filter((m) => !m.habit_id);
 
-  const legacyUpsert = async () => {
-    const upsertMetric = async (
-      payload: Record<string, unknown>,
-      match: Record<string, unknown>,
-      isProfileMetric: boolean,
-    ) => {
-      let updateQuery = supabase.from("metrics").update(payload).match(match);
-      if (isProfileMetric) {
-        updateQuery = updateQuery.is("habit_id", null);
-      }
-
-      const { data: updated, error: updateError } = await updateQuery.select(
-        "id",
-      );
-      if (updateError) throw updateError;
-
-      if (updated?.length) return;
-
-      const { error: insertError } = await supabase
-        .from("metrics")
-        .insert(payload);
-
-      if (insertError) throw insertError;
-    };
-
-    if (habitMetrics.length > 0) {
-      for (const metric of habitMetrics) {
-        const payload = {
-          profile_id: metric.profile_id,
-          habit_id: metric.habit_id,
-          date: metric.date,
-          metric_type: metric.metric_type,
-          granularity: metric.granularity,
-          value: metric.value,
-          metadata: metric.metadata,
-        };
-        await upsertMetric(
-          payload,
-          {
-            profile_id: metric.profile_id,
-            habit_id: metric.habit_id,
-            date: metric.date,
-            metric_type: metric.metric_type,
-            granularity: metric.granularity,
-          },
-          false,
-        );
-      }
-    }
-
-    if (profileMetrics.length > 0) {
-      for (const metric of profileMetrics) {
-        const payload = {
-          profile_id: metric.profile_id,
-          habit_id: null,
-          date: metric.date,
-          metric_type: metric.metric_type,
-          granularity: metric.granularity,
-          value: metric.value,
-          metadata: metric.metadata,
-        };
-        await upsertMetric(
-          payload,
-          {
-            profile_id: metric.profile_id,
-            date: metric.date,
-            metric_type: metric.metric_type,
-            granularity: metric.granularity,
-          },
-          true,
-        );
-      }
-    }
-  };
+  const toPayload = (m: Metric) => ({
+    profile_id: m.profile_id,
+    habit_id: m.habit_id,
+    date: m.date,
+    metric_type: m.metric_type,
+    granularity: m.granularity,
+    value: m.value,
+    metadata: m.metadata,
+  });
 
   if (habitMetrics.length > 0) {
-    const payload = habitMetrics.map((metric) => ({
-      profile_id: metric.profile_id,
-      habit_id: metric.habit_id,
-      date: metric.date,
-      metric_type: metric.metric_type,
-      granularity: metric.granularity,
-      value: metric.value,
-      metadata: metric.metadata,
-    }));
-    const { error } = await supabase.from("metrics").upsert(payload, {
-      onConflict: "profile_id,habit_id,date,metric_type,granularity",
-    });
-    if (error) {
-      if (error.code === "42P10") {
-        await legacyUpsert();
-        return metrics.length;
-      }
-      throw error;
-    }
+    const { error } = await supabase
+      .from("metrics")
+      .upsert(habitMetrics.map(toPayload), {
+        onConflict: "profile_id,habit_id,date,metric_type,granularity",
+      });
+    if (error) throw error;
   }
 
   if (profileMetrics.length > 0) {
-    const payload = profileMetrics.map((metric) => ({
-      profile_id: metric.profile_id,
-      habit_id: null,
-      date: metric.date,
-      metric_type: metric.metric_type,
-      granularity: metric.granularity,
-      value: metric.value,
-      metadata: metric.metadata,
-    }));
-    const { error } = await supabase.from("metrics").upsert(payload, {
-      onConflict: "profile_id,date,metric_type,granularity",
-    });
-    if (error) {
-      if (error.code === "42P10") {
-        await legacyUpsert();
-        return metrics.length;
-      }
-      throw error;
-    }
+    const { error } = await supabase
+      .from("metrics")
+      .upsert(profileMetrics.map(toPayload), {
+        onConflict: "profile_id,date,metric_type,granularity",
+      });
+    if (error) throw error;
   }
 
   return metrics.length;

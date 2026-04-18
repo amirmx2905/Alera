@@ -26,19 +26,3 @@ export interface Metric {
   value: number;
   metadata: Record<string, any>;
 }
-
-export interface MetricsResponse {
-  success: boolean;
-  profile_id: string;
-  habit_id: string | null;
-  logical_date: string;
-  records_found: number;
-  metrics_calculated: number;
-  metrics_written: number;
-  metrics: Array<{ type: string; value: number }>;
-}
-
-export interface ErrorResponse {
-  success: false;
-  error: string;
-}

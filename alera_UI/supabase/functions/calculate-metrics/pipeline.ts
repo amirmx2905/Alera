@@ -1,7 +1,7 @@
 import type { Metric } from "./types.ts";
 import { getTodayInCDMX } from "./utils.ts";
 import { fetchRecordsForDate, writeMetrics } from "./database.ts";
-import { calculateGoalProgressForHabits } from "./calculator.ts";
+import { calculateGoalProgressForHabits } from "./goal-calculator.ts";
 import {
   calculateHabitMetrics,
   calculateProfileMetrics,
@@ -119,9 +119,10 @@ export async function runMetricsPipeline({
     logEvent("info", "metrics.pipeline.habit_metrics.delete", {
       profile_id: profileId,
       habit_id: habitId,
-      reason: habitMetrics.length === 0
-        ? "no_habit_metrics"
-        : "should_delete_habit_metrics",
+      reason:
+        habitMetrics.length === 0
+          ? "no_habit_metrics"
+          : "should_delete_habit_metrics",
     });
     habitMetricsDeleted = await deleteHabitMetrics(
       supabase,

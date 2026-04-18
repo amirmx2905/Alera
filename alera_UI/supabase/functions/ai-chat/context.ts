@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { TIMEZONE } from "./datetime.ts";
+import { TIMEZONE } from "./config.ts";
 
 type ContextItem = Record<string, unknown>;
 
@@ -12,24 +12,26 @@ type HabitRecord = {
 };
 
 /**
- * Get today's date in CDMX timezone (YYYY-MM-DD format)
+ * Get a YYYY-MM-DD date key for a given Date in the configured timezone
  */
-function getTodayInCDMX(): string {
-  const now = new Date(
-    new Date().toLocaleString("en-US", { timeZone: TIMEZONE }),
-  );
-  return now.toISOString().split("T")[0];
+function toDateKeyInTZ(date: Date): string {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return formatter.format(date);
 }
 
-/**
- * Get date N days ago in CDMX timezone
- */
+function getTodayInCDMX(): string {
+  return toDateKeyInTZ(new Date());
+}
+
 function getDaysAgoInCDMX(daysAgo: number): string {
-  const now = new Date(
-    new Date().toLocaleString("en-US", { timeZone: TIMEZONE }),
-  );
+  const now = new Date();
   now.setDate(now.getDate() - daysAgo);
-  return now.toISOString().split("T")[0];
+  return toDateKeyInTZ(now);
 }
 
 export async function buildContext(
@@ -136,10 +138,10 @@ export async function buildContext(
     habits: habits ?? [],
     profile: profile
       ? {
-        id: profile.id,
-        first_name: profile.first_name,
-        last_name: profile.last_name,
-      }
+          id: profile.id,
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+        }
       : null,
   };
 }

@@ -7,12 +7,42 @@
 
 import type { RequestBody } from "./types.ts";
 import { getUserIdFromToken } from "./utils.ts";
-import { createSupabaseClient } from "./client.ts";
+import { createClient } from "@supabase/supabase-js";
 import { ensureHabitAccess, ensureProfileAccess } from "./authz.ts";
-import { corsPreflightResponse, jsonResponse } from "./response.ts";
 import { runMetricsPipeline } from "./pipeline.ts";
-import { getErrorMessage, getErrorStatus } from "./errors.ts";
 import { logEvent } from "./telemetry.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers":
+    "Content-Type, Authorization, apikey, x-client-info",
+};
+
+const corsPreflightResponse = () =>
+  new Response(null, { status: 204, headers: corsHeaders });
+
+const jsonResponse = (payload: unknown, status = 200) =>
+  new Response(JSON.stringify(payload), {
+    status,
+    headers: { "Content-Type": "application/json", ...corsHeaders },
+  });
+
+const createSupabaseClient = () =>
+  createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+  );
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Unknown error";
+}
+
+function getErrorStatus(message: string) {
+  const isAuthError =
+    message.includes("auth token") || message.includes("Invalid auth");
+  return isAuthError ? 401 : 500;
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -28,7 +58,7 @@ Deno.serve(async (req: Request) => {
     const isProfileOnly = !habit_id;
 
     if (!profile_id) {
-      return jsonResponse({ error: "profile_id is required" }, { status: 400 });
+      return jsonResponse({ error: "profile_id is required" }, 400);
     }
 
     // Get auth user id from JWT token
@@ -42,7 +72,7 @@ Deno.serve(async (req: Request) => {
     } catch (error) {
       return jsonResponse(
         { error: error instanceof Error ? error.message : "Access denied" },
-        { status: 403 },
+        403,
       );
     }
 
@@ -52,7 +82,7 @@ Deno.serve(async (req: Request) => {
       } catch (error) {
         return jsonResponse(
           { error: error instanceof Error ? error.message : "Access denied" },
-          { status: 403 },
+          403,
         );
       }
     }
@@ -85,7 +115,7 @@ Deno.serve(async (req: Request) => {
         success: false,
         error: errorMessage,
       },
-      { status },
+      status,
     );
   }
 });

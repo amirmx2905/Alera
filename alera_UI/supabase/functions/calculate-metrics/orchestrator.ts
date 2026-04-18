@@ -1,60 +1,36 @@
 import type { HabitLogRecord, Metric } from "./types.ts";
-import { fetchHabitAllTimeData, fetchHabitType } from "./database.ts";
+import { fetchHabitAllTimeData } from "./database.ts";
 import {
-  calculateActiveDays,
-  calculateAverageValue30d,
-  calculateBestStreak,
+  deleteBestStreakOverall,
+  deleteStreakMetric,
+  fetchHabitType,
+} from "./repositories.ts";
+import {
   calculateDailyTotal,
-  calculateDaysCompleted30d,
-  calculateGoalProgress,
   calculateMonthlyAverage,
   calculateStreak,
-  calculateTodayGoalsProgress,
+  calculateWeeklyAverage,
+} from "./habit-calculator.ts";
+import {
+  calculateAverageValue30d,
+  calculateBestStreak,
+  calculateDaysCompleted30d,
+  calculateGoalProgress,
   calculateTotalEntriesAllTime,
+} from "./goal-calculator.ts";
+import {
+  calculateActiveDays,
+  calculateTodayGoalsProgress,
   calculateTotalEntriesDaily,
   calculateTotalEntriesMonthly,
   calculateTotalEntriesWeekly,
-  calculateWeeklyAverage,
-} from "./calculator.ts";
+} from "./profile-calculator.ts";
 
 export type HabitMetricsResult = {
   habitMetrics: Metric[];
   bestStreak: Metric | null;
   shouldDeleteHabitMetrics: boolean;
 };
-
-async function deleteBestStreakOverall(supabase: any, profileId: string) {
-  const { error } = await supabase
-    .from("metrics")
-    .delete()
-    .eq("profile_id", profileId)
-    .is("habit_id", null)
-    .eq("metric_type", "best_streak_overall");
-
-  if (error) {
-    console.error("Error deleting best_streak_overall:", error);
-  }
-}
-
-async function deleteStreakMetric(
-  supabase: any,
-  profileId: string,
-  habitId: string,
-  targetDate: string,
-) {
-  const { error } = await supabase
-    .from("metrics")
-    .delete()
-    .eq("profile_id", profileId)
-    .eq("habit_id", habitId)
-    .eq("metric_type", "streak")
-    .eq("granularity", "daily")
-    .eq("date", targetDate);
-
-  if (error) {
-    console.error("Error deleting streak metric:", error);
-  }
-}
 
 export async function calculateHabitMetrics(
   supabase: any,
@@ -129,11 +105,11 @@ export async function calculateHabitMetrics(
     if (monthlyAvg) habitMetrics.push(monthlyAvg);
   }
 
-  const bestStreak = await calculateBestStreak(
-    supabase,
+  const bestStreak = calculateBestStreak(
     profileId,
     habitId,
     targetDate,
+    allTimeRecords,
   );
   if (bestStreak) habitMetrics.push(bestStreak);
 
@@ -155,11 +131,11 @@ export async function calculateHabitMetrics(
     if (avgValue) habitMetrics.push(avgValue);
   }
 
-  const totalAllTime = await calculateTotalEntriesAllTime(
-    supabase,
+  const totalAllTime = calculateTotalEntriesAllTime(
     profileId,
     habitId,
     targetDate,
+    allTimeRecords,
   );
   if (totalAllTime) habitMetrics.push(totalAllTime);
 
