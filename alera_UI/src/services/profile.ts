@@ -64,6 +64,7 @@ export async function getProfile(): Promise<Profile | null> {
 
     return (data as Profile) || null;
   } catch {
+    // Swallow query errors — caller treats null as "no profile"
     return null;
   }
 }

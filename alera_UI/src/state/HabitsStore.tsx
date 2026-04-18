@@ -23,6 +23,8 @@ import {
   toggleHabitArchiveStatus,
   writeCachedHabits,
 } from "../features/habits/habitsStoreData";
+
+export type { HabitsContextValue } from "../features/habits/habitsStoreData";
 import type { Entry, Habit } from "../features/habits/types";
 import { getCdmxDateKey, toLocalDateKey } from "../features/habits/utils/dates";
 import {
@@ -40,7 +42,9 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
   const [categories, setCategories] = useState<HabitCategory[]>([]);
   const [categoryMap, setCategoryMap] = useState<Record<string, string>>({});
   const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
-  const [streaksByHabitId, setStreaksByHabitId] = useState<Record<string, number>>({});
+  const [streaksByHabitId, setStreaksByHabitId] = useState<
+    Record<string, number>
+  >({});
   const [isStreaksLoading, setIsStreaksLoading] = useState(false);
   const [hasHydrated, setHasHydrated] = useState(false);
   const habitsRef = useRef<Habit[]>([]);
@@ -98,7 +102,11 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
           const expectedDate = getExpectedMetricDate(habit.goalType, todayKey);
           acc[habit.id] =
             !payload || payload.date < expectedDate
-              ? calculateLocalStreak(habit.entries, habit.goalType, habit.goalAmount)
+              ? calculateLocalStreak(
+                  habit.entries,
+                  habit.goalType,
+                  habit.goalAmount,
+                )
               : payload.value;
           return acc;
         }, {}),
@@ -116,7 +124,11 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
           const entries = transformEntries(habit.entries);
           setStreaksByHabitId((prev) => ({
             ...prev,
-            [habitId]: calculateLocalStreak(entries, habit.goalType, habit.goalAmount),
+            [habitId]: calculateLocalStreak(
+              entries,
+              habit.goalType,
+              habit.goalAmount,
+            ),
           }));
           return { ...habit, entries };
         }),
@@ -316,22 +328,6 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
       {children}
     </HabitsContext.Provider>
   );
-}
-
-export function useHabitsData() {
-  const context = useContext(HabitsContext);
-  if (!context) {
-    throw new Error("useHabitsData must be used within HabitsProvider");
-  }
-  return context;
-}
-
-export function useHabitsActions() {
-  const context = useContext(HabitsContext);
-  if (!context) {
-    throw new Error("useHabitsActions must be used within HabitsProvider");
-  }
-  return context;
 }
 
 export function useHabits(): HabitsContextValue {

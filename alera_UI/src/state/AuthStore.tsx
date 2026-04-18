@@ -45,6 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(data.session ?? null);
         }
       } catch {
+        // Session bootstrap failed — treat as signed-out
         if (isMounted) setSession(null);
       } finally {
         if (isMounted) setIsLoading(false);

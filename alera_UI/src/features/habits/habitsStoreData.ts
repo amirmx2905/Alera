@@ -158,6 +158,7 @@ export const readCachedHabits = async (sessionUserId: string) => {
     const parsed = JSON.parse(cached) as Habit[];
     return Array.isArray(parsed) ? parsed : null;
   } catch {
+    // Corrupted cache — discard and let network refresh
     return null;
   }
 };
