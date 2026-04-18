@@ -35,7 +35,7 @@ function Wrapper({ children }: { children: React.ReactNode }) {
 describe("useHabits outside provider", () => {
   it("throws when used outside HabitsProvider", () => {
     expect(() => renderHook(() => useHabits())).toThrow(
-      "useHabitsData must be used within HabitsProvider",
+      "useHabits must be used within HabitsProvider",
     );
   });
 });

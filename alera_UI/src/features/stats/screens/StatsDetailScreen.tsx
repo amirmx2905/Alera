@@ -216,15 +216,15 @@ export function StatsDetailScreen() {
           )}
         </View>
 
-        {isBinaryHabit ? null : (
-          <StatsPeriodSelector value={granularity} onChange={setGranularity} />
-        )}
-        {isBinaryHabit ? null : (
-          <StatsTrendChart
-            title="Logged amount"
-            headerRightLabel={selectedPeriodLabel}
-            points={habitTrend}
-          />
+        {!isBinaryHabit && (
+          <>
+            <StatsPeriodSelector value={granularity} onChange={setGranularity} />
+            <StatsTrendChart
+              title="Logged amount"
+              headerRightLabel={selectedPeriodLabel}
+              points={habitTrend}
+            />
+          </>
         )}
         <StatsCalendarStrip
           days={detail.calendar30Days}

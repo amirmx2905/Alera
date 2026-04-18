@@ -30,33 +30,7 @@ import {
   getExpectedMetricDate,
 } from "../features/habits/utils/habitStreaks";
 
-// --- Split contexts ---
-
-type HabitsDataValue = {
-  habits: Habit[];
-  isLoading: boolean;
-  streaksByHabitId: Record<string, number>;
-  isStreaksLoading: boolean;
-  categories: HabitCategory[];
-  isCategoriesLoading: boolean;
-};
-
-type HabitsActionsValue = {
-  refreshHabits: (options?: { silent?: boolean }) => Promise<void>;
-  refreshStreaks: () => Promise<void>;
-  createHabitWithGoal: (payload: CreateHabitWithGoalPayload) => Promise<void>;
-  addEntry: (habitId: string, entry: Entry) => void;
-  updateEntry: (habitId: string, entryId: string, amount: number) => void;
-  deleteEntry: (habitId: string, entryId: string) => void;
-  toggleArchive: (id: string) => Promise<void>;
-  removeHabit: (id: string) => Promise<void>;
-};
-
-export type { HabitsDataValue, HabitsActionsValue };
-export const HabitsDataContext = createContext<HabitsDataValue | null>(null);
-export const HabitsActionsContext = createContext<HabitsActionsValue | null>(
-  null,
-);
+export const HabitsContext = createContext<HabitsContextValue | null>(null);
 
 export function HabitsProvider({ children }: { children: React.ReactNode }) {
   const { session } = useAuth();
@@ -66,9 +40,7 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
   const [categories, setCategories] = useState<HabitCategory[]>([]);
   const [categoryMap, setCategoryMap] = useState<Record<string, string>>({});
   const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
-  const [streaksByHabitId, setStreaksByHabitId] = useState<
-    Record<string, number>
-  >({});
+  const [streaksByHabitId, setStreaksByHabitId] = useState<Record<string, number>>({});
   const [isStreaksLoading, setIsStreaksLoading] = useState(false);
   const [hasHydrated, setHasHydrated] = useState(false);
   const habitsRef = useRef<Habit[]>([]);
@@ -126,11 +98,7 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
           const expectedDate = getExpectedMetricDate(habit.goalType, todayKey);
           acc[habit.id] =
             !payload || payload.date < expectedDate
-              ? calculateLocalStreak(
-                  habit.entries,
-                  habit.goalType,
-                  habit.goalAmount,
-                )
+              ? calculateLocalStreak(habit.entries, habit.goalType, habit.goalAmount)
               : payload.value;
           return acc;
         }, {}),
@@ -148,11 +116,7 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
           const entries = transformEntries(habit.entries);
           setStreaksByHabitId((prev) => ({
             ...prev,
-            [habitId]: calculateLocalStreak(
-              entries,
-              habit.goalType,
-              habit.goalAmount,
-            ),
+            [habitId]: calculateLocalStreak(entries, habit.goalType, habit.goalAmount),
           }));
           return { ...habit, entries };
         }),
@@ -192,7 +156,6 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
         return;
       }
-
       if (!options?.silent) setIsLoading(true);
       try {
         const mappedHabits = await loadHabitsData();
@@ -213,7 +176,6 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
         const nextMap = await refreshCategories();
         categoryId = nextMap[payload.category] ?? null;
       }
-
       const habit = await createHabitRecord(payload, categoryId);
       setHabits((current) => [habit, ...current]);
     },
@@ -223,14 +185,11 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
   const toggleArchive = useCallback(async (id: string) => {
     const habit = habitsRef.current.find((item) => item.id === id);
     if (!habit) return;
-
-    // Optimistic update
     setHabits((current) =>
       current.map((item) =>
         item.id === id ? { ...item, archived: !item.archived } : item,
       ),
     );
-
     try {
       await toggleHabitArchiveStatus(id, Boolean(habit.archived));
     } catch {
@@ -246,10 +205,7 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
 
   const removeHabit = useCallback(async (id: string) => {
     const previous = habitsRef.current;
-
-    // Optimistic update
     setHabits((current) => current.filter((item) => item.id !== id));
-
     try {
       await removeHabitRecord(id);
     } catch {
@@ -285,7 +241,6 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
         isMounted = false;
       };
     }
-
     setHasHydrated(false);
     readCachedHabits(sessionUserId)
       .then((cached) => {
@@ -297,7 +252,6 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
       .finally(() => {
         if (isMounted) setHasHydrated(true);
       });
-
     return () => {
       isMounted = false;
     };
@@ -322,7 +276,7 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
     });
   }, [hasHydrated, refreshHabits, sessionUserId]);
 
-  const dataValue = useMemo<HabitsDataValue>(
+  const contextValue = useMemo<HabitsContextValue>(
     () => ({
       habits,
       isLoading,
@@ -330,19 +284,6 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
       isStreaksLoading,
       categories,
       isCategoriesLoading,
-    }),
-    [
-      habits,
-      isLoading,
-      streaksByHabitId,
-      isStreaksLoading,
-      categories,
-      isCategoriesLoading,
-    ],
-  );
-
-  const actionsValue = useMemo<HabitsActionsValue>(
-    () => ({
       refreshHabits,
       refreshStreaks,
       createHabitWithGoal,
@@ -353,6 +294,12 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
       removeHabit,
     }),
     [
+      habits,
+      isLoading,
+      streaksByHabitId,
+      isStreaksLoading,
+      categories,
+      isCategoriesLoading,
       refreshHabits,
       refreshStreaks,
       createHabitWithGoal,
@@ -365,35 +312,32 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <HabitsDataContext.Provider value={dataValue}>
-      <HabitsActionsContext.Provider value={actionsValue}>
-        {children}
-      </HabitsActionsContext.Provider>
-    </HabitsDataContext.Provider>
+    <HabitsContext.Provider value={contextValue}>
+      {children}
+    </HabitsContext.Provider>
   );
 }
 
-/** Read-only data — re-renders only when habits/streaks/categories change */
 export function useHabitsData() {
-  const context = useContext(HabitsDataContext);
+  const context = useContext(HabitsContext);
   if (!context) {
     throw new Error("useHabitsData must be used within HabitsProvider");
   }
   return context;
 }
 
-/** Stable action callbacks — almost never triggers a re-render */
 export function useHabitsActions() {
-  const context = useContext(HabitsActionsContext);
+  const context = useContext(HabitsContext);
   if (!context) {
     throw new Error("useHabitsActions must be used within HabitsProvider");
   }
   return context;
 }
 
-/** Combined hook — backwards-compatible, re-renders on any change */
 export function useHabits(): HabitsContextValue {
-  const data = useHabitsData();
-  const actions = useHabitsActions();
-  return useMemo(() => ({ ...data, ...actions }), [data, actions]);
+  const context = useContext(HabitsContext);
+  if (!context) {
+    throw new Error("useHabits must be used within HabitsProvider");
+  }
+  return context;
 }

@@ -74,22 +74,15 @@ export function RootNavigator() {
       return;
     }
 
-    let isMounted = true;
     setProfileStatus("loading");
 
     getProfile()
       .then((profile) => {
-        if (!isMounted) return;
         setProfileStatus(profile ? "ready" : "missing");
       })
       .catch(() => {
-        if (!isMounted) return;
         setProfileStatus("error");
       });
-
-    return () => {
-      isMounted = false;
-    };
   }, [session?.user.id, retryCount]);
 
   const handleProfileComplete = () => setProfileStatus("ready");

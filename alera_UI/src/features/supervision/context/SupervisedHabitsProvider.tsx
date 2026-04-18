@@ -1,10 +1,8 @@
 import React, { useCallback, useMemo } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import {
-  HabitsDataContext,
-  HabitsActionsContext,
-  type HabitsDataValue,
-  type HabitsActionsValue,
+  HabitsContext,
+  type HabitsContextValue,
 } from "../../../state/HabitsStore";
 import { useSupervisedHabits } from "../hooks/useSupervisedHabits";
 import { useSupervisedActions } from "../hooks/useSupervisedActions";
@@ -30,19 +28,15 @@ export function SupervisedHabitsProvider({ profileId, children }: Props) {
   const { createHabitWithGoal, toggleArchive, removeHabit } =
     useSupervisedActions({ profileId, refreshHabits, categoryMap });
 
-  // Refresh when screen regains focus (e.g. after creating a habit in the modal)
   useFocusEffect(
     useCallback(() => {
       refreshHabits();
     }, [refreshHabits]),
   );
 
-  // Supervised addEntry/updateEntry/deleteEntry are no-ops in the context
-  // since the supervisor observes but the store refresh handles it.
-  // For HabitDetailScreen to work, we provide stubs that call refreshHabits.
+  // Entry mutations are no-ops for supervised view — supervisor observes only.
   const addEntry = useCallback(
     (_habitId: string, _entry: Entry) => {
-      // Entry was already created via service; refresh to sync state
       refreshHabits().catch(() => {});
     },
     [refreshHabits],
@@ -89,7 +83,7 @@ export function SupervisedHabitsProvider({ profileId, children }: Props) {
     [createHabitWithGoal],
   );
 
-  const dataValue = useMemo<HabitsDataValue>(
+  const contextValue = useMemo<HabitsContextValue>(
     () => ({
       habits,
       isLoading,
@@ -97,12 +91,6 @@ export function SupervisedHabitsProvider({ profileId, children }: Props) {
       isStreaksLoading: false,
       categories,
       isCategoriesLoading,
-    }),
-    [habits, isLoading, streaksByHabitId, categories, isCategoriesLoading],
-  );
-
-  const actionsValue = useMemo<HabitsActionsValue>(
-    () => ({
       refreshHabits,
       refreshStreaks,
       createHabitWithGoal: wrappedCreateHabitWithGoal,
@@ -113,6 +101,11 @@ export function SupervisedHabitsProvider({ profileId, children }: Props) {
       removeHabit,
     }),
     [
+      habits,
+      isLoading,
+      streaksByHabitId,
+      categories,
+      isCategoriesLoading,
       refreshHabits,
       refreshStreaks,
       wrappedCreateHabitWithGoal,
@@ -125,10 +118,8 @@ export function SupervisedHabitsProvider({ profileId, children }: Props) {
   );
 
   return (
-    <HabitsDataContext.Provider value={dataValue}>
-      <HabitsActionsContext.Provider value={actionsValue}>
-        {children}
-      </HabitsActionsContext.Provider>
-    </HabitsDataContext.Provider>
+    <HabitsContext.Provider value={contextValue}>
+      {children}
+    </HabitsContext.Provider>
   );
 }

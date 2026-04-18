@@ -16,6 +16,11 @@ from sklearn.linear_model import LinearRegression
 # monthly:  6
 _MAX_HORIZONS = {"daily": 28, "weekly": 26, "monthly": 6}
 
+# Gradient Boosting hyperparameters — kept small for fast inference on sparse habit data.
+_GBR_N_ESTIMATORS = 50
+_GBR_MAX_DEPTH = 3
+_GBR_RANDOM_STATE = 42
+
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -126,7 +131,7 @@ def _predict_full(
     X = train[cols].values
     y = train["target"].values
 
-    model = GradientBoostingRegressor(n_estimators=50, max_depth=3, random_state=42)
+    model = GradientBoostingRegressor(n_estimators=_GBR_N_ESTIMATORS, max_depth=_GBR_MAX_DEPTH, random_state=_GBR_RANDOM_STATE)
     model.fit(X, y)
 
     last_row = df[cols].iloc[[-1]].values
@@ -206,7 +211,7 @@ def _forecast_values(
         if len(train) >= 4:
             Xt = train[cols].values
             yt = train["_val_target"].values
-            gbr = GradientBoostingRegressor(n_estimators=50, max_depth=3, random_state=42)
+            gbr = GradientBoostingRegressor(n_estimators=_GBR_N_ESTIMATORS, max_depth=_GBR_MAX_DEPTH, random_state=_GBR_RANDOM_STATE)
             gbr.fit(Xt, yt)
             gbr_pred = float(gbr.predict(logged_df[cols].iloc[[-1]].values)[0])
 
