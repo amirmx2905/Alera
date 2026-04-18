@@ -219,15 +219,16 @@ export function buildKpis(
   const bestLocal = activeHabits.reduce<{
     streak: number;
     habitName: string;
+    goalType: "daily" | "weekly" | "monthly";
   }>(
     (currentBest, habit) => {
       const streak = streaksByHabitId[habit.id] ?? getCurrentStreak(habit);
       if (streak > currentBest.streak) {
-        return { streak, habitName: habit.name };
+        return { streak, habitName: habit.name, goalType: habit.goalType };
       }
       return currentBest;
     },
-    { streak: 0, habitName: "N/A" },
+    { streak: 0, habitName: "N/A", goalType: "daily" },
   );
 
   const hasUsableMetricBest =
@@ -250,6 +251,14 @@ export function buildKpis(
     bestStreakHabit: hasUsableMetricBest
       ? (bestStreakHabitFromMetrics?.name ?? "N/A")
       : bestLocal.habitName,
+    bestStreakUnit: ((): "days" | "weeks" | "months" => {
+      const gt = hasUsableMetricBest
+        ? bestStreakHabitFromMetrics?.goalType
+        : bestLocal.goalType;
+      if (gt === "weekly") return "weeks";
+      if (gt === "monthly") return "months";
+      return "days";
+    })(),
   };
 }
 

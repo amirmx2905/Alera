@@ -10,6 +10,7 @@ export type StatsKpi = {
   activeDays30: number;
   bestStreak: number;
   bestStreakHabit: string;
+  bestStreakUnit: "days" | "weeks" | "months";
 };
 
 export type StatsTrendPoint = {

@@ -158,7 +158,7 @@ export function StatsHabitShareDonutChart({
           </Text>
 
           <View className="mt-3 gap-1">
-            {segments.slice(0, 3).map((segment) => (
+            {segments.map((segment) => (
               <View
                 key={segment.label}
                 className="flex-row items-center justify-between"

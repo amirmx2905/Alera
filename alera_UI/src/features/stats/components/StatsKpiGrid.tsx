@@ -70,7 +70,7 @@ export function StatsKpiGrid({
               containerClassName="w-full"
             />
           ) : (
-            `${kpis.bestStreak}`
+            `${kpis.bestStreak} ${kpis.bestStreakUnit}`
           )
         }
         subtitle={isBestStreakLoading ? "" : kpis.bestStreakHabit}
