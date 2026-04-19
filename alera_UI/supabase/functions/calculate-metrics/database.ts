@@ -18,16 +18,12 @@ function applyLogicalTimestampWindow(
   );
 }
 
-/**
- * Fetch all records for a specific user/habit on a specific date
- */
 export async function fetchRecordsForDate(
   supabase: any,
   profileId: string,
   habitId: string,
   logicalDate: string,
 ): Promise<HabitLogRecord[]> {
-  // Get UTC range for the date
   const [utcStart, utcEnd] = getDateRangeForWindow(logicalDate, 0);
 
   let query = supabase
@@ -39,18 +35,13 @@ export async function fetchRecordsForDate(
   query = applyLogicalTimestampWindow(query, utcStart, utcEnd);
 
   const { data, error } = await query;
-
   if (error) throw error;
 
-  // Filter by logical_date (in case of timezone edge cases)
   return (data || []).filter(
     (record: HabitLogRecord) => convertToLogicalDate(record) === logicalDate,
   );
 }
 
-/**
- * Fetch historical data for a specific user/habit
- */
 export async function fetchHistoricalData(
   supabase: any,
   profileId: string,
@@ -69,14 +60,10 @@ export async function fetchHistoricalData(
   query = applyLogicalTimestampWindow(query, utcStart, utcEnd);
 
   const { data, error } = await query;
-
   if (error) throw error;
   return data || [];
 }
 
-/**
- * Fetch historical data for a profile across all habits
- */
 export async function fetchProfileHistoricalData(
   supabase: any,
   profileId: string,
@@ -93,14 +80,10 @@ export async function fetchProfileHistoricalData(
   query = applyLogicalTimestampWindow(query, utcStart, utcEnd);
 
   const { data, error } = await query;
-
   if (error) throw error;
   return data || [];
 }
 
-/**
- * Fetch all records for a profile/habits on a specific date
- */
 export async function fetchProfileRecordsForDate(
   supabase: any,
   profileId: string,
@@ -120,7 +103,6 @@ export async function fetchProfileRecordsForDate(
   query = applyLogicalTimestampWindow(query, utcStart, utcEnd);
 
   const { data, error } = await query;
-
   if (error) throw error;
 
   return (data || []).filter(
@@ -128,9 +110,6 @@ export async function fetchProfileRecordsForDate(
   );
 }
 
-/**
- * Fetch historical data for a profile across specific habits
- */
 export async function fetchProfileHistoricalDataForHabits(
   supabase: any,
   profileId: string,
@@ -151,14 +130,10 @@ export async function fetchProfileHistoricalDataForHabits(
   query = applyLogicalTimestampWindow(query, utcStart, utcEnd);
 
   const { data, error } = await query;
-
   if (error) throw error;
   return data || [];
 }
 
-/**
- * Fetch all-time data for a specific profile/habit
- */
 export async function fetchHabitAllTimeData(
   supabase: any,
   profileId: string,
@@ -175,7 +150,9 @@ export async function fetchHabitAllTimeData(
 }
 
 /**
- * Write metrics to database using upsert
+ * Write metrics to database.
+ * Tries bulk upsert first; falls back to individual update-or-insert
+ * when PostgREST can't resolve partial unique indexes (error 42P10).
  */
 export async function writeMetrics(
   supabase: any,
@@ -188,7 +165,7 @@ export async function writeMetrics(
 
   const toPayload = (m: Metric) => ({
     profile_id: m.profile_id,
-    habit_id: m.habit_id,
+    habit_id: m.habit_id ?? null,
     date: m.date,
     metric_type: m.metric_type,
     granularity: m.granularity,
@@ -196,32 +173,57 @@ export async function writeMetrics(
     metadata: m.metadata,
   });
 
+  const individualUpsert = async () => {
+    for (const metric of metrics) {
+      const payload = toPayload(metric);
+      const isProfile = !payload.habit_id;
+      const match: Record<string, unknown> = {
+        profile_id: payload.profile_id,
+        date: payload.date,
+        metric_type: payload.metric_type,
+        granularity: payload.granularity,
+      };
+      if (!isProfile) match.habit_id = payload.habit_id;
+
+      let q = supabase.from("metrics").update(payload).match(match);
+      if (isProfile) q = q.is("habit_id", null);
+      const { data: updated, error: updateError } = await q.select("id");
+      if (updateError) throw updateError;
+
+      if (!updated?.length) {
+        const { error: insertError } = await supabase
+          .from("metrics")
+          .insert(payload);
+        if (insertError) throw insertError;
+      }
+    }
+  };
+
   if (habitMetrics.length > 0) {
-    const { error } = await supabase
-      .from("metrics")
-      .upsert(habitMetrics.map(toPayload), {
-        onConflict: "profile_id,habit_id,date,metric_type,granularity",
-      });
-    if (error) throw error;
+    const payload = habitMetrics.map(toPayload);
+    const { error } = await supabase.from("metrics").upsert(payload, {
+      onConflict: "profile_id,habit_id,date,metric_type,granularity",
+    });
+    if (error) {
+      if (error.code === "42P10") {
+        await individualUpsert();
+        return metrics.length;
+      }
+      throw error;
+    }
   }
 
   if (profileMetrics.length > 0) {
-    for (const metric of profileMetrics) {
-      const payload = toPayload(metric);
-      const { error: delError } = await supabase
-        .from("metrics")
-        .delete()
-        .eq("profile_id", payload.profile_id)
-        .is("habit_id", null)
-        .eq("date", payload.date)
-        .eq("metric_type", payload.metric_type)
-        .eq("granularity", payload.granularity);
-      if (delError) throw delError;
-
-      const { error: insError } = await supabase
-        .from("metrics")
-        .insert(payload);
-      if (insError) throw insError;
+    const payload = profileMetrics.map(toPayload);
+    const { error } = await supabase.from("metrics").upsert(payload, {
+      onConflict: "profile_id,date,metric_type,granularity",
+    });
+    if (error) {
+      if (error.code === "42P10") {
+        await individualUpsert();
+        return metrics.length;
+      }
+      throw error;
     }
   }
 

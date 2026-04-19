@@ -59,6 +59,7 @@ async function calculatePeriodAverage(
   const daysWithData = Object.keys(dailyTotals).length;
   if (daysWithData === 0) return null;
 
+  const windowSize = Math.min(windowDays, daysWithData);
   const avg = Object.values(dailyTotals).reduce((sum, val) => sum + val, 0) /
     daysWithData;
 
@@ -73,7 +74,7 @@ async function calculatePeriodAverage(
     metric_type: `${granularity}_average`,
     granularity,
     value: Math.round(avg * 10) / 10,
-    metadata: { days_with_data: daysWithData },
+    metadata: { days_with_data: daysWithData, window_size: windowSize },
   };
 }
 
