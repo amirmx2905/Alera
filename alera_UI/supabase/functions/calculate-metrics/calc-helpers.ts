@@ -38,8 +38,8 @@ export function groupDailyTotals(
   const dailyTotals: Record<string, number> = {};
   for (const record of records) {
     const recordLogicalDate = convertToLogicalDate(record);
-    dailyTotals[recordLogicalDate] =
-      (dailyTotals[recordLogicalDate] || 0) + (record.value || 0);
+    dailyTotals[recordLogicalDate] = (dailyTotals[recordLogicalDate] || 0) +
+      (record.value || 0);
   }
   return dailyTotals;
 }
@@ -49,8 +49,8 @@ export function groupTotalsByHabit(
 ): Record<string, number> {
   const totals: Record<string, number> = {};
   for (const record of records) {
-    totals[record.habit_id] =
-      (totals[record.habit_id] || 0) + (record.value || 0);
+    totals[record.habit_id] = (totals[record.habit_id] || 0) +
+      (record.value || 0);
   }
   return totals;
 }

@@ -138,10 +138,10 @@ export async function buildContext(
     habits: habits ?? [],
     profile: profile
       ? {
-          id: profile.id,
-          first_name: profile.first_name,
-          last_name: profile.last_name,
-        }
+        id: profile.id,
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+      }
       : null,
   };
 }

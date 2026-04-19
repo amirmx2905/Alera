@@ -39,8 +39,8 @@ function getErrorMessage(error: unknown) {
 }
 
 function getErrorStatus(message: string) {
-  const isAuthError =
-    message.includes("auth token") || message.includes("Invalid auth");
+  const isAuthError = message.includes("auth token") ||
+    message.includes("Invalid auth");
   return isAuthError ? 401 : 500;
 }
 

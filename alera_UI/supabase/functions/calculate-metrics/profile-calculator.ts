@@ -34,8 +34,9 @@ async function calculateTotalEntries(
     );
     periodDate = logicalDate;
   } else {
-    windowDays =
-      granularity === "weekly" ? WEEKLY_WINDOW_DAYS : MONTHLY_WINDOW_DAYS;
+    windowDays = granularity === "weekly"
+      ? WEEKLY_WINDOW_DAYS
+      : MONTHLY_WINDOW_DAYS;
     records = await fetchProfileHistoricalDataForHabits(
       supabase,
       profileId,
@@ -43,10 +44,9 @@ async function calculateTotalEntries(
       windowDays - 1,
       logicalDate,
     );
-    periodDate =
-      granularity === "weekly"
-        ? getSundayDateKey(logicalDate)
-        : getMonthEndKey(logicalDate);
+    periodDate = granularity === "weekly"
+      ? getSundayDateKey(logicalDate)
+      : getMonthEndKey(logicalDate);
   }
 
   const totalValue = sumValues(records);

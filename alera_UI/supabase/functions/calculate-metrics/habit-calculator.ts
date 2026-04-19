@@ -59,14 +59,12 @@ async function calculatePeriodAverage(
   const daysWithData = Object.keys(dailyTotals).length;
   if (daysWithData === 0) return null;
 
-  const avg =
-    Object.values(dailyTotals).reduce((sum, val) => sum + val, 0) /
+  const avg = Object.values(dailyTotals).reduce((sum, val) => sum + val, 0) /
     daysWithData;
 
-  const periodEndDate =
-    granularity === "weekly"
-      ? getSundayDateKey(logicalDate)
-      : getMonthEndKey(logicalDate);
+  const periodEndDate = granularity === "weekly"
+    ? getSundayDateKey(logicalDate)
+    : getMonthEndKey(logicalDate);
 
   return {
     profile_id: profileId,
@@ -140,7 +138,7 @@ export async function calculateStreak(
       .filter(([, total]) =>
         goalConfig.target_value > 0
           ? total >= goalConfig.target_value
-          : total > 0,
+          : total > 0
       )
       .map(([dateKey]) => dateKey);
 
@@ -182,17 +180,15 @@ export async function calculateStreak(
 
   const totalsByPeriod: Record<string, number> = {};
   for (const [dateKey, total] of Object.entries(dailyTotals)) {
-    const periodKey =
-      goalConfig.goal_type === "weekly"
-        ? getMondayStartKey(dateKey)
-        : getMonthStartKey(dateKey);
+    const periodKey = goalConfig.goal_type === "weekly"
+      ? getMondayStartKey(dateKey)
+      : getMonthStartKey(dateKey);
     totalsByPeriod[periodKey] = (totalsByPeriod[periodKey] || 0) + total;
   }
 
-  const currentPeriodKey =
-    goalConfig.goal_type === "weekly"
-      ? getMondayStartKey(logicalDate)
-      : getMonthStartKey(logicalDate);
+  const currentPeriodKey = goalConfig.goal_type === "weekly"
+    ? getMondayStartKey(logicalDate)
+    : getMonthStartKey(logicalDate);
 
   if ((totalsByPeriod[currentPeriodKey] ?? 0) < goalConfig.target_value) {
     return null;

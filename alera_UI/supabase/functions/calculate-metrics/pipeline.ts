@@ -119,10 +119,9 @@ export async function runMetricsPipeline({
     logEvent("info", "metrics.pipeline.habit_metrics.delete", {
       profile_id: profileId,
       habit_id: habitId,
-      reason:
-        habitMetrics.length === 0
-          ? "no_habit_metrics"
-          : "should_delete_habit_metrics",
+      reason: habitMetrics.length === 0
+        ? "no_habit_metrics"
+        : "should_delete_habit_metrics",
     });
     habitMetricsDeleted = await deleteHabitMetrics(
       supabase,
