@@ -35,12 +35,16 @@ const createSupabaseClient = () =>
   );
 
 function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Unknown error";
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object" && error !== null && "message" in error) {
+    return String((error as { message: unknown }).message);
+  }
+  return "Unknown error";
 }
 
 function getErrorStatus(message: string) {
-  const isAuthError = message.includes("auth token") ||
-    message.includes("Invalid auth");
+  const isAuthError =
+    message.includes("auth token") || message.includes("Invalid auth");
   return isAuthError ? 401 : 500;
 }
 

@@ -206,12 +206,23 @@ export async function writeMetrics(
   }
 
   if (profileMetrics.length > 0) {
-    const { error } = await supabase
-      .from("metrics")
-      .upsert(profileMetrics.map(toPayload), {
-        onConflict: "profile_id,date,metric_type,granularity",
-      });
-    if (error) throw error;
+    for (const metric of profileMetrics) {
+      const payload = toPayload(metric);
+      const { error: delError } = await supabase
+        .from("metrics")
+        .delete()
+        .eq("profile_id", payload.profile_id)
+        .is("habit_id", null)
+        .eq("date", payload.date)
+        .eq("metric_type", payload.metric_type)
+        .eq("granularity", payload.granularity);
+      if (delError) throw delError;
+
+      const { error: insError } = await supabase
+        .from("metrics")
+        .insert(payload);
+      if (insError) throw insError;
+    }
   }
 
   return metrics.length;
