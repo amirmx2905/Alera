@@ -5,12 +5,12 @@
  * Extracts auth user from JWT, calculates all metrics, and writes to database.
  */
 
-import type { RequestBody } from "./types.ts";
-import { getUserIdFromToken } from "./utils.ts";
+import type { RequestBody } from "./shared/types.ts";
+import { getUserIdFromToken } from "./shared/utils.ts";
 import { createClient } from "@supabase/supabase-js";
-import { ensureHabitAccess, ensureProfileAccess } from "./authz.ts";
+import { ensureHabitAccess, ensureProfileAccess } from "./shared/authz.ts";
 import { runMetricsPipeline } from "./pipeline.ts";
-import { logEvent } from "./telemetry.ts";
+import { logEvent } from "./shared/telemetry.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

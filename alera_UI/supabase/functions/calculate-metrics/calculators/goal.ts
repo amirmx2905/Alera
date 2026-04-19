@@ -1,8 +1,11 @@
-import type { HabitLogRecord, Metric } from "./types.ts";
-import { MONTHLY_WINDOW_DAYS } from "./config.ts";
-import { fetchHistoricalData, fetchRecordsForDate } from "./database.ts";
-import { fetchHabitGoalConfig, fetchHabitGoalTarget } from "./repositories.ts";
-import { convertToLogicalDate } from "./utils.ts";
+import type { HabitLogRecord, Metric } from "../shared/types.ts";
+import { MONTHLY_WINDOW_DAYS } from "../shared/config.ts";
+import { fetchHistoricalData, fetchRecordsForDate } from "../db/database.ts";
+import {
+  fetchHabitGoalConfig,
+  fetchHabitGoalTarget,
+} from "../db/repositories.ts";
+import { convertToLogicalDate } from "../shared/utils.ts";
 import {
   countMaxStreak,
   getDaysBetween,
@@ -12,7 +15,7 @@ import {
   getSundayDateKey,
   groupDailyTotals,
   sumValues,
-} from "./calc-helpers.ts";
+} from "./helpers.ts";
 
 export async function calculateGoalProgress(
   supabase: any,

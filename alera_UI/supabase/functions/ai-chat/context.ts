@@ -6,9 +6,11 @@ type ContextItem = Record<string, unknown>;
 type HabitRecord = {
   id: string;
   name: string;
+  description: string;
   type: string;
   unit: string | null;
   status: string;
+  created_at: string;
 };
 
 /**
@@ -38,20 +40,20 @@ export async function buildContext(
   supabase: SupabaseClient,
   profileId: string,
 ) {
-  // All dates in CDMX timezone
   const today = getTodayInCDMX();
   const last7DaysStart = getDaysAgoInCDMX(7);
   const last3MonthsStart = getDaysAgoInCDMX(90);
 
-  const metricsTodayQuery = supabase
+  // Current state: ALL granularities for today
+  // (streaks, goal_progress, averages, best_streak, active_days, etc.)
+  const metricsSnapshotQuery = supabase
     .from("metrics")
-    .select("habit_id, metric_type, value, date")
+    .select("habit_id, metric_type, granularity, value, date, metadata")
     .eq("profile_id", profileId)
-    .eq("granularity", "daily")
-    .eq("date", today)
-    .order("date", { ascending: false });
+    .eq("date", today);
 
-  const metricsLast7DaysQuery = supabase
+  // Recent daily trends (last 7 days)
+  const metricsTrendsQuery = supabase
     .from("metrics")
     .select("habit_id, metric_type, value, date")
     .eq("profile_id", profileId)
@@ -59,29 +61,32 @@ export async function buildContext(
     .gte("date", last7DaysStart)
     .order("date", { ascending: false });
 
-  const metricsLast3MonthsQuery = supabase
+  // Long-term daily totals only (3 months, limited to save tokens)
+  const metricsLongTermQuery = supabase
     .from("metrics")
-    .select("habit_id, metric_type, value, date")
+    .select("habit_id, value, date")
     .eq("profile_id", profileId)
     .eq("granularity", "daily")
+    .eq("metric_type", "daily_total")
     .gte("date", last3MonthsStart)
     .order("date", { ascending: false });
 
   const habitsQuery = supabase
     .from("habits")
-    .select("id, name, type, unit, status")
+    .select("id, name, description, type, unit, status, created_at")
     .eq("profile_id", profileId);
 
+  // Last 20 messages for conversation injection
   const conversationsQuery = supabase
     .from("ai_conversations")
     .select("message, role, created_at")
     .eq("profile_id", profileId)
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(20);
 
   const goalsQuery = supabase
     .from("user_goals")
-    .select("habit_id, target_value, updated_at")
+    .select("habit_id, goal_type, target_value, updated_at")
     .eq("profile_id", profileId)
     .order("updated_at", { ascending: false });
 
@@ -91,31 +96,42 @@ export async function buildContext(
     .eq("id", profileId)
     .maybeSingle();
 
+  // ML predictions (recent)
+  const predictionsQuery = supabase
+    .from("predictions")
+    .select("habit_id, prediction_type, value, date")
+    .eq("profile_id", profileId)
+    .gte("date", last7DaysStart)
+    .order("date", { ascending: false });
+
   const [
-    { data: metricsToday, error: metricsTodayError },
-    { data: metricsLast7Days, error: metricsLast7DaysError },
-    { data: metricsLast3Months, error: metricsLast3MonthsError },
+    { data: metricsSnapshot, error: snapshotError },
+    { data: metricsTrends, error: trendsError },
+    { data: metricsLongTerm, error: longTermError },
     { data: conversations, error: convError },
     { data: goals, error: goalsError },
     { data: habits, error: habitsError },
     { data: profile, error: profileError },
+    { data: predictions, error: predictionsError },
   ] = await Promise.all([
-    metricsTodayQuery,
-    metricsLast7DaysQuery,
-    metricsLast3MonthsQuery,
+    metricsSnapshotQuery,
+    metricsTrendsQuery,
+    metricsLongTermQuery,
     conversationsQuery,
     goalsQuery,
     habitsQuery,
     profileQuery,
+    predictionsQuery,
   ]);
 
-  if (metricsTodayError) throw metricsTodayError;
-  if (metricsLast7DaysError) throw metricsLast7DaysError;
-  if (metricsLast3MonthsError) throw metricsLast3MonthsError;
+  if (snapshotError) throw snapshotError;
+  if (trendsError) throw trendsError;
+  if (longTermError) throw longTermError;
   if (convError) throw convError;
   if (goalsError) throw goalsError;
   if (habitsError) throw habitsError;
   if (profileError) throw profileError;
+  if (predictionsError) throw predictionsError;
 
   const habitMap = new Map(
     (habits || []).map((habit: HabitRecord) => [habit.id, habit]),
@@ -126,16 +142,11 @@ export async function buildContext(
       habit: habitMap.get(item.habit_id as string) || null,
     }));
 
+  // Reverse to chronological order for message injection
+  const chronologicalHistory = [...(conversations ?? [])].reverse();
+
   return {
-    metrics_today: attachHabit(metricsToday ?? []),
-    metrics_last_7_days: attachHabit(metricsLast7Days ?? []),
-    metrics_last_3_months: attachHabit(metricsLast3Months ?? []),
-    conversations: conversations ?? [],
-    goals: (goals ?? []).map((goal: ContextItem) => ({
-      ...goal,
-      habit: habitMap.get(goal.habit_id as string) || null,
-    })),
-    habits: habits ?? [],
+    today,
     profile: profile
       ? {
         id: profile.id,
@@ -143,5 +154,15 @@ export async function buildContext(
         last_name: profile.last_name,
       }
       : null,
+    habits: habits ?? [],
+    goals: (goals ?? []).map((goal: ContextItem) => ({
+      ...goal,
+      habit: habitMap.get(goal.habit_id as string) || null,
+    })),
+    metrics_snapshot: attachHabit(metricsSnapshot ?? []),
+    metrics_trends: attachHabit(metricsTrends ?? []),
+    metrics_long_term: attachHabit(metricsLongTerm ?? []),
+    predictions: attachHabit(predictions ?? []),
+    conversation_history: chronologicalHistory,
   };
 }

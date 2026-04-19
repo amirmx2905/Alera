@@ -1,18 +1,18 @@
-import type { HabitLogRecord, Metric } from "./types.ts";
-import { MONTHLY_WINDOW_DAYS, WEEKLY_WINDOW_DAYS } from "./config.ts";
+import type { HabitLogRecord, Metric } from "../shared/types.ts";
+import { MONTHLY_WINDOW_DAYS, WEEKLY_WINDOW_DAYS } from "../shared/config.ts";
 import {
   fetchProfileHistoricalData,
   fetchProfileHistoricalDataForHabits,
   fetchProfileRecordsForDate,
-} from "./database.ts";
-import { fetchHabitGoalTargets } from "./repositories.ts";
-import { convertToLogicalDate } from "./utils.ts";
+} from "../db/database.ts";
+import { fetchHabitGoalTargets } from "../db/repositories.ts";
+import { convertToLogicalDate } from "../shared/utils.ts";
 import {
   getMonthEndKey,
   getSundayDateKey,
   groupTotalsByHabit,
   sumValues,
-} from "./calc-helpers.ts";
+} from "./helpers.ts";
 
 async function calculateTotalEntries(
   supabase: any,

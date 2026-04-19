@@ -1,11 +1,11 @@
-import type { HabitLogRecord, Metric } from "./types.ts";
+import type { HabitLogRecord, Metric } from "../shared/types.ts";
 import {
   MONTHLY_WINDOW_DAYS,
   STREAK_LOOKBACK_DAYS,
   WEEKLY_WINDOW_DAYS,
-} from "./config.ts";
-import { fetchHistoricalData } from "./database.ts";
-import { fetchHabitGoalConfig } from "./repositories.ts";
+} from "../shared/config.ts";
+import { fetchHistoricalData } from "../db/database.ts";
+import { fetchHabitGoalConfig } from "../db/repositories.ts";
 import {
   getMondayStartKey,
   getMonthEndKey,
@@ -14,7 +14,7 @@ import {
   groupDailyTotals,
   parseDateKey,
   toDateKey,
-} from "./calc-helpers.ts";
+} from "./helpers.ts";
 
 export function calculateDailyTotal(
   profileId: string,

@@ -1,30 +1,30 @@
-import type { HabitLogRecord, Metric } from "./types.ts";
-import { fetchHabitAllTimeData } from "./database.ts";
+import type { HabitLogRecord, Metric } from "./shared/types.ts";
+import { fetchHabitAllTimeData } from "./db/database.ts";
 import {
   deleteBestStreakOverall,
   deleteStreakMetric,
   fetchHabitType,
-} from "./repositories.ts";
+} from "./db/repositories.ts";
 import {
   calculateDailyTotal,
   calculateMonthlyAverage,
   calculateStreak,
   calculateWeeklyAverage,
-} from "./habit-calculator.ts";
+} from "./calculators/habit.ts";
 import {
   calculateAverageValue30d,
   calculateBestStreak,
   calculateDaysCompleted30d,
   calculateGoalProgress,
   calculateTotalEntriesAllTime,
-} from "./goal-calculator.ts";
+} from "./calculators/goal.ts";
 import {
   calculateActiveDays,
   calculateTodayGoalsProgress,
   calculateTotalEntriesDaily,
   calculateTotalEntriesMonthly,
   calculateTotalEntriesWeekly,
-} from "./profile-calculator.ts";
+} from "./calculators/profile.ts";
 
 export type HabitMetricsResult = {
   habitMetrics: Metric[];

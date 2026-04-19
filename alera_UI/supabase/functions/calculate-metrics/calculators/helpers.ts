@@ -1,5 +1,5 @@
-import type { HabitLogRecord } from "./types.ts";
-import { convertToLogicalDate } from "./utils.ts";
+import type { HabitLogRecord } from "../shared/types.ts";
+import { convertToLogicalDate } from "../shared/utils.ts";
 
 export function countMaxStreak(dates: string[]): number {
   if (dates.length === 0) return 0;

@@ -2,8 +2,11 @@
  * Database layer for fetching and writing data
  */
 
-import type { HabitLogRecord, Metric } from "./types.ts";
-import { convertToLogicalDate, getDateRangeForWindow } from "./utils.ts";
+import type { HabitLogRecord, Metric } from "../shared/types.ts";
+import {
+  convertToLogicalDate,
+  getDateRangeForWindow,
+} from "../shared/utils.ts";
 
 function applyLogicalTimestampWindow(
   query: any,

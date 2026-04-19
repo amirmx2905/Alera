@@ -1,7 +1,7 @@
-import type { Metric } from "./types.ts";
-import { getTodayInCDMX } from "./utils.ts";
-import { fetchRecordsForDate, writeMetrics } from "./database.ts";
-import { calculateGoalProgressForHabits } from "./goal-calculator.ts";
+import type { Metric } from "./shared/types.ts";
+import { getTodayInCDMX } from "./shared/utils.ts";
+import { fetchRecordsForDate, writeMetrics } from "./db/database.ts";
+import { calculateGoalProgressForHabits } from "./calculators/goal.ts";
 import {
   calculateHabitMetrics,
   calculateProfileMetrics,
@@ -10,8 +10,8 @@ import {
   deleteHabitMetrics,
   fetchActiveHabitIds,
   fetchHabitIdsWithLogs,
-} from "./repositories.ts";
-import { logEvent, nowMs } from "./telemetry.ts";
+} from "./db/repositories.ts";
+import { logEvent, nowMs } from "./shared/telemetry.ts";
 
 type RunMetricsPipelineParams = {
   supabase: any;
