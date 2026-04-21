@@ -1,7 +1,14 @@
 """ML predictions pipeline — main entry point.
 
-Connects to Supabase, loops through all active habits, checks data maturity,
-trains models, and upserts prediction results into the predictions table.
+Data flow:
+    habits_log  ──→  metrics  ──→  ML pipeline  ──→  predictions
+                                        │
+                               habits_log (only for best_reminder KDE)
+
+The pipeline reads pre-computed daily_total metrics instead of raw logs so
+that all feature values are consistent with what the user sees in the
+dashboard. Raw logs are fetched only for best_reminder, which needs
+individual log timestamps (hour-of-day) that are not stored in metrics.
 
 Usage:
     python pipeline.py              # uses env vars
@@ -55,10 +62,38 @@ def fetch_active_habits(client: Client, profile_id: str) -> list[dict]:
     return resp.data or []
 
 
-def fetch_logs(client: Client, habit_id: str, profile_id: str) -> pd.DataFrame:
+def fetch_daily_totals(client: Client, habit_id: str, profile_id: str) -> pd.DataFrame:
+    """Fetch pre-computed daily totals from the metrics table.
+
+    Returns a DataFrame with columns [date, value] where date is the logical
+    date (already CDMX-adjusted by calculate-metrics) and value is the
+    daily_total. Only rows where the user actually logged exist — missing
+    dates imply zero activity and are filled in by build_feature_matrix.
+    """
+    resp = (
+        client.table("metrics")
+        .select("date, value")
+        .eq("habit_id", habit_id)
+        .eq("profile_id", profile_id)
+        .eq("metric_type", "daily_total")
+        .eq("granularity", "daily")
+        .order("date", desc=False)
+        .execute()
+    )
+    if not resp.data:
+        return pd.DataFrame()
+    return pd.DataFrame(resp.data)
+
+
+def fetch_raw_logs(client: Client, habit_id: str, profile_id: str) -> pd.DataFrame:
+    """Fetch raw log timestamps — used only by best_reminder.
+
+    The KDE model needs the hour-of-day from each individual log entry to
+    find peak logging times. This data is not available in the metrics table.
+    """
     resp = (
         client.table("habits_log")
-        .select("value, logged_at, created_at")
+        .select("created_at")
         .eq("habit_id", habit_id)
         .eq("profile_id", profile_id)
         .order("created_at", desc=False)
@@ -120,7 +155,7 @@ def process_habit(
     habit_type = habit["type"]
     habit_created_at = habit["created_at"]
 
-    logs_df = fetch_logs(client, habit_id, profile_id)
+    daily_totals_df = fetch_daily_totals(client, habit_id, profile_id)
 
     # Fetch goal before maturity check so goal_type can inform period counting
     # (logged-period thresholds differ between daily / weekly / monthly habits).
@@ -128,7 +163,7 @@ def process_habit(
     goal_target = float(goal["target_value"]) if goal else None
     goal_type = goal["goal_type"] if goal else "daily"
 
-    tier, calendar_days, logged_periods = check_maturity(logs_df, habit_created_at, goal_type)
+    tier, calendar_days, logged_periods = check_maturity(daily_totals_df, habit_created_at, goal_type)
 
     # Locked habits: not enough data, skip entirely
     if tier == "locked":
@@ -142,8 +177,8 @@ def process_habit(
         "days_to_full": days_to_full,
     }
 
-    # Build features
-    features_df = build_feature_matrix(logs_df, goal_target, goal_type, tier, habit_created_at)
+    # Build features from pre-computed daily totals
+    features_df = build_feature_matrix(daily_totals_df, goal_target, goal_type, tier, habit_created_at)
     if features_df.empty:
         return tier
 
@@ -161,7 +196,9 @@ def process_habit(
             eta = predict_goal_eta(features_df, goal_target, goal_type, habit_type)
             upsert_prediction(client, profile_id, habit_id, "goal_eta", eta, metadata, dry_run)
 
-        reminder = predict_best_reminder(logs_df)
+        # best_reminder needs raw log timestamps — fetch from habits_log
+        raw_logs_df = fetch_raw_logs(client, habit_id, profile_id)
+        reminder = predict_best_reminder(raw_logs_df)
         upsert_prediction(client, profile_id, habit_id, "best_reminder", reminder, metadata, dry_run)
 
     return tier

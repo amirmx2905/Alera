@@ -1,4 +1,9 @@
-"""Data maturity checker for habit prediction unlock tiers."""
+"""Data maturity checker for habit prediction unlock tiers.
+
+Operates on pre-computed daily_totals_df (from the metrics table) rather than
+raw habits_log rows.  The metrics table date column already reflects the
+logical (CDMX-adjusted) date, so no timezone conversion is needed here.
+"""
 
 from datetime import date, timedelta
 
@@ -9,18 +14,18 @@ import pandas as pd
 # Logged-period counter
 # ---------------------------------------------------------------------------
 
-def _count_logged_periods(logs_df: pd.DataFrame, goal_type: str) -> int:
-    """Count distinct periods that have at least one log entry.
+def _count_logged_periods(daily_totals_df: pd.DataFrame, goal_type: str) -> int:
+    """Count distinct periods that have at least one metrics row.
 
-    Uses the same period definition as features.py so the count reflects
-    how many rows the feature matrix will have with real signal (period_count > 0).
+    Each row in daily_totals_df represents a day where the user logged
+    something (calculate-metrics only writes daily_total when value > 0),
+    so counting distinct periods from these dates gives the same result as
+    counting from raw logs — with no timezone conversion required.
     """
-    if logs_df.empty:
+    if daily_totals_df.empty:
         return 0
 
-    # Prefer logged_at (user-selected date) over created_at
-    effective_ts = logs_df["logged_at"].fillna(logs_df["created_at"])
-    log_dates = pd.to_datetime(effective_ts, format="ISO8601").dt.date
+    log_dates = pd.to_datetime(daily_totals_df["date"]).dt.date
 
     if goal_type == "daily":
         return int(log_dates.nunique())
@@ -54,7 +59,7 @@ _MIN_CALENDAR_FULL  = 30
 
 
 def check_maturity(
-    logs_df: pd.DataFrame,
+    daily_totals_df: pd.DataFrame,
     habit_created_at: str,
     goal_type: str = "daily",
 ) -> tuple[str, int, int]:
@@ -66,7 +71,8 @@ def check_maturity(
     would have previously received 'full' tier with an essentially useless model).
 
     Args:
-        logs_df:          DataFrame of habits_log rows (can be empty).
+        daily_totals_df:  DataFrame from metrics table (columns: date, value).
+                          Can be empty (treated as zero activity).
         habit_created_at: ISO timestamp of when the habit was created.
         goal_type:        'daily' | 'weekly' | 'monthly' — controls period counting.
 
@@ -74,11 +80,11 @@ def check_maturity(
         (tier, calendar_days, logged_periods)
         - tier:           'locked', 'basic', or 'full'
         - calendar_days:  days elapsed since habit creation (inclusive)
-        - logged_periods: distinct periods that have at least one log entry
+        - logged_periods: distinct periods that have at least one metrics row
     """
     created = pd.to_datetime(habit_created_at, format="ISO8601").date()
     calendar_days = (date.today() - created).days + 1
-    logged_periods = _count_logged_periods(logs_df, goal_type)
+    logged_periods = _count_logged_periods(daily_totals_df, goal_type)
 
     min_basic = _MIN_LOGGED_BASIC.get(goal_type, 5)
     min_full  = _MIN_LOGGED_FULL.get(goal_type, 12)

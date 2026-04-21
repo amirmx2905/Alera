@@ -6,10 +6,14 @@ recognised as a completed week, not four missed days.
 
 Public API
 ----------
-build_feature_matrix(logs_df, goal_target, goal_type, tier, habit_created_at)
+build_feature_matrix(daily_totals_df, goal_target, goal_type, tier, habit_created_at)
     → period-indexed DataFrame used by every model.
+    daily_totals_df comes from the metrics table (metric_type='daily_total'),
+    so it is already aggregated and consistent with what the user sees in the
+    dashboard.  Missing dates in daily_totals_df are treated as zero activity.
+
 get_logging_hours(logs_df)
-    → list of ints used by predict_best_reminder.
+    → list of ints used by predict_best_reminder (reads raw habits_log).
 """
 
 import warnings
@@ -76,20 +80,22 @@ def _period_end(ps: date, goal_type: str) -> date:
 # ---------------------------------------------------------------------------
 
 def build_feature_matrix(
-    logs_df: pd.DataFrame,
+    daily_totals_df: pd.DataFrame,
     goal_target: float | None,
     goal_type: str,
     tier: str,
     habit_created_at: str,
 ) -> pd.DataFrame:
-    """Transform raw habit logs into a *period-aware* feature matrix.
+    """Transform pre-computed daily totals into a *period-aware* feature matrix.
 
     Each row represents one period (day / week / month) and whether the
     habit goal was met during that period, so models never confuse
     "no log on Tuesday" with "missed the weekly goal".
 
     Args:
-        logs_df:          DataFrame with columns [value, logged_at, created_at].
+        daily_totals_df:  DataFrame with columns [date, value] from the metrics
+                          table (metric_type='daily_total').  Rows only exist for
+                          days the user logged; missing dates = zero activity.
         goal_target:      Numeric goal threshold (None → any log counts).
         goal_type:        'daily' | 'weekly' | 'monthly'.
         tier:             'basic' | 'full' — controls optional features.
@@ -100,22 +106,19 @@ def build_feature_matrix(
     """
     today = date.today()
 
-    # ── 1. Aggregate raw logs by calendar day ─────────────────────────────
-    if logs_df.empty:
-        daily = pd.DataFrame(columns=["log_date", "daily_total", "log_count"])
+    # ── 1. Normalise pre-computed daily totals ────────────────────────────
+    # calculate-metrics already applied the CDMX logical-date logic, so the
+    # `date` column is the correct calendar date — no timezone conversion needed.
+    if daily_totals_df.empty:
+        daily = pd.DataFrame(columns=["log_date", "daily_total"])
     else:
-        logs = logs_df.copy()
-        # Prefer logged_at (user-selected date) over created_at
-        effective_ts = logs["logged_at"].fillna(logs["created_at"])
-        logs.loc[:, "log_date"] = pd.to_datetime(effective_ts, format='ISO8601').dt.date
-        logs.loc[:, "value"] = pd.to_numeric(logs["value"], errors="coerce").fillna(0)
-        daily = logs.groupby("log_date", as_index=False).agg(
-            daily_total=("value", "sum"),
-            log_count=("value", "count"),
-        )
+        daily = pd.DataFrame({
+            "log_date": pd.to_datetime(daily_totals_df["date"]).dt.date,
+            "daily_total": pd.to_numeric(daily_totals_df["value"], errors="coerce").fillna(0),
+        })
 
-    # ── 2. Build period spine and sum logs into each period ───────────────
-    spine = _build_period_spine(habit_created_at, goal_type).copy()
+    # ── 2. Build period spine and sum daily totals into each period ───────
+    spine = _build_period_spine(habit_created_at, goal_type)
 
     period_totals: list[float] = []
     period_counts: list[int] = []
@@ -127,11 +130,12 @@ def build_feature_matrix(
             period_counts.append(0)
         else:
             mask = (daily["log_date"] >= ps) & (daily["log_date"] <= pe)
-            period_totals.append(float(daily.loc[mask, "daily_total"].sum()))
-            period_counts.append(int(daily.loc[mask, "log_count"].sum()))
+            matched = daily.loc[mask]
+            period_totals.append(float(matched["daily_total"].sum()))
+            # period_count > 0 means the user logged at least once in this period
+            period_counts.append(int(len(matched)))
 
-    spine["period_total"] = period_totals
-    spine["period_count"] = period_counts
+    spine = spine.assign(period_total=period_totals, period_count=period_counts)
 
     # ── 3. Period-level completion ────────────────────────────────────────
     # A period is "completed" when the *period total* meets the goal.
@@ -140,28 +144,26 @@ def build_feature_matrix(
     effective_threshold = goal_target if goal_target and goal_target > 0 else None
 
     if effective_threshold is not None:
-        spine["completed"] = (spine["period_total"] >= effective_threshold).astype(int)
+        spine = spine.assign(completed=(spine["period_total"] >= effective_threshold).astype(int))
     else:
         # No numeric goal → any log in the period counts
-        spine["completed"] = (spine["period_count"] > 0).astype(int)
+        spine = spine.assign(completed=(spine["period_count"] > 0).astype(int))
 
     # Mark current (incomplete) period — models should treat it carefully
-    spine["is_current_period"] = spine["period_start"].apply(
-        lambda ps: _period_end(ps, goal_type) >= today
-    ).astype(int)
+    spine = spine.assign(
+        is_current_period=spine["period_start"].apply(
+            lambda ps: _period_end(ps, goal_type) >= today
+        ).astype(int)
+    )
 
     # ── 4. Rolling features over periods (not days) ───────────────────────
     n_periods_short = 4   # ~4 weeks for weekly, ~4 days for daily
     n_periods_long = 8
 
-    spine["completion_rate_short"] = (
-        spine["completed"].rolling(n_periods_short, min_periods=1).mean()
-    )
-    spine["completion_rate_long"] = (
-        spine["completed"].rolling(n_periods_long, min_periods=1).mean()
-    )
-    spine["avg_value_short"] = (
-        spine["period_total"].rolling(n_periods_short, min_periods=1).mean()
+    spine = spine.assign(
+        completion_rate_short=spine["completed"].rolling(n_periods_short, min_periods=1).mean(),
+        completion_rate_long=spine["completed"].rolling(n_periods_long, min_periods=1).mean(),
+        avg_value_short=spine["period_total"].rolling(n_periods_short, min_periods=1).mean(),
     )
 
     # Consecutive completed periods (streak)
@@ -170,7 +172,6 @@ def build_feature_matrix(
     for c in spine["completed"]:
         current = current + 1 if c == 1 else 0
         streaks.append(current)
-    spine["current_streak"] = streaks
 
     # Periods since last completion
     last_done: date | None = None
@@ -183,22 +184,22 @@ def build_feature_matrix(
             gaps.append(i)
         else:
             gaps.append(i - spine.index[spine["period_start"] == last_done][0])
-    spine["periods_since_last_completion"] = gaps
 
-    # day_of_week retained for streak-risk model (still useful for daily habits)
-    spine["day_of_week"] = pd.to_datetime(spine["period_start"]).dt.weekday
+    spine = spine.assign(
+        current_streak=streaks,
+        periods_since_last_completion=gaps,
+        day_of_week=pd.to_datetime(spine["period_start"]).dt.weekday,
+    )
 
     # ── 5. Full-tier extras ───────────────────────────────────────────────
     if tier == "full":
-        spine["trend_slope_short"] = _rolling_slope(spine["completion_rate_short"], n_periods_short)
-        spine["trend_slope_long"] = _rolling_slope(spine["completion_rate_short"], n_periods_long)
-        spine["value_variance"] = (
-            spine["period_total"].rolling(n_periods_short, min_periods=1).var().fillna(0)
-        )
-        if effective_threshold is not None:
-            spine["goal_distance"] = effective_threshold - spine["period_total"]
-        else:
-            spine["goal_distance"] = 0.0
+        full_cols: dict = {
+            "trend_slope_short": _rolling_slope(spine["completion_rate_short"], n_periods_short),
+            "trend_slope_long": _rolling_slope(spine["completion_rate_short"], n_periods_long),
+            "value_variance": spine["period_total"].rolling(n_periods_short, min_periods=1).var().fillna(0),
+            "goal_distance": (effective_threshold - spine["period_total"]) if effective_threshold is not None else 0.0,
+        }
+        spine = spine.assign(**full_cols)
 
     return spine.reset_index(drop=True)
 
