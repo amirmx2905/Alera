@@ -96,11 +96,17 @@ def _predict_basic(
     future_x = np.arange(len(y), len(y) + horizon).reshape(-1, 1)
     forecast = np.clip(model.predict(future_x), 0, 1).tolist()
 
+    y_pred_train = model.predict(X)
     result = {
         "direction": _direction_from_values(vf or forecast) or direction,
         "rate_7d": round(rate_short, 3),
         "predicted_rate_next_7d": round(predicted, 3),
         "forecast": [round(f, 3) for f in forecast],
+        "_metrics": {
+            "model_mae": round(float(np.mean(np.abs(y - y_pred_train))), 3),
+            "model_rmse": round(float(np.sqrt(np.mean((y - y_pred_train) ** 2))), 3),
+            "train_samples": len(y),
+        },
     }
     return _attach_value_fields(result, vf, avg_hit, avg_miss, df, habit_type)
 
@@ -151,12 +157,18 @@ def _predict_full(
     future_x = np.arange(len(y_rates), len(y_rates) + horizon).reshape(-1, 1)
     forecast = np.clip(lr.predict(future_x) + gbr_offset, 0, 1).tolist()
 
+    y_pred_train = model.predict(X)
     result = {
         "direction": _direction_from_values(vf or forecast) or direction,
         "rate_7d": round(rate_short, 3),
         "predicted_rate_next_7d": round(predicted, 3),
         "confidence": round(float(model.score(X, y)), 3) if len(X) > 0 else 0.0,
         "forecast": [round(f, 3) for f in forecast],
+        "_metrics": {
+            "model_mae": round(float(np.mean(np.abs(y - y_pred_train))), 3),
+            "model_rmse": round(float(np.sqrt(np.mean((y - y_pred_train) ** 2))), 3),
+            "train_samples": len(X),
+        },
     }
     return _attach_value_fields(result, vf, avg_hit, avg_miss, features_df, habit_type)
 

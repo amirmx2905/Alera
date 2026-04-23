@@ -170,7 +170,7 @@ def process_habit(
         return tier
 
     days_to_full = max(0, 30 - calendar_days)
-    metadata = {
+    base_metadata = {
         "tier": tier,
         "calendar_days": calendar_days,
         "logged_periods": logged_periods,
@@ -184,22 +184,24 @@ def process_habit(
 
     # Streak risk (basic + full)
     risk = predict_streak_risk(features_df, tier)
-    upsert_prediction(client, profile_id, habit_id, "streak_risk", risk, metadata, dry_run)
+    risk_metadata = {**base_metadata, **risk.pop("_metrics", {})}
+    upsert_prediction(client, profile_id, habit_id, "streak_risk", risk, risk_metadata, dry_run)
 
     # Trajectory (basic + full)
     traj = predict_trajectory(features_df, tier, goal_type, goal_target, habit_type)
-    upsert_prediction(client, profile_id, habit_id, "trajectory", traj, metadata, dry_run)
+    traj_metadata = {**base_metadata, **traj.pop("_metrics", {})}
+    upsert_prediction(client, profile_id, habit_id, "trajectory", traj, traj_metadata, dry_run)
 
     # Full-tier only predictions
     if tier == "full":
         if goal_target:
             eta = predict_goal_eta(features_df, goal_target, goal_type, habit_type)
-            upsert_prediction(client, profile_id, habit_id, "goal_eta", eta, metadata, dry_run)
+            upsert_prediction(client, profile_id, habit_id, "goal_eta", eta, base_metadata, dry_run)
 
         # best_reminder needs raw log timestamps — fetch from habits_log
         raw_logs_df = fetch_raw_logs(client, habit_id, profile_id)
         reminder = predict_best_reminder(raw_logs_df)
-        upsert_prediction(client, profile_id, habit_id, "best_reminder", reminder, metadata, dry_run)
+        upsert_prediction(client, profile_id, habit_id, "best_reminder", reminder, base_metadata, dry_run)
 
     return tier
 

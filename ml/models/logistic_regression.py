@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, f1_score
 
 # ---------------------------------------------------------------------------
 # Feature sets
@@ -67,7 +68,14 @@ def predict_streak_risk(features_df: pd.DataFrame, tier: str) -> dict:
     last_row = features_df[cols].iloc[[-1]].values
     risk_score = float(model.predict_proba(last_row)[0][1])
 
-    return _format_risk(risk_score, tier, cols, model)
+    result = _format_risk(risk_score, tier, cols, model)
+    y_pred = model.predict(X)
+    result["_metrics"] = {
+        "model_accuracy": round(float(accuracy_score(y, y_pred)), 3),
+        "model_f1": round(float(f1_score(y, y_pred, zero_division=0)), 3),
+        "train_samples": len(X),
+    }
+    return result
 
 
 # ---------------------------------------------------------------------------
