@@ -8,6 +8,7 @@ import { MainLayout } from "../../../layouts/MainLayout";
 import { useCurrentProfile } from "../../profile/hooks/useCurrentProfile";
 import { usePressScale } from "../../../hooks/usePressScale";
 import { SupervisionTokenCard } from "../../profile/components/SupervisionTokenCard";
+import { WatchConnectionCard } from "../components/WatchConnectionCard";
 import type { SettingsStackParamList } from "../../../navigation/SettingsStack";
 
 type Props = NativeStackScreenProps<SettingsStackParamList, "SettingsHome">;
@@ -96,6 +97,10 @@ export function SettingsScreen({ navigation, route }: Props) {
           <Ionicons name="chevron-forward" size={20} color="#64748b" />
         </View>
       </Pressable>
+
+      <View className="mt-6">
+        <WatchConnectionCard />
+      </View>
 
       {profile ? (
         <View className="mt-6">
