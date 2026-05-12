@@ -43,6 +43,14 @@ supabase/.temp/
 # typescript
 *.tsbuildinfo
 
-# generated native folders
-/ios
+# generated native folder (Android — not in use)
 /android
+
+# iOS native code (committed for watchOS companion target)
+# Pods/ is regenerated with `cd ios && pod install`
+ios/Pods/
+ios/build/
+ios/DerivedData/
+ios/.xcode.env.local
+**/xcuserdata/
+**/*.xcuserstate
