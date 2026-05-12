@@ -64,12 +64,21 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
     clearStreaks();
   }, [clearStreaks]);
 
-  const refreshCategories = useCallback(async () => {
+  const fetchCategories = useCallback(async () => {
     const { nextCategories, nextMap } = await loadHabitCategories();
     setCategories(nextCategories);
     setCategoryMap(nextMap);
     return nextMap;
   }, []);
+
+  const refreshCategories = useCallback(async () => {
+    setIsCategoriesLoading(true);
+    try {
+      await fetchCategories();
+    } finally {
+      setIsCategoriesLoading(false);
+    }
+  }, [fetchCategories]);
 
   const refreshStreaks = useCallback(async () => {
     if (!sessionUserId) {
@@ -185,13 +194,13 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
     async (payload: CreateHabitWithGoalPayload) => {
       let categoryId = categoryMap[payload.category] ?? null;
       if (!categoryId) {
-        const nextMap = await refreshCategories();
+        const nextMap = await fetchCategories();
         categoryId = nextMap[payload.category] ?? null;
       }
       const habit = await createHabitRecord(payload, categoryId);
       setHabits((current) => [habit, ...current]);
     },
-    [categoryMap, refreshCategories],
+    [categoryMap, fetchCategories],
   );
 
   const toggleArchive = useCallback(async (id: string) => {
@@ -228,20 +237,11 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    let isMounted = true;
-    setIsCategoriesLoading(true);
     refreshCategories()
       .catch(() => {
-        if (!isMounted) return;
-        setCategories([]);
-        setCategoryMap({});
+        // Keep previous categories if refresh fails; UI can retry.
       })
-      .finally(() => {
-        if (isMounted) setIsCategoriesLoading(false);
-      });
-    return () => {
-      isMounted = false;
-    };
+      .finally(() => undefined);
   }, [refreshCategories]);
 
   useEffect(() => {
@@ -296,6 +296,7 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
       isStreaksLoading,
       categories,
       isCategoriesLoading,
+      refreshCategories,
       refreshHabits,
       refreshStreaks,
       createHabitWithGoal,
@@ -312,6 +313,7 @@ export function HabitsProvider({ children }: { children: React.ReactNode }) {
       isStreaksLoading,
       categories,
       isCategoriesLoading,
+      refreshCategories,
       refreshHabits,
       refreshStreaks,
       createHabitWithGoal,

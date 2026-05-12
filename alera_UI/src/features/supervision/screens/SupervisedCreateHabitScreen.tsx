@@ -12,8 +12,13 @@ type Props = NativeStackScreenProps<
 
 export function SupervisedCreateHabitScreen({ navigation, route }: Props) {
   const { profileId } = route.params;
-  const { categories, isCategoriesLoading, refreshHabits, categoryMap } =
-    useSupervisedHabits(profileId);
+  const {
+    categories,
+    isCategoriesLoading,
+    refreshCategories,
+    refreshHabits,
+    categoryMap,
+  } = useSupervisedHabits(profileId);
   const { createHabitWithGoal } = useSupervisedActions({
     profileId,
     refreshHabits,
@@ -25,6 +30,7 @@ export function SupervisedCreateHabitScreen({ navigation, route }: Props) {
       subtitle="For supervised user"
       categories={categories}
       isCategoriesLoading={isCategoriesLoading}
+      refreshCategories={refreshCategories}
       createHabitWithGoal={createHabitWithGoal}
       onSuccess={() => navigation.goBack()}
     />

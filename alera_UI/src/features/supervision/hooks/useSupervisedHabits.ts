@@ -42,6 +42,22 @@ export function useSupervisedHabits(profileId: string) {
   const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
   const [categoryMap, setCategoryMap] = useState<Record<string, string>>({});
 
+  const refreshCategories = useCallback(async () => {
+    setIsCategoriesLoading(true);
+    try {
+      const items = await listHabitCategories();
+      setCategories(items.map((c) => ({ id: c.id, name: c.name })));
+      setCategoryMap(
+        items.reduce<Record<string, string>>((acc, c) => {
+          acc[c.name] = c.id;
+          return acc;
+        }, {}),
+      );
+    } finally {
+      setIsCategoriesLoading(false);
+    }
+  }, []);
+
   const refreshHabits = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -96,19 +112,10 @@ export function useSupervisedHabits(profileId: string) {
   }, [refreshHabits]);
 
   useEffect(() => {
-    listHabitCategories()
-      .then((items) => {
-        setCategories(items.map((c) => ({ id: c.id, name: c.name })));
-        setCategoryMap(
-          items.reduce<Record<string, string>>((acc, c) => {
-            acc[c.name] = c.id;
-            return acc;
-          }, {}),
-        );
-      })
-      .catch(() => {})
-      .finally(() => setIsCategoriesLoading(false));
-  }, []);
+    refreshCategories().catch(() => {
+      // Keep previous categories if refresh fails; UI can retry.
+    });
+  }, [refreshCategories]);
 
   return {
     habits,
@@ -117,6 +124,7 @@ export function useSupervisedHabits(profileId: string) {
     categories,
     isCategoriesLoading,
     categoryMap,
+    refreshCategories,
     refreshHabits,
   };
 }

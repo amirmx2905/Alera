@@ -10,6 +10,7 @@ type CreateHabitStepOneProps = {
   formData: CreateHabitFormState;
   isCategoriesLoading: boolean;
   categories: Array<{ id: string; name: string }>;
+  onRetryCategories: () => Promise<void>;
   onFieldChange: (patch: Partial<CreateHabitFormState>) => void;
   onBack: () => void;
   onContinue: () => void;
@@ -21,6 +22,7 @@ export function CreateHabitStepOne({
   formData,
   isCategoriesLoading,
   categories,
+  onRetryCategories,
   onFieldChange,
   onBack,
   onContinue,
@@ -64,10 +66,25 @@ export function CreateHabitStepOne({
             </View>
           </View>
         ) : categories.length === 0 ? (
-          <View className="rounded-2xl border border-white/10 bg-white/5 p-3">
+          <View className="rounded-2xl border border-white/10 bg-white/5 p-4 gap-3">
             <Text className="text-slate-400 text-sm text-center">
-              No categories available
+              Couldn't load categories. Try again.
             </Text>
+            <Pressable
+              onPress={() => {
+                onRetryCategories().catch(() => {
+                  // Keep fallback visible on failure.
+                });
+              }}
+              className="self-center rounded-xl border border-white/15 bg-white/10 px-4 py-2"
+              accessibilityRole="button"
+              accessibilityLabel="Retry categories"
+              accessibilityHint="Try loading habit categories again"
+            >
+              <Text className="text-slate-200 text-sm font-semibold">
+                Retry
+              </Text>
+            </Pressable>
           </View>
         ) : (
           <ScrollableSelection

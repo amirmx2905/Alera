@@ -30,6 +30,7 @@ export type HabitsContextValue = {
   isStreaksLoading: boolean;
   categories: HabitCategory[];
   isCategoriesLoading: boolean;
+  refreshCategories: () => Promise<void>;
   refreshHabits: (options?: { silent?: boolean }) => Promise<void>;
   refreshStreaks: () => Promise<void>;
   createHabitWithGoal: (payload: CreateHabitWithGoalPayload) => Promise<void>;

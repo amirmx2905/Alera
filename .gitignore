@@ -49,3 +49,7 @@ expo-env.d.ts
 #others
 ml/seed
 ml/seed.py
+alera_UI/.agents/
+alera_UI/.claude/
+alera_UI/skills-lock.json
+

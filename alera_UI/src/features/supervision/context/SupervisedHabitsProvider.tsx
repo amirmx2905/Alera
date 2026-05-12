@@ -22,6 +22,7 @@ export function SupervisedHabitsProvider({ profileId, children }: Props) {
     categories,
     isCategoriesLoading,
     categoryMap,
+    refreshCategories,
     refreshHabits,
   } = useSupervisedHabits(profileId);
 
@@ -91,6 +92,7 @@ export function SupervisedHabitsProvider({ profileId, children }: Props) {
       isStreaksLoading: false,
       categories,
       isCategoriesLoading,
+      refreshCategories,
       refreshHabits,
       refreshStreaks,
       createHabitWithGoal: wrappedCreateHabitWithGoal,
@@ -106,6 +108,7 @@ export function SupervisedHabitsProvider({ profileId, children }: Props) {
       streaksByHabitId,
       categories,
       isCategoriesLoading,
+      refreshCategories,
       refreshHabits,
       refreshStreaks,
       wrappedCreateHabitWithGoal,

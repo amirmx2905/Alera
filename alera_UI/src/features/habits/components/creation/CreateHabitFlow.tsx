@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { View, Alert, Animated } from "react-native";
 import { MainLayout } from "../../../../layouts/MainLayout";
 import { CreateHabitStepType } from "./CreateHabitStepType";
@@ -15,6 +15,7 @@ type CreateHabitFlowProps = {
   subtitle: string;
   categories: Array<{ id: string; name: string }>;
   isCategoriesLoading: boolean;
+  refreshCategories: () => Promise<void>;
   createHabitWithGoal: (data: {
     name: string;
     description?: string;
@@ -41,6 +42,7 @@ export function CreateHabitFlow({
   subtitle,
   categories,
   isCategoriesLoading,
+  refreshCategories,
   createHabitWithGoal,
   onSuccess,
 }: CreateHabitFlowProps) {
@@ -57,6 +59,21 @@ export function CreateHabitFlow({
   const stepOpacity = useRef(new Animated.Value(1)).current;
   const stepTranslateX = useRef(new Animated.Value(0)).current;
   const isAnimatingRef = useRef(false);
+  const didAutoRetryCategoriesRef = useRef(false);
+
+  useEffect(() => {
+    if (step !== 2) {
+      didAutoRetryCategoriesRef.current = false;
+      return;
+    }
+    if (isCategoriesLoading || categories.length > 0) return;
+    if (didAutoRetryCategoriesRef.current) return;
+
+    didAutoRetryCategoriesRef.current = true;
+    refreshCategories().catch(() => {
+      // Leave fallback UI visible; user can retry manually.
+    });
+  }, [categories.length, isCategoriesLoading, refreshCategories, step]);
 
   const animateBars = useCallback(
     (newStep: number) => {
@@ -220,6 +237,7 @@ export function CreateHabitFlow({
               formData={formData}
               categories={categories}
               isCategoriesLoading={isCategoriesLoading}
+              onRetryCategories={refreshCategories}
               onFieldChange={handleFieldChange}
               onBack={handleBack}
               onContinue={handleContinue}
