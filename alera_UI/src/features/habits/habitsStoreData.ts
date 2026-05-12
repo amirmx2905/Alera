@@ -64,8 +64,9 @@ export const loadHabitsData = async () => {
       ? row.user_goals[0]
       : row.user_goals;
     const goalValue = goal?.target_value;
-    const parsedGoal =
-      goalValue === undefined || goalValue === null ? 0 : Number(goalValue);
+    const parsedGoal = goalValue === undefined || goalValue === null
+      ? 0
+      : Number(goalValue);
 
     return {
       id: row.id,

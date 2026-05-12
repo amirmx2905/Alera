@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { listHabits, type HabitRow } from "../../habits/services/habits";
+import { type HabitRow, listHabits } from "../../habits/services/habits";
 import { listLogsForHabits } from "../../habits/services/logs";
 import { listHabitCategories } from "../../habits/services/habitCategories";
 import { calculateLocalStreak } from "../../habits/utils/habitStreaks";
@@ -13,8 +13,9 @@ function mapRowsToHabits(rows: HabitRow[]): Habit[] {
       ? row.user_goals[0]
       : row.user_goals;
     const goalValue = goal?.target_value;
-    const parsed =
-      goalValue === undefined || goalValue === null ? 0 : Number(goalValue);
+    const parsed = goalValue === undefined || goalValue === null
+      ? 0
+      : Number(goalValue);
 
     return {
       id: row.id,
